@@ -64,7 +64,7 @@ export default async function CollectionDetailPage({ params }: { params: Promise
         </div>
 
         <div className="relative -mx-6 px-6 lg:-mx-8 lg:px-8">
-          <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-thin">
+          <div className="flex justify-start gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-thin">
             {artifacts.length > 0 ? (
               artifacts.map((artifact) => (
                 <div key={artifact.id} className="flex-none w-80 snap-start">
