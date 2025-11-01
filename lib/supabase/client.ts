@@ -1,14 +1,19 @@
-import { createBrowserClient } from "@supabase/ssr"
+import { createBrowserClient as createSupabaseBrowserClient } from "@supabase/ssr"
 
-let client: ReturnType<typeof createBrowserClient> | null = null
+let client: ReturnType<typeof createSupabaseBrowserClient> | null = null
 
+/**
+ * Creates a singleton Supabase client for browser/client-side use
+ */
 export function createClient() {
   if (client) return client
 
-  client = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  client = createSupabaseBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
 
   return client
 }
 
-// Keep the old export for backward compatibility
 export { createClient as createBrowserClient }
