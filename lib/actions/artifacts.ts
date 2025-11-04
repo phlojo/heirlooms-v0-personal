@@ -111,6 +111,38 @@ export async function getArtifactById(artifactId: string) {
 }
 
 /**
+ * Server action to get previous and next artifacts in the same collection
+ */
+export async function getAdjacentArtifacts(artifactId: string, collectionId: string) {
+  const supabase = await createClient()
+
+  // Get all artifacts in the collection ordered by created_at
+  const { data: artifacts, error } = await supabase
+    .from("artifacts")
+    .select("id, title, created_at")
+    .eq("collection_id", collectionId)
+    .order("created_at", { ascending: false })
+
+  if (error || !artifacts) {
+    console.error("[v0] Error fetching adjacent artifacts:", error)
+    return { previous: null, next: null }
+  }
+
+  // Find the current artifact's index
+  const currentIndex = artifacts.findIndex((a) => a.id === artifactId)
+
+  if (currentIndex === -1) {
+    return { previous: null, next: null }
+  }
+
+  // Previous is the one before in the array (newer), next is the one after (older)
+  const previous = currentIndex > 0 ? artifacts[currentIndex - 1] : null
+  const next = currentIndex < artifacts.length - 1 ? artifacts[currentIndex + 1] : null
+
+  return { previous, next }
+}
+
+/**
  * Server action to get all artifacts from public collections
  */
 export async function getAllPublicArtifacts() {

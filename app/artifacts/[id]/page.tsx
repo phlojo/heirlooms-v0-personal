@@ -1,10 +1,10 @@
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Edit } from "lucide-react"
+import { ArrowLeft, Edit, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getCurrentUser } from "@/lib/supabase/server"
-import { getArtifactById } from "@/lib/actions/artifacts"
+import { getArtifactById, getAdjacentArtifacts } from "@/lib/actions/artifacts"
 import { CollectionLabel } from "@/components/collection-label"
 import { getDetailUrl } from "@/lib/cloudinary"
 
@@ -24,6 +24,8 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
   if (!canView) {
     notFound()
   }
+
+  const { previous, next } = await getAdjacentArtifacts(id, artifact.collection_id)
 
   const collectionHref = artifact.collection?.slug
     ? `/collections/${artifact.collection.slug}`
@@ -50,10 +52,34 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
             )}
           </div>
 
-          <div className="flex items-start justify-between">
-            <h1 className="text-balance text-3xl font-bold tracking-tight">{artifact.title}</h1>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Button variant="ghost" size="icon" asChild disabled={!previous} className="shrink-0">
+                {previous ? (
+                  <Link href={`/artifacts/${previous.id}`} title={previous.title}>
+                    <ChevronLeft className="h-5 w-5" />
+                  </Link>
+                ) : (
+                  <span>
+                    <ChevronLeft className="h-5 w-5" />
+                  </span>
+                )}
+              </Button>
+              <h1 className="text-balance text-3xl font-bold tracking-tight min-w-0">{artifact.title}</h1>
+              <Button variant="ghost" size="icon" asChild disabled={!next} className="shrink-0">
+                {next ? (
+                  <Link href={`/artifacts/${next.id}`} title={next.title}>
+                    <ChevronRight className="h-5 w-5" />
+                  </Link>
+                ) : (
+                  <span>
+                    <ChevronRight className="h-5 w-5" />
+                  </span>
+                )}
+              </Button>
+            </div>
             {canEdit && (
-              <Button variant="outline" asChild>
+              <Button variant="outline" asChild className="shrink-0 bg-transparent">
                 <Link href={`/artifacts/${id}/edit`}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
