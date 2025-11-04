@@ -39,7 +39,7 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
             <Button variant="ghost" size="sm" asChild>
               <Link href={collectionHref}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                Back to
               </Link>
             </Button>
             {artifact.collection && (
