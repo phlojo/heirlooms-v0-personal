@@ -3,6 +3,7 @@ import { openai, getSummaryModel } from "@/lib/ai"
 import { generateObject } from "ai"
 import { NextResponse } from "next/server"
 import { z } from "zod"
+import { revalidatePath } from "next/cache"
 
 const MAX_TRANSCRIPT_LENGTH = 10000
 const MAX_IMAGE_CAPTIONS = 3
@@ -88,6 +89,8 @@ export async function POST(request: Request) {
       maxOutputTokens: 2000,
     })
 
+    console.log("[v0] Generated AI description:", object.description_markdown?.substring(0, 100) + "...")
+
     // Save the description to the database
     const { error: updateError } = await supabase
       .from("artifacts")
@@ -95,12 +98,19 @@ export async function POST(request: Request) {
         ai_description: object.description_markdown,
         analysis_status: "done",
         analysis_error: null,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", artifactId)
 
     if (updateError) {
+      console.error("[v0] Failed to save summary:", updateError)
       throw new Error(`Failed to save summary: ${updateError.message}`)
     }
+
+    console.log("[v0] Successfully saved ai_description to database for artifact:", artifactId)
+
+    revalidatePath(`/artifacts/${artifactId}`)
+    revalidatePath(`/artifacts/${artifactId}/edit`)
 
     return NextResponse.json({ ok: true, object })
   } catch (error) {

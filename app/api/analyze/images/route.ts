@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getVisionModel } from "@/lib/ai"
 import { generateText } from "ai"
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 
 const MAX_IMAGES = 5
 
@@ -109,19 +110,24 @@ export async function POST(request: Request) {
       }
     }
 
-    // Save captions to database
     const { error: updateError } = await supabase
       .from("artifacts")
       .update({
         image_captions: captions,
         analysis_status: "done",
         analysis_error: null,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", artifactId)
 
     if (updateError) {
       throw new Error(`Failed to save captions: ${updateError.message}`)
     }
+
+    console.log("[v0] Successfully saved image captions for artifact:", artifactId)
+
+    revalidatePath(`/artifacts/${artifactId}`)
+    revalidatePath(`/artifacts/${artifactId}/edit`)
 
     return NextResponse.json({ ok: true, captions })
   } catch (error) {
