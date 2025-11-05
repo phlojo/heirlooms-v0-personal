@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getVisionModel } from "@/lib/ai"
 import { generateText } from "ai"
 import { NextResponse } from "next/server"
+import { AbortSignal } from "abortcontroller"
 
 const MAX_IMAGES = 5
 
@@ -16,6 +17,22 @@ function isImageUrl(url: string): boolean {
     lower.includes(".bmp") ||
     lower.includes("image")
   )
+}
+
+async function isValidImageUrl(url: string): Promise<boolean> {
+  try {
+    // Basic URL format validation
+    new URL(url)
+
+    // Try to fetch headers to verify the URL is reachable and is an image
+    const response = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(5000) })
+    if (!response.ok) return false
+
+    const contentType = response.headers.get("content-type")
+    return contentType?.startsWith("image/") ?? false
+  } catch {
+    return false
+  }
 }
 
 export async function POST(request: Request) {
@@ -39,11 +56,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Artifact not found" }, { status: 404 })
     }
 
-    // Get up to 5 image URLs
-    const imageUrls = (artifact.media_urls || []).filter(isImageUrl).slice(0, MAX_IMAGES)
+    const potentialImageUrls = (artifact.media_urls || []).filter(isImageUrl).slice(0, MAX_IMAGES)
+
+    // Validate URLs in parallel
+    const validationResults = await Promise.all(
+      potentialImageUrls.map(async (url) => ({
+        url,
+        isValid: await isValidImageUrl(url),
+      })),
+    )
+
+    const imageUrls = validationResults.filter((result) => result.isValid).map((result) => result.url)
 
     if (imageUrls.length === 0) {
-      return NextResponse.json({ error: "No image files found in artifact" }, { status: 400 })
+      return NextResponse.json({ error: "No valid image files found in artifact" }, { status: 400 })
     }
 
     // Set processing status
@@ -80,7 +106,7 @@ export async function POST(request: Request) {
         captions[imageUrl] = result.text.trim()
       } catch (error) {
         console.error(`[v0] Failed to caption image ${imageUrl}:`, error)
-        captions[imageUrl] = "Caption generation failed"
+        continue
       }
     }
 
