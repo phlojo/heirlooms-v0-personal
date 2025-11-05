@@ -7,8 +7,8 @@ import { getCurrentUser } from "@/lib/supabase/server"
 import { getArtifactById, getAdjacentArtifacts } from "@/lib/actions/artifacts"
 import { getDetailUrl } from "@/lib/cloudinary"
 import { AudioPlayer } from "@/components/audio-player"
+import ReactMarkdown from "react-markdown"
 import { ArtifactAiPanelWrapper } from "@/components/artifact/ArtifactAiPanelWrapper"
-import { ArtifactAiContent } from "@/components/artifact/ArtifactAiContent"
 
 function isAudioFile(url: string): boolean {
   return (
@@ -40,9 +40,15 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
     ? `/collections/${artifact.collection.slug}`
     : `/collections/${artifact.collection_id}`
 
-  const fullDescription = artifact.transcript
-    ? `${artifact.description || "No description provided"}\n\n${artifact.transcript}`
-    : artifact.description || "No description provided"
+  let fullDescription = artifact.description || "No description provided"
+
+  if (artifact.transcript) {
+    fullDescription += `\n\n${artifact.transcript}`
+  }
+
+  if (artifact.ai_description) {
+    fullDescription += `\n\n${artifact.ai_description}`
+  }
 
   const imageCaptions = artifact.image_captions || {}
 
@@ -109,10 +115,10 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
         </div>
 
         <div className="space-y-6">
-          <p className="text-pretty text-muted-foreground whitespace-pre-wrap">{fullDescription}</p>
+          <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
+            <ReactMarkdown>{fullDescription}</ReactMarkdown>
+          </div>
         </div>
-
-        <ArtifactAiContent ai_description={artifact.ai_description} />
 
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
