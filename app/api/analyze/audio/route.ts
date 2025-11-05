@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { getTranscribeModel, getTextModel, validateOpenAIKey } from "@/lib/ai"
+import { openai, getTranscribeModel, getTextModel, validateOpenAIKey } from "@/lib/ai"
 import { generateText } from "ai"
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     if (transcript && transcript.length > 50) {
       try {
         const cleanupResult = await generateText({
-          model: getTextModel(),
+          model: openai(getTextModel()),
           prompt: `Reformat this transcript for readability. Fix obvious typos and add punctuation, but do not add any new information or facts. Keep the original meaning intact.\n\nTranscript:\n${transcript.slice(0, MAX_TRANSCRIPT_LENGTH)}`,
           maxOutputTokens: 2000,
         })

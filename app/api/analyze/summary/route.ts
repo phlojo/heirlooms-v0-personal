@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { getSummaryModel } from "@/lib/ai"
+import { openai, getSummaryModel } from "@/lib/ai"
 import { generateObject } from "ai"
 import { NextResponse } from "next/server"
 import { z } from "zod"
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
 
     // Generate structured summary using AI
     const { object } = await generateObject({
-      model: getSummaryModel(),
+      model: openai(getSummaryModel()),
       schema: summarySchema,
       system:
         "You write concise, factual, warm heirloom descriptions. Never invent facts; use 'likely' or 'appears to' when unsure. " +

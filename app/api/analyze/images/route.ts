@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { getVisionModel } from "@/lib/ai"
+import { openai, getVisionModel } from "@/lib/ai"
 import { generateText } from "ai"
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     for (const imageUrl of imageUrls) {
       try {
         const result = await generateText({
-          model: getVisionModel(),
+          model: openai(getVisionModel()),
           messages: [
             {
               role: "user",

@@ -7,29 +7,26 @@ export { openai }
 
 /**
  * Get the AI model to use for general text generation
- * @returns Model identifier with provider prefix (e.g., "openai/gpt-4o")
+ * @returns Model identifier (e.g., "gpt-4o")
  */
 export function getTextModel(): string {
-  const model = process.env.AI_MODEL_TEXT || "gpt-4o"
-  return `openai/${model}`
+  return process.env.AI_MODEL_TEXT || "gpt-4o"
 }
 
 /**
  * Get the AI model to use for vision/image analysis
- * @returns Model identifier with provider prefix (e.g., "openai/gpt-4o")
+ * @returns Model identifier (e.g., "gpt-4o")
  */
 export function getVisionModel(): string {
-  const model = process.env.AI_MODEL_VISION || "gpt-4o"
-  return `openai/${model}`
+  return process.env.AI_MODEL_VISION || "gpt-4o"
 }
 
 /**
  * Get the AI model to use for summarization tasks
- * @returns Model identifier with provider prefix (e.g., "openai/gpt-4o")
+ * @returns Model identifier (e.g., "gpt-4o")
  */
 export function getSummaryModel(): string {
-  const model = process.env.AI_MODEL_SUMMARY || "gpt-4o"
-  return `openai/${model}`
+  return process.env.AI_MODEL_SUMMARY || "gpt-4o"
 }
 
 /**
