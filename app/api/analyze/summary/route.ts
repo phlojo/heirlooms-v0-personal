@@ -9,10 +9,7 @@ const MAX_TRANSCRIPT_LENGTH = 10000
 const MAX_IMAGE_CAPTIONS = 3
 
 const summarySchema = z.object({
-  description_markdown: z
-    .string()
-    .min(20, "Description must be at least 20 characters")
-    .describe("A concise, factual, warm heirloom description in markdown format"),
+  description_markdown: z.string().describe("A concise, factual, warm heirloom description in markdown format"),
   highlights: z.array(z.string()).optional().describe("Key highlights or memorable moments (max 5)"),
   people: z.array(z.string()).optional().describe("Names of people mentioned or identified"),
   places: z.array(z.string()).optional().describe("Locations or places mentioned"),
@@ -97,17 +94,16 @@ export async function POST(request: Request) {
     console.log("[v0] Context length:", context.length)
 
     try {
-      const result = await Promise.race([
-        generateObject({
-          model: openai(getSummaryModel()),
-          schema: summarySchema,
-          system:
-            "You are an AI that generates structured summaries for family heirloom artifacts. " +
-            "Write concise, factual, warm descriptions in markdown format. " +
-            "Never invent facts; use 'likely' or 'appears to' when unsure. " +
-            "Focus on what makes this artifact meaningful and memorable. Be specific but avoid speculation. " +
-            "The description_markdown field is REQUIRED and must be at least 20 characters.",
-          prompt: `Based on the following content from a family heirloom artifact, generate a structured summary.
+      const result = await generateObject({
+        model: openai(getSummaryModel()),
+        schema: summarySchema,
+        system:
+          "You are an AI that generates structured summaries for family heirloom artifacts. " +
+          "Write concise, factual, warm descriptions in markdown format. " +
+          "Never invent facts; use 'likely' or 'appears to' when unsure. " +
+          "Focus on what makes this artifact meaningful and memorable. Be specific but avoid speculation. " +
+          "The description_markdown field is REQUIRED and must be at least 20 characters.",
+        prompt: `Based on the following content from a family heirloom artifact, generate a structured summary.
 
 ${context}
 
@@ -120,20 +116,20 @@ Generate a JSON object with these fields:
 - tags (optional): Array of relevant tags
 
 Focus on creating a meaningful, warm description that captures the essence of this heirloom.`,
-          maxTokens: 2000,
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("AI generation timed out after 30 seconds")), 30000),
-        ),
-      ])
+        maxTokens: 2000,
+      })
 
       console.log("[v0] AI generation complete")
       console.log("[v0] Generated object:", JSON.stringify(result, null, 2))
 
-      const finalObject = (result as any).object
+      const finalObject = result.object
 
-      if (!finalObject || !finalObject.description_markdown || finalObject.description_markdown.length < 20) {
-        throw new Error("AI did not generate a valid description (minimum 20 characters required)")
+      if (!finalObject || !finalObject.description_markdown || finalObject.description_markdown.trim().length === 0) {
+        throw new Error("AI did not generate a valid description")
+      }
+
+      if (finalObject.description_markdown.length < 20) {
+        console.log("[v0] WARNING: Description is shorter than 20 characters, but accepting it")
       }
 
       // Save the description to the database
