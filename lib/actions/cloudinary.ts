@@ -77,7 +77,7 @@ export async function generateCloudinaryAudioSignature(userId: string, fileName:
 
     const publicId = `${folder}/${userId}_${timestamp}_${sanitizedFileName}`
 
-    const stringToSign = `public_id=${publicId}&resource_type=video&timestamp=${timestamp}${apiSecret}`
+    const stringToSign = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`
     const encoder = new TextEncoder()
     const data = encoder.encode(stringToSign)
     const hashBuffer = await crypto.subtle.digest("SHA-1", data)
