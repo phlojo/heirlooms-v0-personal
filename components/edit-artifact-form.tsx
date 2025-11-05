@@ -14,9 +14,11 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { X, Upload, ImageIcon, Loader2 } from "lucide-react"
+import { X, Upload, ImageIcon, Loader2, Sparkles } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { fetchJson } from "@/lib/fetchJson"
 
 type FormData = z.infer<typeof updateArtifactSchema>
 
@@ -38,6 +40,8 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   const [uploadedImages, setUploadedImages] = useState<string[]>(artifact.media_urls || [])
   const [isUploading, setIsUploading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
+  const { toast } = useToast()
 
   const form = useForm<FormData>({
     resolver: zodResolver(updateArtifactSchema),
@@ -165,6 +169,51 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     }
   }
 
+  async function handleGenerateDescription() {
+    setIsGeneratingDescription(true)
+    setError(null)
+
+    try {
+      const result = await fetchJson("/api/analyze/summary", {
+        body: { artifactId: artifact.id },
+      })
+
+      toast({
+        title: "Success",
+        description: "Description generated successfully",
+      })
+
+      // Refresh to get the updated artifact data
+      router.refresh()
+
+      // Fetch the updated artifact to get the AI description
+      // We'll need to wait a moment for the database to update
+      setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/artifacts/${artifact.id}`)
+          if (response.ok) {
+            const updatedArtifact = await response.json()
+            if (updatedArtifact.ai_description) {
+              form.setValue("description", updatedArtifact.ai_description)
+            }
+          }
+        } catch (err) {
+          console.error("[v0] Failed to fetch updated artifact:", err)
+        }
+      }, 1000)
+    } catch (err) {
+      console.error("[v0] Generate description error:", err)
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to generate description",
+        variant: "destructive",
+      })
+      setError(err instanceof Error ? err.message : "Failed to generate description")
+    } finally {
+      setIsGeneratingDescription(false)
+    }
+  }
+
   if (success) {
     return (
       <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
@@ -203,6 +252,27 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
               <FormControl>
                 <Textarea placeholder="Tell the story of this heirloom" rows={4} {...field} />
               </FormControl>
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateDescription}
+                  disabled={isGeneratingDescription || isUploading}
+                >
+                  {isGeneratingDescription ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Generate AI Description
+                    </>
+                  )}
+                </Button>
+              </div>
               <FormMessage />
             </FormItem>
           )}
