@@ -6,8 +6,11 @@ import { NextResponse } from "next/server"
 const MAX_TRANSCRIPT_LENGTH = 10000
 
 export async function POST(request: Request) {
+  let artifactId: string | undefined
+
   try {
-    const { artifactId } = await request.json()
+    const body = await request.json()
+    artifactId = body.artifactId
 
     if (!artifactId) {
       return NextResponse.json({ error: "artifactId is required" }, { status: 400 })
@@ -109,9 +112,8 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[v0] Audio analysis error:", error)
 
-    try {
-      const { artifactId } = await request.json()
-      if (artifactId) {
+    if (artifactId) {
+      try {
         const supabase = await createClient()
         await supabase
           .from("artifacts")
@@ -120,9 +122,9 @@ export async function POST(request: Request) {
             analysis_error: error instanceof Error ? error.message : "Unknown error occurred",
           })
           .eq("id", artifactId)
+      } catch (dbError) {
+        console.error("[v0] Failed to save error status:", dbError)
       }
-    } catch (dbError) {
-      console.error("[v0] Failed to save error status:", dbError)
     }
 
     return NextResponse.json(
