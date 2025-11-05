@@ -7,6 +7,8 @@ import { getCurrentUser } from "@/lib/supabase/server"
 import { getArtifactById, getAdjacentArtifacts } from "@/lib/actions/artifacts"
 import { getDetailUrl } from "@/lib/cloudinary"
 import { AudioPlayer } from "@/components/audio-player"
+import ReactMarkdown from "react-markdown"
+import { ArtifactAiPanelWrapper } from "@/components/artifact/ArtifactAiPanelWrapper"
 
 function isAudioFile(url: string): boolean {
   return (
@@ -37,6 +39,18 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
   const collectionHref = artifact.collection?.slug
     ? `/collections/${artifact.collection.slug}`
     : `/collections/${artifact.collection_id}`
+
+  let fullDescription = artifact.description || "No description provided"
+
+  if (artifact.transcript) {
+    fullDescription += `\n\n${artifact.transcript}`
+  }
+
+  if (artifact.ai_description) {
+    fullDescription += `\n\n${artifact.ai_description}`
+  }
+
+  const imageCaptions = artifact.image_captions || {}
 
   return (
     <AppLayout user={user}>
@@ -101,7 +115,9 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
         </div>
 
         <div className="space-y-6">
-          <p className="text-pretty text-muted-foreground">{artifact.description || "No description provided"}</p>
+          <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
+            <ReactMarkdown>{fullDescription}</ReactMarkdown>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
@@ -111,12 +127,17 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
                 isAudioFile(url) ? (
                   <AudioPlayer key={index} src={url} title="Audio Recording" />
                 ) : (
-                  <div key={index} className="aspect-square overflow-hidden border bg-muted">
-                    <img
-                      src={getDetailUrl(url) || "/placeholder.svg"}
-                      alt={`${artifact.title} - Image ${index + 1}`}
-                      className="h-full w-full object-cover"
-                    />
+                  <div key={index} className="space-y-2">
+                    <div className="aspect-square overflow-hidden border bg-muted">
+                      <img
+                        src={getDetailUrl(url) || "/placeholder.svg"}
+                        alt={`${artifact.title} - Image ${index + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    {imageCaptions[url] && (
+                      <p className="text-sm text-muted-foreground italic leading-relaxed">{imageCaptions[url]}</p>
+                    )}
                   </div>
                 ),
               )
@@ -147,6 +168,17 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
                 </div>
               </dl>
             </div>
+
+            {canEdit && (
+              <ArtifactAiPanelWrapper
+                artifactId={artifact.id}
+                analysis_status={artifact.analysis_status}
+                analysis_error={artifact.analysis_error}
+                transcript={artifact.transcript}
+                ai_description={artifact.ai_description}
+                image_captions={artifact.image_captions}
+              />
+            )}
           </div>
         </div>
       </div>
