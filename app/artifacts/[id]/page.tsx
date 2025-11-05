@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/supabase/server"
 import { getArtifactById, getAdjacentArtifacts } from "@/lib/actions/artifacts"
 import { getDetailUrl } from "@/lib/cloudinary"
 import { AudioPlayer } from "@/components/audio-player"
+import { ArtifactAiPanelWrapper } from "@/components/artifact/ArtifactAiPanelWrapper"
 
 function isAudioFile(url: string): boolean {
   return (
@@ -147,6 +148,17 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
                 </div>
               </dl>
             </div>
+
+            {canEdit && (
+              <ArtifactAiPanelWrapper
+                artifactId={artifact.id}
+                analysis_status={artifact.analysis_status}
+                analysis_error={artifact.analysis_error}
+                transcript={artifact.transcript}
+                ai_description={artifact.ai_description}
+                image_captions={artifact.image_captions}
+              />
+            )}
           </div>
         </div>
       </div>

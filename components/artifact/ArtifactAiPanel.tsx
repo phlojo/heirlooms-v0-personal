@@ -21,7 +21,7 @@ interface ArtifactAiPanelProps {
 
 type LoadingState = "audio" | "images" | "summary" | "run-all" | null
 
-export default function ArtifactAiPanel({
+export function ArtifactAiPanel({
   artifactId,
   analysis_status,
   analysis_error,
