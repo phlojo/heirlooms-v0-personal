@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { getOpenAIClient, getTranscribeModel, getTextModel } from "@/lib/ai"
+import { getTranscribeModel, getTextModel, validateOpenAIKey } from "@/lib/ai"
 import { generateText } from "ai"
 import { NextResponse } from "next/server"
 
@@ -12,6 +12,8 @@ export async function POST(request: Request) {
     if (!artifactId) {
       return NextResponse.json({ error: "artifactId is required" }, { status: 400 })
     }
+
+    validateOpenAIKey()
 
     const supabase = await createClient()
 
@@ -52,16 +54,29 @@ export async function POST(request: Request) {
     }
 
     const audioBlob = await audioResponse.blob()
-    const audioFile = new File([audioBlob], "audio.mp3", { type: audioBlob.type || "audio/mpeg" })
 
-    const openai = getOpenAIClient()
-    const transcriptionResponse = await openai.audio.transcriptions.create({
-      file: audioFile,
-      model: getTranscribeModel(),
-      language: artifact.language_hint || undefined,
+    const formData = new FormData()
+    formData.append("file", audioBlob, "audio.mp3")
+    formData.append("model", getTranscribeModel())
+    if (artifact.language_hint) {
+      formData.append("language", artifact.language_hint)
+    }
+
+    const transcriptionResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: formData,
     })
 
-    let transcript = transcriptionResponse.text
+    if (!transcriptionResponse.ok) {
+      const errorText = await transcriptionResponse.text()
+      throw new Error(`Transcription failed: ${errorText}`)
+    }
+
+    const transcriptionData = await transcriptionResponse.json()
+    let transcript = transcriptionData.text
 
     if (transcript && transcript.length > 50) {
       try {
