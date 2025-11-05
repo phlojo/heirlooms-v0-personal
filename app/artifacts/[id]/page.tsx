@@ -113,6 +113,24 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
           </div>
         </div>
 
+        <div className="rounded-2xl border bg-card p-6 shadow-md">
+          <h2 className="text-xl font-semibold">Details</h2>
+          <dl className="mt-4 space-y-3 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Collection</dt>
+              <dd className="font-medium">
+                <Link href={collectionHref} className="text-primary hover:underline">
+                  {artifact.collection?.title || "Unknown"}
+                </Link>
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Added</dt>
+              <dd className="font-medium">{new Date(artifact.created_at).toLocaleDateString()}</dd>
+            </div>
+          </dl>
+        </div>
+
         <div className="space-y-6">
           <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
             <ReactMarkdown>{fullDescription}</ReactMarkdown>
@@ -175,24 +193,6 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
           </div>
 
           <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold">Details</h2>
-              <dl className="mt-4 space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Collection</dt>
-                  <dd className="font-medium">
-                    <Link href={collectionHref} className="text-primary hover:underline">
-                      {artifact.collection?.title || "Unknown"}
-                    </Link>
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Added</dt>
-                  <dd className="font-medium">{new Date(artifact.created_at).toLocaleDateString()}</dd>
-                </div>
-              </dl>
-            </div>
-
             {canEdit && (
               <ArtifactAiPanelWrapper
                 artifactId={artifact.id}
