@@ -51,8 +51,6 @@ export default async function CollectionDetailPage({ params }: { params: Promise
         />
 
         <div className="space-y-4">
-          <h1 className="text-3xl font-bold tracking-tight">{collection.title}</h1>
-
           {collection.description && <p className="text-muted-foreground">{collection.description}</p>}
 
           {canEdit && (
