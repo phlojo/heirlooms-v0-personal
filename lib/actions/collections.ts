@@ -94,6 +94,61 @@ export async function getCollectionBySlug(slug: string) {
 }
 
 /**
+ * Server action to get previous and next collections based on collection ownership context
+ * Returns collections in the same order as displayed on the collections page
+ * If viewing own collection, navigates through own collections
+ * If viewing public collection, navigates through public collections
+ */
+export async function getAdjacentCollections(collectionId: string, userId: string | null) {
+  const supabase = await createClient()
+
+  const { data: currentCollection } = await supabase
+    .from("collections")
+    .select("user_id, is_public")
+    .eq("id", collectionId)
+    .single()
+
+  if (!currentCollection) {
+    return { previous: null, next: null }
+  }
+
+  // Determine navigation context: own collection vs public collections
+  const isOwnCollection = userId && currentCollection.user_id === userId
+
+  // Determine which collections to fetch based on context
+  let query = supabase
+    .from("collections")
+    .select("id, title, slug, created_at, user_id, is_public")
+    .order("created_at", { ascending: false })
+
+  if (isOwnCollection) {
+    query = query.eq("user_id", userId)
+  } else {
+    query = query.eq("is_public", true)
+  }
+
+  const { data: collections, error } = await query
+
+  if (error || !collections) {
+    console.error("[v0] Error fetching adjacent collections:", error)
+    return { previous: null, next: null }
+  }
+
+  // Find the current collection's index
+  const currentIndex = collections.findIndex((c) => c.id === collectionId)
+
+  if (currentIndex === -1) {
+    return { previous: null, next: null }
+  }
+
+  // Previous is the one before in the array (newer), next is the one after (older)
+  const previous = currentIndex > 0 ? collections[currentIndex - 1] : null
+  const next = currentIndex < collections.length - 1 ? collections[currentIndex + 1] : null
+
+  return { previous, next }
+}
+
+/**
  * Server action to delete a collection and all its artifacts
  * Also deletes associated media from Cloudinary
  */

@@ -1,13 +1,14 @@
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/button"
-import { Plus, ArrowLeft } from "lucide-react"
+import { Plus } from "lucide-react"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { getCurrentUser } from "@/lib/supabase/server"
-import { getCollectionBySlug } from "@/lib/actions/collections"
+import { getCollectionBySlug, getAdjacentCollections } from "@/lib/actions/collections"
 import { getArtifactsByCollection } from "@/lib/actions/artifacts"
 import { ArtifactCard } from "@/components/artifact-card"
 import { DeleteCollectionButton } from "@/components/delete-collection-button"
+import { StickyNav } from "@/components/sticky-nav"
 
 export default async function CollectionDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const user = await getCurrentUser()
@@ -33,34 +34,36 @@ export default async function CollectionDetailPage({ params }: { params: Promise
 
   const artifacts = await getArtifactsByCollection(collection.id)
 
+  const { previous, next } = await getAdjacentCollections(collection.id, user?.id || null)
+
   return (
     <AppLayout user={user}>
       <div className="space-y-8">
-        <div>
-          <Button variant="ghost" size="sm" asChild className="mb-4">
-            <Link href="/collections">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Collections
-            </Link>
-          </Button>
+        <StickyNav
+          title={collection.title}
+          backHref="/collections"
+          backLabel="Back to Collections"
+          previousItem={previous ? { id: previous.slug, title: previous.title } : null}
+          nextItem={next ? { id: next.slug, title: next.title } : null}
+          editHref={`/collections/${collection.id}/edit`}
+          canEdit={canEdit}
+          itemType="collection"
+        />
 
-          <div className="space-y-4">
-            <h1 className="text-3xl font-bold tracking-tight">{collection.title}</h1>
+        <div className="space-y-4">
+          {collection.description && <p className="text-muted-foreground">{collection.description}</p>}
 
-            {collection.description && <p className="text-muted-foreground">{collection.description}</p>}
-
-            {canEdit && (
-              <div className="flex items-center gap-3">
-                <Button asChild>
-                  <Link href={`/artifacts/new?collectionId=${collection.id}`}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Artifact
-                  </Link>
-                </Button>
-                <DeleteCollectionButton collectionId={collection.id} collectionTitle={collection.title} />
-              </div>
-            )}
-          </div>
+          {canEdit && (
+            <div className="flex items-center gap-3">
+              <Button asChild>
+                <Link href={`/artifacts/new?collectionId=${collection.id}`}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Artifact
+                </Link>
+              </Button>
+              <DeleteCollectionButton collectionId={collection.id} collectionTitle={collection.title} />
+            </div>
+          )}
         </div>
 
         {artifacts.length === 0 ? (

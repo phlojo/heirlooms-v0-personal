@@ -1,6 +1,4 @@
 import { AppLayout } from "@/components/app-layout"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Edit, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getCurrentUser } from "@/lib/supabase/server"
@@ -12,6 +10,7 @@ import { ArtifactAiPanelWrapper } from "@/components/artifact/ArtifactAiPanelWra
 import { GenerateDescriptionButton } from "@/components/artifact/GenerateDescriptionButton"
 import { GenerateImageCaptionButton } from "@/components/artifact/GenerateImageCaptionButton"
 import { TranscribeAudioButton } from "@/components/artifact/TranscribeAudioButton"
+import { StickyNav } from "@/components/sticky-nav"
 
 function isAudioFile(url: string): boolean {
   return (
@@ -59,64 +58,16 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
   return (
     <AppLayout user={user}>
       <div className="space-y-8">
-        <div className="sticky top-16 z-30 -mx-6 bg-background px-6 pb-4 lg:-mx-8 lg:px-8 pt-2.5.5.5.5.5.5 pt-2 pt-2 pt-1 pt-0.5 pt-1.5 pt-2 pt-1.5 pt-5 pt-2 pt-2 pt-0">
-          <div className="mb-4 flex items-center gap-2 mt-2 mt-2 mt-1 mt-2.5 mt-2 mt-1.5 mt-px">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={collectionHref}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to {artifact.collection?.title || "Uncategorized"} Collection
-              </Link>
-            </Button>
-          </div>
-
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                asChild={!!previous}
-                disabled={!previous}
-                className={`shrink-0 ${!previous ? "opacity-50 pointer-events-none hover:bg-transparent" : ""}`}
-              >
-                {previous ? (
-                  <Link href={`/artifacts/${previous.id}`} title={previous.title}>
-                    <ChevronLeft className="h-5 w-5" />
-                  </Link>
-                ) : (
-                  <span>
-                    <ChevronLeft className="h-5 w-5" />
-                  </span>
-                )}
-              </Button>
-              <h1 className="text-balance text-3xl font-bold tracking-tight min-w-0">{artifact.title}</h1>
-              <Button
-                variant="ghost"
-                size="icon"
-                asChild={!!next}
-                disabled={!next}
-                className={`shrink-0 ${!next ? "opacity-50 pointer-events-none hover:bg-transparent" : ""}`}
-              >
-                {next ? (
-                  <Link href={`/artifacts/${next.id}`} title={next.title}>
-                    <ChevronRight className="h-5 w-5" />
-                  </Link>
-                ) : (
-                  <span>
-                    <ChevronRight className="h-5 w-5" />
-                  </span>
-                )}
-              </Button>
-            </div>
-            {canEdit && (
-              <Button variant="outline" asChild className="shrink-0 bg-transparent">
-                <Link href={`/artifacts/${id}/edit`}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </Link>
-              </Button>
-            )}
-          </div>
-        </div>
+        <StickyNav
+          title={artifact.title}
+          backHref={collectionHref}
+          backLabel={`Back to ${artifact.collection?.title || "Uncategorized"} Collection`}
+          previousItem={previous}
+          nextItem={next}
+          editHref={`/artifacts/${id}/edit`}
+          canEdit={canEdit}
+          itemType="artifact"
+        />
 
         <div className="rounded-2xl border bg-card p-6 shadow-md">
           <h2 className="text-xl font-semibold">Details</h2>
