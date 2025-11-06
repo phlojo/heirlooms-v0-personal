@@ -40,12 +40,7 @@ export function AppLayout({ children, user }: AppLayoutProps) {
       <div className="flex">
         <SideNav isOpen={sidebarOpen} onClose={() => handleSidebarToggle(false)} isMobile={isMobile} />
 
-        <main
-          className="flex-1 p-6 transition-all duration-200 lg:p-8"
-          style={{
-            marginLeft: !isMobile && sidebarOpen ? "256px" : "0",
-          }}
-        >
+        <main className="flex-1 p-6 transition-all duration-200 lg:p-8">
           <div className="mx-auto max-w-7xl">
             <PageTransition>{children}</PageTransition>
           </div>
