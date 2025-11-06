@@ -15,40 +15,52 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll()
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-        supabaseResponse = NextResponse.next({
-          request,
-        })
-        cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
-      },
-    },
-  })
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  console.log("[v0] Middleware check", {
-    path: request.nextUrl.pathname,
-    hasUser: !!user,
-    userEmail: user?.email,
-  })
-
-  const isProtectedRoute =
-    request.nextUrl.pathname === "/collections/new" || request.nextUrl.pathname === "/artifacts/new"
-
-  if (!user && isProtectedRoute) {
-    console.log("[v0] Redirecting to login - no user for protected route")
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    return NextResponse.redirect(url)
+  try {
+    new URL(supabaseUrl)
+  } catch (error) {
+    console.error("[v0] Invalid Supabase URL in middleware:", supabaseUrl)
+    return supabaseResponse
   }
 
-  return supabaseResponse
+  try {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
+        },
+      },
+    })
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    console.log("[v0] Middleware check", {
+      path: request.nextUrl.pathname,
+      hasUser: !!user,
+    })
+
+    const isProtectedRoute =
+      request.nextUrl.pathname === "/collections/new" || request.nextUrl.pathname === "/artifacts/new"
+
+    if (!user && isProtectedRoute) {
+      console.log("[v0] Redirecting to login - no user for protected route")
+      const url = request.nextUrl.clone()
+      url.pathname = "/login"
+      return NextResponse.redirect(url)
+    }
+
+    return supabaseResponse
+  } catch (error) {
+    console.error("[v0] Middleware Supabase error:", error)
+    // Allow the request to continue even if auth check fails
+    return supabaseResponse
+  }
 }

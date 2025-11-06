@@ -2,7 +2,17 @@
 
 import { useState } from "react"
 import ReactMarkdown from "react-markdown"
-import { Loader2, Mic, ImageIcon, FileText, PlayCircle, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
+import {
+  Loader2,
+  Mic,
+  ImageIcon,
+  FileText,
+  PlayCircle,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -85,7 +95,10 @@ export function ArtifactAiPanel({
     <div className="space-y-6 rounded-2xl border bg-card p-6 shadow-md">
       {/* Header with Status Badge */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">AI Analysis</h2>
+        <h2 className="flex items-center gap-2 text-xl font-semibold">
+          <Sparkles className="h-5 w-5" />
+          Heirlooms AI Assistant
+        </h2>
         {analysis_status && <Badge variant={getStatusVariant(analysis_status)}>{analysis_status}</Badge>}
       </div>
 
@@ -100,13 +113,13 @@ export function ArtifactAiPanel({
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-2">
         <Button
-          onClick={() => handleAnalysis("/api/analyze/audio", "audio", "Audio transcription complete")}
+          onClick={() => handleAnalysis("/api/analyze/summary", "summary", "Description generated")}
           disabled={loading !== null}
           variant="outline"
           size="sm"
         >
-          {loading === "audio" ? <Loader2 className="animate-spin" /> : <Mic />}
-          Transcribe Audio
+          {loading === "summary" ? <Loader2 className="animate-spin" /> : <FileText />}
+          Generate AI Description
         </Button>
 
         <Button
@@ -116,17 +129,17 @@ export function ArtifactAiPanel({
           size="sm"
         >
           {loading === "images" ? <Loader2 className="animate-spin" /> : <ImageIcon />}
-          Caption Photos
+          Generate AI Captions
         </Button>
 
         <Button
-          onClick={() => handleAnalysis("/api/analyze/summary", "summary", "Description generated")}
+          onClick={() => handleAnalysis("/api/analyze/audio", "audio", "Audio transcription complete")}
           disabled={loading !== null}
           variant="outline"
           size="sm"
         >
-          {loading === "summary" ? <Loader2 className="animate-spin" /> : <FileText />}
-          Generate Description
+          {loading === "audio" ? <Loader2 className="animate-spin" /> : <Mic />}
+          AI Transcribe Audio
         </Button>
 
         <Button
@@ -135,7 +148,7 @@ export function ArtifactAiPanel({
           variant="default"
           size="sm"
         >
-          {loading === "run-all" ? <Loader2 className="animate-spin" /> : <PlayCircle />}
+          {loading === "run-all" ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle />}
           Run All
         </Button>
       </div>
@@ -165,7 +178,7 @@ export function ArtifactAiPanel({
             </div>
           ) : (
             <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
-              No description generated yet. Click "Generate Description" to create one.
+              No description generated yet. Click "Generate AI Description" to create one.
             </div>
           )}
         </CollapsibleContent>

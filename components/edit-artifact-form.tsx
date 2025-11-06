@@ -17,6 +17,7 @@ import { useState } from "react"
 import { X, Upload, ImageIcon, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 type FormData = z.infer<typeof updateArtifactSchema>
 
@@ -38,6 +39,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   const [uploadedImages, setUploadedImages] = useState<string[]>(artifact.media_urls || [])
   const [isUploading, setIsUploading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const { toast } = useToast()
 
   const form = useForm<FormData>({
     resolver: zodResolver(updateArtifactSchema),

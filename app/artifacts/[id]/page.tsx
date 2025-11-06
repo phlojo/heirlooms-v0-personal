@@ -9,6 +9,9 @@ import { getDetailUrl } from "@/lib/cloudinary"
 import { AudioPlayer } from "@/components/audio-player"
 import ReactMarkdown from "react-markdown"
 import { ArtifactAiPanelWrapper } from "@/components/artifact/ArtifactAiPanelWrapper"
+import { GenerateDescriptionButton } from "@/components/artifact/GenerateDescriptionButton"
+import { GenerateImageCaptionButton } from "@/components/artifact/GenerateImageCaptionButton"
+import { TranscribeAudioButton } from "@/components/artifact/TranscribeAudioButton"
 
 function isAudioFile(url: string): boolean {
   return (
@@ -42,15 +45,16 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
 
   let fullDescription = artifact.description || "No description provided"
 
-  if (artifact.transcript) {
-    fullDescription += `\n\n${artifact.transcript}`
-  }
-
   if (artifact.ai_description) {
     fullDescription += `\n\n${artifact.ai_description}`
   }
 
   const imageCaptions = artifact.image_captions || {}
+
+  const mediaUrls = artifact.media_urls || []
+  const totalMedia = mediaUrls.length
+  const audioFiles = mediaUrls.filter((url) => isAudioFile(url)).length
+  const imageFiles = totalMedia - audioFiles
 
   return (
     <AppLayout user={user}>
@@ -114,10 +118,63 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
           </div>
         </div>
 
+        <div className="rounded-2xl border bg-card p-6 shadow-md">
+          <h2 className="text-xl font-semibold">Details</h2>
+          <dl className="mt-4 space-y-3 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Collection</dt>
+              <dd className="font-medium">
+                <Link href={collectionHref} className="text-primary hover:underline">
+                  {artifact.collection?.title || "Unknown"}
+                </Link>
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Added</dt>
+              <dd className="font-medium">{new Date(artifact.created_at).toLocaleDateString()}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Total Media</dt>
+              <dd className="font-medium">
+                {totalMedia} {totalMedia === 1 ? "file" : "files"}
+              </dd>
+            </div>
+            {imageFiles > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Photos/Videos</dt>
+                <dd className="font-medium">{imageFiles}</dd>
+              </div>
+            )}
+            {audioFiles > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Audio Recordings</dt>
+                <dd className="font-medium">{audioFiles}</dd>
+              </div>
+            )}
+            {artifact.transcript && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Transcription</dt>
+                <dd className="font-medium text-green-600">Available</dd>
+              </div>
+            )}
+            {artifact.ai_description && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">AI Description</dt>
+                <dd className="font-medium text-green-600">Generated</dd>
+              </div>
+            )}
+          </dl>
+        </div>
+
         <div className="space-y-6">
           <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
             <ReactMarkdown>{fullDescription}</ReactMarkdown>
           </div>
+          {canEdit && (
+            <div>
+              <GenerateDescriptionButton artifactId={artifact.id} />
+            </div>
+          )}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
@@ -125,7 +182,24 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
             {artifact.media_urls && artifact.media_urls.length > 0 ? (
               artifact.media_urls.map((url, index) =>
                 isAudioFile(url) ? (
-                  <AudioPlayer key={index} src={url} title="Audio Recording" />
+                  <div key={index} className="space-y-3">
+                    <AudioPlayer src={url} title="Audio Recording" />
+                    {canEdit && <TranscribeAudioButton artifactId={artifact.id} audioUrl={url} />}
+
+                    <div className="rounded-lg border bg-muted/30 p-4">
+                      <h3 className="text-sm font-semibold mb-2">Transcript</h3>
+                      {artifact.transcript ? (
+                        <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                          {artifact.transcript}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">
+                          No transcript available yet. Click the "AI Transcribe Audio" button above to generate a
+                          transcript of this audio recording.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 ) : (
                   <div key={index} className="space-y-2">
                     <div className="aspect-square overflow-hidden border bg-muted">
@@ -135,9 +209,12 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
                         className="h-full w-full object-cover"
                       />
                     </div>
-                    {imageCaptions[url] && (
-                      <p className="text-sm text-muted-foreground italic leading-relaxed">{imageCaptions[url]}</p>
-                    )}
+                    <div className="space-y-1">
+                      {imageCaptions[url] && (
+                        <p className="text-sm text-muted-foreground italic leading-relaxed">{imageCaptions[url]}</p>
+                      )}
+                      {canEdit && <GenerateImageCaptionButton artifactId={artifact.id} imageUrl={url} />}
+                    </div>
                   </div>
                 ),
               )
@@ -151,24 +228,6 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
           </div>
 
           <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold">Details</h2>
-              <dl className="mt-4 space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Collection</dt>
-                  <dd className="font-medium">
-                    <Link href={collectionHref} className="text-primary hover:underline">
-                      {artifact.collection?.title || "Unknown"}
-                    </Link>
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Added</dt>
-                  <dd className="font-medium">{new Date(artifact.created_at).toLocaleDateString()}</dd>
-                </div>
-              </dl>
-            </div>
-
             {canEdit && (
               <ArtifactAiPanelWrapper
                 artifactId={artifact.id}
