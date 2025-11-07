@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { TopNav } from "./top-nav"
 import { SideNav } from "./side-nav"
+import BottomNav from "./navigation/bottom-nav"
 import { useIsMobile } from "@/hooks/use-mobile"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import { PageTransition } from "./page-transition"
@@ -40,12 +41,14 @@ export function AppLayout({ children, user }: AppLayoutProps) {
       <div className="flex">
         <SideNav isOpen={sidebarOpen} onClose={() => handleSidebarToggle(false)} isMobile={isMobile} />
 
-        <main className="flex-1 p-6 transition-all duration-200 lg:p-8">
+        <main className="flex-1 p-6 pb-24 transition-all duration-200 lg:p-8 lg:pb-8">
           <div className="mx-auto max-w-7xl">
             <PageTransition>{children}</PageTransition>
           </div>
         </main>
       </div>
+
+      <BottomNav user={user} />
     </div>
   )
 }
