@@ -44,14 +44,12 @@ export function StickyNav({
   }
 
   const truncateBackLabel = (label: string) => {
-    // Remove " Collection" if it exists at the end
     const withoutSuffix = label.endsWith(" Collection") ? label.slice(0, -11) : label
 
     // Truncate to 20 characters
     const truncated = withoutSuffix.length > 20 ? withoutSuffix.slice(0, 20) + "..." : withoutSuffix
 
-    // Add " Collection" back
-    return `${truncated} Collection`
+    return truncated
   }
 
   const displayLabel = truncateBackLabel(backLabel)
