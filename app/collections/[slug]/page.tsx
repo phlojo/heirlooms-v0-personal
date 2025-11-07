@@ -10,10 +10,19 @@ import { ArtifactCard } from "@/components/artifact-card"
 import { DeleteCollectionButton } from "@/components/delete-collection-button"
 import { StickyNav } from "@/components/sticky-nav"
 
-export default async function CollectionDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CollectionDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ mode?: string }>
+}) {
   const user = await getCurrentUser()
 
   const { slug } = await params
+  const { mode: rawMode } = await searchParams
+
+  const mode: "all" | "mine" | "both" = rawMode === "all" ? "all" : rawMode === "mine" ? "mine" : "both"
 
   if (slug === "new") {
     redirect("/collections/new")
@@ -34,7 +43,7 @@ export default async function CollectionDetailPage({ params }: { params: Promise
 
   const artifacts = await getArtifactsByCollection(collection.id)
 
-  const { previous, next } = await getAdjacentCollections(collection.id, user?.id || null)
+  const { previous, next } = await getAdjacentCollections(collection.id, user?.id || null, mode)
 
   return (
     <AppLayout user={user}>
@@ -42,12 +51,14 @@ export default async function CollectionDetailPage({ params }: { params: Promise
         <StickyNav
           title={collection.title}
           backHref="/collections"
-          backLabel="Back to Collections"
+          backLabel="All Collections"
           previousItem={previous ? { id: previous.slug, title: previous.title } : null}
           nextItem={next ? { id: next.slug, title: next.title } : null}
           editHref={`/collections/${collection.id}/edit`}
           canEdit={canEdit}
           itemType="collection"
+          mode={mode === "both" ? undefined : mode}
+          authorUserId={collection.user_id}
         />
 
         <div className="space-y-4">

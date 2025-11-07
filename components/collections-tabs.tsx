@@ -62,7 +62,7 @@ export function CollectionsTabs({ user, myCollections, allCollections }: Collect
         {allCollections.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {allCollections.map((collection) => (
-              <CollectionCard key={collection.id} collection={collection} />
+              <CollectionCard key={collection.id} collection={collection} mode="all" />
             ))}
           </div>
         ) : (
@@ -88,7 +88,7 @@ export function CollectionsTabs({ user, myCollections, allCollections }: Collect
         ) : myCollections.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {myCollections.map((collection) => (
-              <CollectionCard key={collection.id} collection={collection} />
+              <CollectionCard key={collection.id} collection={collection} mode="mine" />
             ))}
           </div>
         ) : (

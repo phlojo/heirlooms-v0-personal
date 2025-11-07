@@ -57,83 +57,91 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
 
   return (
     <AppLayout user={user}>
-      <div className="space-y-8">
-        <StickyNav
-          title={artifact.title}
-          backHref={collectionHref}
-          backLabel={`Back to ${artifact.collection?.title || "Uncategorized"} Collection`}
-          previousItem={previous}
-          nextItem={next}
-          editHref={`/artifacts/${id}/edit`}
-          canEdit={canEdit}
-          itemType="artifact"
-        />
-
-        <div className="rounded-2xl border bg-card p-6 shadow-md">
-          <h2 className="text-xl font-semibold">Details</h2>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Collection</dt>
-              <dd className="font-medium">
-                <Link href={collectionHref} className="text-primary hover:underline">
-                  {artifact.collection?.title || "Unknown"}
-                </Link>
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Added</dt>
-              <dd className="font-medium">{new Date(artifact.created_at).toLocaleDateString()}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Total Media</dt>
-              <dd className="font-medium">
-                {totalMedia} {totalMedia === 1 ? "file" : "files"}
-              </dd>
-            </div>
-            {imageFiles > 0 && (
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Photos/Videos</dt>
-                <dd className="font-medium">{imageFiles}</dd>
-              </div>
-            )}
-            {audioFiles > 0 && (
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Audio Recordings</dt>
-                <dd className="font-medium">{audioFiles}</dd>
-              </div>
-            )}
-            {artifact.transcript && (
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Transcription</dt>
-                <dd className="font-medium text-green-600">Available</dd>
-              </div>
-            )}
-            {artifact.ai_description && (
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">AI Description</dt>
-                <dd className="font-medium text-green-600">Generated</dd>
-              </div>
-            )}
-          </dl>
+      <div className="space-y-8 -mx-6 lg:-mx-8">
+        {/* Constrained content wrapper */}
+        <div className="px-6 lg:px-8">
+          <StickyNav
+            title={artifact.title}
+            backHref={collectionHref}
+            backLabel={`${artifact.collection?.title || "Uncategorized"} Collection`}
+            previousItem={previous}
+            nextItem={next}
+            editHref={`/artifacts/${id}/edit`}
+            canEdit={canEdit}
+            itemType="artifact"
+          />
         </div>
 
-        <div className="space-y-6">
-          <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
-            <ReactMarkdown>{fullDescription}</ReactMarkdown>
+        <div className="px-6 lg:px-8">
+          <div className="rounded-2xl border bg-card p-6 shadow-md">
+            <h2 className="text-xl font-semibold">Details</h2>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Collection</dt>
+                <dd className="font-medium">
+                  <Link href={collectionHref} className="text-primary hover:underline">
+                    {artifact.collection?.title || "Unknown"}
+                  </Link>
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Added</dt>
+                <dd className="font-medium">{new Date(artifact.created_at).toLocaleDateString()}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Total Media</dt>
+                <dd className="font-medium">
+                  {totalMedia} {totalMedia === 1 ? "file" : "files"}
+                </dd>
+              </div>
+              {imageFiles > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Photos/Videos</dt>
+                  <dd className="font-medium">{imageFiles}</dd>
+                </div>
+              )}
+              {audioFiles > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Audio Recordings</dt>
+                  <dd className="font-medium">{audioFiles}</dd>
+                </div>
+              )}
+              {artifact.transcript && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Transcription</dt>
+                  <dd className="font-medium text-green-600">Available</dd>
+                </div>
+              )}
+              {artifact.ai_description && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">AI Description</dt>
+                  <dd className="font-medium text-green-600">Generated</dd>
+                </div>
+              )}
+            </dl>
           </div>
-          {canEdit && (
-            <div>
-              <GenerateDescriptionButton artifactId={artifact.id} />
+        </div>
+
+        <div className="px-6 lg:px-8">
+          <div className="space-y-6">
+            <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
+              <ReactMarkdown>{fullDescription}</ReactMarkdown>
             </div>
-          )}
+            {canEdit && (
+              <div>
+                <GenerateDescriptionButton artifactId={artifact.id} />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
+          {/* Left column: Images and audio (full-width on mobile, half on desktop) */}
           <div className="space-y-4">
             {artifact.media_urls && artifact.media_urls.length > 0 ? (
               artifact.media_urls.map((url, index) =>
                 isAudioFile(url) ? (
-                  <div key={index} className="space-y-3">
+                  <div key={index} className="space-y-3 px-6 lg:px-8">
                     <AudioPlayer src={url} title="Audio Recording" />
                     {canEdit && <TranscribeAudioButton artifactId={artifact.id} audioUrl={url} />}
 
@@ -153,14 +161,14 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
                   </div>
                 ) : (
                   <div key={index} className="space-y-2">
-                    <div className="aspect-square overflow-hidden border bg-muted">
+                    <div className="aspect-square overflow-hidden bg-muted">
                       <img
                         src={getDetailUrl(url) || "/placeholder.svg"}
                         alt={`${artifact.title} - Image ${index + 1}`}
                         className="h-full w-full object-cover"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 px-6 lg:px-8">
                       {imageCaptions[url] && (
                         <p className="text-sm text-muted-foreground italic leading-relaxed">{imageCaptions[url]}</p>
                       )}
@@ -170,7 +178,7 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
                 ),
               )
             ) : (
-              <div className="aspect-square overflow-hidden border bg-muted">
+              <div className="aspect-square overflow-hidden bg-muted">
                 <div className="flex h-full items-center justify-center">
                   <p className="text-sm text-muted-foreground">No media available</p>
                 </div>
@@ -178,7 +186,8 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
             )}
           </div>
 
-          <div className="space-y-6">
+          {/* Right column: AI panel with padding */}
+          <div className="space-y-6 px-6 lg:px-8">
             {canEdit && (
               <ArtifactAiPanelWrapper
                 artifactId={artifact.id}

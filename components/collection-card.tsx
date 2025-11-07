@@ -6,7 +6,7 @@ import { CollectionThumbnailGrid } from "@/components/collection-thumbnail-grid"
 interface CollectionCardProps {
   collection: {
     id: string
-    slug?: string // Added slug field
+    slug?: string
     title: string
     description?: string
     cover_image?: string
@@ -15,10 +15,12 @@ interface CollectionCardProps {
     authorName?: string | null
     thumbnailImages?: string[]
   }
+  mode?: "all" | "mine"
 }
 
-export function CollectionCard({ collection }: CollectionCardProps) {
-  const href = collection.slug ? `/collections/${collection.slug}` : `/collections/${collection.id}`
+export function CollectionCard({ collection, mode }: CollectionCardProps) {
+  const baseHref = collection.slug ? `/collections/${collection.slug}` : `/collections/${collection.id}`
+  const href = mode ? `${baseHref}?mode=${mode}` : baseHref
 
   return (
     <Link href={href}>
