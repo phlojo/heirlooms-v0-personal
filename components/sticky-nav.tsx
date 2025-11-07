@@ -45,7 +45,7 @@ export function StickyNav({
 
   return (
     <div className="sticky top-16 z-30 -mx-6 bg-background px-6 lg:-mx-8 lg:px-8 pt-1 pb-2">
-      <div className="mb-4 flex items-center gap-2 mt-2">
+      <div className="flex items-center gap-2 mt-2 mb-2">
         <Button variant="ghost" size="sm" asChild className="gap-2">
           <Link href={backHref}>
             <ArrowLeft className="h-4 w-4" />
