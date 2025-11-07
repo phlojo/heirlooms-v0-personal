@@ -42,7 +42,7 @@ export default async function CollectionDetailPage({ params }: { params: Promise
         <StickyNav
           title={collection.title}
           backHref="/collections"
-          backLabel="Back to Collections"
+          backLabel="All Collections"
           previousItem={previous ? { id: previous.slug, title: previous.title } : null}
           nextItem={next ? { id: next.slug, title: next.title } : null}
           editHref={`/collections/${collection.id}/edit`}
