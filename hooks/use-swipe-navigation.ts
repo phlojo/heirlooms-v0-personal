@@ -1,0 +1,66 @@
+"use client"
+
+import { useRouter } from "next/navigation"
+import { useEffect, useRef } from "react"
+
+interface SwipeNavigationOptions {
+  previousUrl?: string | null
+  nextUrl?: string | null
+  disabled?: boolean
+}
+
+/**
+ * Custom hook to enable swipe gestures for navigation
+ * Swipe left → navigate to next item
+ * Swipe right → navigate to previous item
+ */
+export function useSwipeNavigation({ previousUrl, nextUrl, disabled = false }: SwipeNavigationOptions) {
+  const router = useRouter()
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (disabled) return
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX
+      touchStartY.current = e.touches[0].clientY
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (touchStartX.current === null || touchStartY.current === null) return
+
+      const touchEndX = e.changedTouches[0].clientX
+      const touchEndY = e.changedTouches[0].clientY
+
+      const deltaX = touchEndX - touchStartX.current
+      const deltaY = touchEndY - touchStartY.current
+
+      // Only trigger if horizontal swipe is dominant (not vertical scroll)
+      const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY)
+      const meetsThreshold = Math.abs(deltaX) > 75 // 75px threshold
+
+      if (isHorizontalSwipe && meetsThreshold) {
+        if (deltaX > 0 && previousUrl) {
+          // Swipe right → go to previous
+          router.push(previousUrl)
+        } else if (deltaX < 0 && nextUrl) {
+          // Swipe left → go to next
+          router.push(nextUrl)
+        }
+      }
+
+      // Reset
+      touchStartX.current = null
+      touchStartY.current = null
+    }
+
+    document.addEventListener("touchstart", handleTouchStart, { passive: true })
+    document.addEventListener("touchend", handleTouchEnd, { passive: true })
+
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart)
+      document.removeEventListener("touchend", handleTouchEnd)
+    }
+  }, [previousUrl, nextUrl, disabled, router])
+}
