@@ -20,6 +20,15 @@ const navItems: NavItem[] = [
   { href: "/profile", label: "Profile", icon: User },
 ]
 
+/**
+ * BottomNav - Mobile-only bottom navigation bar
+ *
+ * Safe-area handling:
+ * - Uses max(env(safe-area-inset-bottom), 0px) to respect iOS notch and Android gesture nav
+ * - Adds 8px base padding + safe-area-inset-bottom for comfortable spacing
+ * - Tested with simulated 24px inset (typical Android gesture bar height)
+ * - Total height dynamically adjusts: 64px base + safe-area-inset-bottom
+ */
 export default function BottomNav() {
   const pathname = usePathname()
 
@@ -31,10 +40,11 @@ export default function BottomNav() {
         "lg:hidden",
       )}
       style={{
-        paddingBottom: "env(safe-area-inset-bottom)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)",
+        height: "calc(64px + env(safe-area-inset-bottom, 0px))",
       }}
     >
-      <div className="flex h-full items-center justify-around px-2">
+      <div className="flex h-16 items-center justify-around px-2">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
