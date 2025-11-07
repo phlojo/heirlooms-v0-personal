@@ -89,10 +89,9 @@ export function StickyNavWithTabs({
   return (
     <div className="sticky top-16 z-30 -mx-6 bg-background px-6 pb-4 lg:-mx-8 lg:px-8">
       <div className="mb-4 flex items-center gap-2 mt-2">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href={backHref}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {backLabel}
+        <Button variant="ghost" size="icon" asChild>
+          <Link href={backHref} title={backLabel}>
+            <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         {userId && (
