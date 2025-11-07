@@ -63,7 +63,7 @@ export function Author({ userId, authorName, size = "md", showAvatar = true, cla
     return (
       <div
         className={cn(
-          "inline-flex items-center rounded-full bg-primary/10 font-medium text-primary/50",
+          "inline-flex w-fit items-center rounded-full bg-primary/10 font-medium text-primary/50",
           sizeClasses[size],
           className,
         )}
@@ -77,7 +77,7 @@ export function Author({ userId, authorName, size = "md", showAvatar = true, cla
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-full bg-primary/10 font-medium text-primary transition-colors",
+        "inline-flex w-fit items-center rounded-full bg-primary/10 font-medium text-primary transition-colors",
         sizeClasses[size],
         className,
       )}
