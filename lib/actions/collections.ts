@@ -94,16 +94,21 @@ export async function getCollectionBySlug(slug: string) {
 }
 
 /**
- * Server action to get previous and next collections based on all viewable collections
- * Returns collections in chronological order (newest first) including both public collections
- * and the user's own collections, matching the order on the collections page
+ * Server action to get previous and next collections based on filter mode
+ * @param collectionId - Current collection ID
+ * @param userId - Current user ID (null if not logged in)
+ * @param mode - Filter mode: "all" (public only), "mine" (user's collections only), or "both" (public + user's)
  */
-export async function getAdjacentCollections(collectionId: string, userId: string | null) {
+export async function getAdjacentCollections(
+  collectionId: string,
+  userId: string | null,
+  mode: "all" | "mine" | "both" = "both",
+) {
   const supabase = await createClient()
 
   const { data: currentCollection } = await supabase
     .from("collections")
-    .select("user_id, is_public")
+    .select("user_id, is_public, created_at")
     .eq("id", collectionId)
     .single()
 
@@ -111,18 +116,28 @@ export async function getAdjacentCollections(collectionId: string, userId: strin
     return { previous: null, next: null }
   }
 
-  // Build query to get all collections the user can view
+  // Build query based on mode
   let query = supabase
     .from("collections")
     .select("id, title, slug, created_at, user_id, is_public")
     .order("created_at", { ascending: false })
 
-  // If user is logged in, get public collections OR their own collections
-  // If not logged in, only get public collections
-  if (userId) {
-    query = query.or(`is_public.eq.true,user_id.eq.${userId}`)
-  } else {
+  if (mode === "all") {
+    // Only public collections
     query = query.eq("is_public", true)
+  } else if (mode === "mine") {
+    // Only user's collections
+    if (!userId) {
+      return { previous: null, next: null }
+    }
+    query = query.eq("user_id", userId)
+  } else {
+    // Both public and user's collections
+    if (userId) {
+      query = query.or(`is_public.eq.true,user_id.eq.${userId}`)
+    } else {
+      query = query.eq("is_public", true)
+    }
   }
 
   const { data: collections, error } = await query
@@ -144,6 +159,50 @@ export async function getAdjacentCollections(collectionId: string, userId: strin
   const next = currentIndex < collections.length - 1 ? collections[currentIndex + 1] : null
 
   return { previous, next }
+}
+
+/**
+ * Server action to find the closest collection when switching filter modes
+ * @param currentCollectionId - Current collection ID
+ * @param currentCreatedAt - Current collection's created_at timestamp
+ * @param userId - Current user ID
+ * @param targetMode - Target filter mode to switch to
+ */
+export async function getClosestCollection(
+  currentCollectionId: string,
+  currentCreatedAt: string,
+  userId: string,
+  targetMode: "all" | "mine",
+) {
+  const supabase = await createClient()
+
+  let query = supabase
+    .from("collections")
+    .select("id, title, slug, created_at")
+    .order("created_at", { ascending: false })
+
+  if (targetMode === "all") {
+    query = query.eq("is_public", true)
+  } else if (targetMode === "mine") {
+    query = query.eq("user_id", userId)
+  }
+
+  const { data: collections, error } = await query
+
+  if (error || !collections || collections.length === 0) {
+    return null
+  }
+
+  // Check if current collection is in the filtered list
+  const currentInList = collections.find((c) => c.id === currentCollectionId)
+  if (currentInList) {
+    return currentInList
+  }
+
+  // Find the closest next collection (older or same timestamp)
+  const closestNext = collections.find((c) => new Date(c.created_at) <= new Date(currentCreatedAt))
+
+  return closestNext || collections[0]
 }
 
 /**

@@ -8,7 +8,7 @@ import { getCollectionBySlug, getAdjacentCollections } from "@/lib/actions/colle
 import { getArtifactsByCollection } from "@/lib/actions/artifacts"
 import { ArtifactCard } from "@/components/artifact-card"
 import { DeleteCollectionButton } from "@/components/delete-collection-button"
-import { StickyNav } from "@/components/sticky-nav"
+import { StickyNavWithTabs } from "@/components/sticky-nav-with-tabs"
 
 export default async function CollectionDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const user = await getCurrentUser()
@@ -34,12 +34,14 @@ export default async function CollectionDetailPage({ params }: { params: Promise
 
   const artifacts = await getArtifactsByCollection(collection.id)
 
-  const { previous, next } = await getAdjacentCollections(collection.id, user?.id || null)
+  // The client component will handle filtering based on the active tab
+  const mode = "both" // This will be overridden by client-side tab selection
+  const { previous, next } = await getAdjacentCollections(collection.id, user?.id || null, mode)
 
   return (
     <AppLayout user={user}>
       <div className="space-y-8">
-        <StickyNav
+        <StickyNavWithTabs
           title={collection.title}
           backHref="/collections"
           backLabel="All Collections"
@@ -48,6 +50,9 @@ export default async function CollectionDetailPage({ params }: { params: Promise
           editHref={`/collections/${collection.id}/edit`}
           canEdit={canEdit}
           itemType="collection"
+          userId={user?.id || null}
+          collectionId={collection.id}
+          currentCreatedAt={collection.created_at}
         />
 
         <div className="space-y-4">
