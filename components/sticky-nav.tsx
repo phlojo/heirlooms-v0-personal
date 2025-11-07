@@ -57,7 +57,7 @@ export function StickyNav({
 
   return (
     <div className="sticky top-16 z-50 bg-background border-b">
-      <div className="container max-w-7xl mx-auto lg:px-8 py-3 px-0">
+      <div className="px-6 lg:px-8 py-3">
         <div className="flex items-center gap-2 mb-3">
           <Button variant="ghost" size="sm" asChild className="gap-2">
             <Link href={backHref}>
