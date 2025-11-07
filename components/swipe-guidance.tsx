@@ -14,9 +14,9 @@ export function SwipeGuidance({ onDismiss }: SwipeGuidanceProps) {
       aria-live="polite"
     >
       <div className="bg-foreground text-background px-5 py-3 rounded-full shadow-lg flex items-center justify-center gap-3 text-sm font-medium">
-        <ArrowLeft className="h-5 w-5" />
-        <span>Swipe to navigate</span>
-        <ArrowRight className="h-5 w-5" />
+        <ArrowLeft className="h-5 w-5 flex-shrink-0" />
+        <span className="text-center">Swipe to navigate</span>
+        <ArrowRight className="h-5 w-5 flex-shrink-0" />
       </div>
     </div>
   )
