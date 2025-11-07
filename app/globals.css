@@ -49,7 +49,8 @@
   --shadow-color: #000000;
 
   /* Bottom nav height for mobile spacing */
-  --bottom-nav-height: 80px; /* Base height (64px) + safe area padding (16px min) */
+  /* Increased from 80px to 96px to match new bottom nav height (80px + 16px padding) */
+  --bottom-nav-height: 96px; /* Base height (80px) + safe area padding (16px min) */
 }
 
 .dark {

@@ -43,9 +43,14 @@ function track(event: string, data: Record<string, unknown>) {
  *
  * Safe-area handling:
  * - Uses max(env(safe-area-inset-bottom), 0px) to respect iOS notch and Android gesture nav
- * - Adds 8px base padding + safe-area-inset-bottom for comfortable spacing
+ * - Adds 12px base padding + safe-area-inset-bottom for comfortable spacing
  * - Tested with simulated 24px inset (typical Android gesture bar height)
- * - Total height dynamically adjusts: 64px base + safe-area-inset-bottom
+ * - Total height dynamically adjusts: 80px base + safe-area-inset-bottom
+ *
+ * Touch optimization:
+ * - Increased height from 64px to 80px for better touch targets
+ * - Larger padding on links (px-4 py-3) for easier tapping
+ * - Active class prevents iOS double-tap issue with touch-action
  */
 export default function BottomNav() {
   const pathname = usePathname()
@@ -54,15 +59,15 @@ export default function BottomNav() {
     <nav
       className={cn(
         "fixed inset-x-0 bottom-0 z-50",
-        "h-16 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
+        "h-20 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
         "lg:hidden",
       )}
       style={{
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)",
-        height: "calc(64px + env(safe-area-inset-bottom, 0px))",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",
+        height: "calc(80px + env(safe-area-inset-bottom, 0px))",
       }}
     >
-      <div className="flex h-16 items-center justify-around px-2">
+      <div className="flex h-20 items-center justify-around px-2">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
@@ -73,7 +78,8 @@ export default function BottomNav() {
               href={item.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex min-w-[44px] flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 transition-colors",
+                "flex min-w-[56px] flex-col items-center justify-center gap-1.5 rounded-lg px-4 py-3 transition-colors",
+                "touch-manipulation active:scale-95",
                 "hover:bg-accent",
                 isActive ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
@@ -85,8 +91,8 @@ export default function BottomNav() {
                 })
               }}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-[10px] leading-none">{item.label}</span>
+              <Icon className="h-6 w-6" />
+              <span className="text-[11px] leading-none">{item.label}</span>
             </Link>
           )
         })}
