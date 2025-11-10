@@ -62,7 +62,7 @@ export default async function HomePage() {
             Welcome to Heirlooms
           </h1>
           <p className="mt-2 text-lg text-muted-foreground mb-6">
-            Preserve and share the objects and stories that matter to you.
+            Preserve what matters to you and discover collections from the community.
           </p>
         </div>
 
