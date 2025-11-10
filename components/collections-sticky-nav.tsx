@@ -26,7 +26,7 @@ interface StickyNavProps {
   showBackButton?: boolean
 }
 
-export function StickyNav({
+export function CollectionsStickyNav({
   title,
   backHref,
   backLabel,
