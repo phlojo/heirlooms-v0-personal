@@ -1,9 +1,9 @@
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, Edit } from "lucide-react"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { getCurrentUser } from "@/lib/supabase/server"
+import { getCurrentUser, createClient } from "@/lib/supabase/server"
 import { getCollectionBySlug, getAdjacentCollections } from "@/lib/actions/collections"
 import { getArtifactsByCollection } from "@/lib/actions/artifacts"
 import { ArtifactCard } from "@/components/artifact-card"
@@ -19,6 +19,7 @@ export default async function CollectionDetailPage({
   searchParams: Promise<{ mode?: string }>
 }) {
   const user = await getCurrentUser()
+  const supabase = await createClient()
 
   const { slug } = await params
   const { mode: rawMode } = await searchParams
@@ -30,19 +31,38 @@ export default async function CollectionDetailPage({
   }
 
   let collection
-  try {
-    collection = await getCollectionBySlug(slug)
-  } catch (error) {
-    console.error("[v0] Error loading collection:", error)
-    notFound()
-  }
+  let isUnsorted = false
+  if (slug === "unsorted") {
+    if (!user) {
+      notFound()
+    }
+    // Virtual "Unsorted" collection
+    isUnsorted = true
+    collection = {
+      id: "unsorted",
+      title: "Unsorted",
+      description: "Artifacts that haven't been added to a collection yet",
+      slug: "unsorted",
+      user_id: user.id,
+      is_public: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+  } else {
+    try {
+      collection = await getCollectionBySlug(slug)
+    } catch (error) {
+      console.error("[v0] Error loading collection:", error)
+      notFound()
+    }
 
-  if (!collection) {
-    notFound()
+    if (!collection) {
+      notFound()
+    }
   }
 
   const canView = collection.is_public || (user && collection.user_id === user.id)
-  const canEdit = user && collection.user_id === user.id
+  const canEdit = user && collection.user_id === user.id && !isUnsorted
 
   if (!canView) {
     notFound()
@@ -50,21 +70,32 @@ export default async function CollectionDetailPage({
 
   let artifacts = []
   try {
-    artifacts = await getArtifactsByCollection(collection.id)
+    if (isUnsorted) {
+      // Get artifacts with null collection_id
+      const { data } = await supabase
+        .from("artifacts")
+        .select("*, collection:collections(id, title)")
+        .eq("user_id", user!.id)
+        .is("collection_id", null)
+        .order("created_at", { ascending: false })
+      artifacts = data || []
+    } else {
+      artifacts = await getArtifactsByCollection(collection.id)
+    }
   } catch (error) {
     console.error("[v0] Error loading artifacts:", error)
-    // Continue with empty artifacts array
   }
 
   let previous = null
   let next = null
-  try {
-    const adjacent = await getAdjacentCollections(collection.id, user?.id || null, mode)
-    previous = adjacent.previous
-    next = adjacent.next
-  } catch (error) {
-    console.error("[v0] Error loading adjacent collections:", error)
-    // Continue without navigation
+  if (!isUnsorted) {
+    try {
+      const adjacent = await getAdjacentCollections(collection.id, user?.id || null, mode)
+      previous = adjacent.previous
+      next = adjacent.next
+    } catch (error) {
+      console.error("[v0] Error loading adjacent collections:", error)
+    }
   }
 
   const getNavUrl = (slug: string) => {
@@ -94,11 +125,22 @@ export default async function CollectionDetailPage({
           />
 
           <div className="space-y-4">
+            {isUnsorted && (
+              <div className="inline-flex items-center gap-2 rounded-md border border-muted bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                <span>System Collection</span>
+              </div>
+            )}
             {collection.description && <p className="text-muted-foreground">{collection.description}</p>}
 
-            {canEdit && (
+            {canEdit && !isUnsorted && (
               <div className="flex items-center gap-3">
-                <Button asChild>
+                <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <Link href={`/collections/${collection.id}/edit`}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Collection
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
                   <Link href={`/artifacts/new?collectionId=${collection.id}`}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Artifact
@@ -107,12 +149,22 @@ export default async function CollectionDetailPage({
                 <DeleteCollectionButton collectionId={collection.id} collectionTitle={collection.title} />
               </div>
             )}
+
+            {isUnsorted && (
+              <div className="rounded-lg border border-dashed bg-muted/20 p-4">
+                <p className="text-sm text-muted-foreground mb-3">
+                  These artifacts need a home. You can create them without a collection and assign them later.
+                </p>
+              </div>
+            )}
           </div>
 
           {artifacts.length === 0 ? (
             <div className="rounded-lg border border-dashed p-12 text-center">
-              <p className="text-sm text-muted-foreground">No artifacts in this collection yet.</p>
-              {canEdit && (
+              <p className="text-sm text-muted-foreground">
+                {isUnsorted ? "No unsorted artifacts." : "No artifacts in this collection yet."}
+              </p>
+              {canEdit && !isUnsorted && (
                 <p className="mt-2 text-xs text-muted-foreground">Click "Add Artifact" above to add your first item.</p>
               )}
             </div>

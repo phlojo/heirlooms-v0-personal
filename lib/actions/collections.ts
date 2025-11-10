@@ -215,13 +215,21 @@ export async function getClosestCollection(
 }
 
 /**
- * Server action to delete a collection and all its artifacts
- * Also deletes associated media from Cloudinary
+ * Server action to update an existing collection
  */
-export async function deleteCollection(collectionId: string) {
+export async function updateCollection(collectionId: string, input: CollectionInput) {
+  const validatedFields = collectionSchema.safeParse(input)
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      error: "Invalid input",
+      fieldErrors: validatedFields.error.flatten().fieldErrors,
+    }
+  }
+
   const supabase = await createClient()
 
-  // Check authentication
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -232,6 +240,50 @@ export async function deleteCollection(collectionId: string) {
 
   // Verify ownership
   const collection = await getCollection(collectionId)
+  if (!collection || collection.user_id !== user.id) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  // Update collection
+  const { data, error } = await supabase
+    .from("collections")
+    .update({
+      title: validatedFields.data.title,
+      description: validatedFields.data.description,
+      is_public: validatedFields.data.is_public,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", collectionId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error("[v0] Collection update error:", error)
+    return { success: false, error: "Failed to update collection. Please try again." }
+  }
+
+  revalidatePath("/collections")
+  revalidatePath(`/collections/${collection.slug}`)
+  return { success: true, data }
+}
+
+/**
+ * Server action to delete a collection with option to keep artifacts
+ * @param collectionId - Collection ID to delete
+ * @param deleteArtifacts - If true, delete artifacts; if false, move to unsorted (set collection_id to null)
+ */
+export async function deleteCollection(collectionId: string, deleteArtifacts = false) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  const collection = await getCollection(collectionId)
   if (!collection) {
     return { success: false, error: "Collection not found" }
   }
@@ -240,26 +292,33 @@ export async function deleteCollection(collectionId: string) {
     return { success: false, error: "You do not have permission to delete this collection" }
   }
 
-  // Get all artifacts in the collection to delete their media
-  const artifacts = await getArtifactsByCollection(collectionId)
+  if (deleteArtifacts) {
+    // Get all artifacts to delete their media
+    const artifacts = await getArtifactsByCollection(collectionId)
 
-  // Delete media from Cloudinary for each artifact
-  const mediaUrls: string[] = []
-  artifacts.forEach((artifact) => {
-    if (artifact.media_urls && Array.isArray(artifact.media_urls)) {
-      mediaUrls.push(...artifact.media_urls)
-    }
-  })
+    const mediaUrls: string[] = []
+    artifacts.forEach((artifact) => {
+      if (artifact.media_urls && Array.isArray(artifact.media_urls)) {
+        mediaUrls.push(...artifact.media_urls)
+      }
+    })
 
-  // Delete each media file from Cloudinary
-  for (const url of mediaUrls) {
-    const publicId = await extractPublicIdFromUrl(url)
-    if (publicId) {
-      await deleteCloudinaryMedia(publicId)
+    // Delete each media file from Cloudinary
+    for (const url of mediaUrls) {
+      const publicId = await extractPublicIdFromUrl(url)
+      if (publicId) {
+        await deleteCloudinaryMedia(publicId)
+      }
     }
+
+    // Delete artifacts
+    await supabase.from("artifacts").delete().eq("collection_id", collectionId)
+  } else {
+    // Move artifacts to "Unsorted" by setting collection_id to null
+    await supabase.from("artifacts").update({ collection_id: null }).eq("collection_id", collectionId)
   }
 
-  // Delete the collection (artifacts will cascade delete due to foreign key constraint)
+  // Delete the collection
   const { error } = await supabase.from("collections").delete().eq("id", collectionId)
 
   if (error) {
@@ -267,7 +326,6 @@ export async function deleteCollection(collectionId: string) {
     return { success: false, error: "Failed to delete collection. Please try again." }
   }
 
-  // Revalidate paths
   revalidatePath("/collections")
   revalidatePath(`/collections/${collection.slug}`)
 

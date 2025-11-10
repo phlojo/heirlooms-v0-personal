@@ -13,11 +13,21 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { X, Upload, ImageIcon, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 type FormData = z.infer<typeof updateArtifactSchema>
 
@@ -40,6 +50,9 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [success, setSuccess] = useState(false)
   const { toast } = useToast()
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(updateArtifactSchema),
@@ -52,6 +65,47 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       media_urls: artifact.media_urls || [],
     },
   })
+
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      setHasUnsavedChanges(true)
+    })
+    return () => subscription.unsubscribe()
+  }, [form])
+
+  useEffect(() => {
+    const originalUrls = artifact.media_urls || []
+    if (JSON.stringify(originalUrls.sort()) !== JSON.stringify(uploadedImages.sort())) {
+      setHasUnsavedChanges(true)
+    }
+  }, [uploadedImages, artifact.media_urls])
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && !success) {
+        e.preventDefault()
+        e.returnValue = ""
+      }
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [hasUnsavedChanges, success])
+
+  const handleNavigation = (path: string) => {
+    if (hasUnsavedChanges && !success) {
+      setPendingNavigation(path)
+      setShowUnsavedDialog(true)
+    } else {
+      router.push(path)
+    }
+  }
+
+  const confirmNavigation = () => {
+    if (pendingNavigation) {
+      router.push(pendingNavigation)
+    }
+  }
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
@@ -146,7 +200,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
 
     if (result?.success) {
       setSuccess(true)
-      // Redirect after a short delay to show success message
+      setHasUnsavedChanges(false)
       setTimeout(() => {
         router.push(`/artifacts/${artifact.id}`)
         router.refresh()
@@ -180,119 +234,136 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Title</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter artifact title" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Tell the story of this heirloom" rows={4} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="space-y-3">
-          <FormLabel>Photos</FormLabel>
-
-          {/* Upload button */}
-          <div className="flex items-center gap-3">
-            <label className="cursor-pointer">
-              <Button type="button" variant="outline" disabled={isUploading} asChild>
-                <span>
-                  <Upload className="mr-2 h-4 w-4" />
-                  {isUploading ? "Uploading..." : "Upload Photos"}
-                </span>
-              </Button>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="hidden"
-                disabled={isUploading}
-              />
-            </label>
-            <FormDescription className="!mt-0">Upload photos (max 15MB per file, 30MB total)</FormDescription>
-          </div>
-
-          {/* Image previews */}
-          {uploadedImages.length > 0 && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {uploadedImages.map((url, index) => (
-                <div key={index} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
-                  <img
-                    src={url || "/placeholder.svg"}
-                    alt={`Upload ${index + 1}`}
-                    className="h-full w-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-md transition-transform hover:scale-110"
-                    title="Delete this photo"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Empty state */}
-          {uploadedImages.length === 0 && !isUploading && (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-              <ImageIcon className="mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">No photos uploaded yet</p>
-            </div>
-          )}
-        </div>
-
-        {error && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        )}
-
-        <div className="flex gap-3">
-          <Button type="submit" disabled={form.formState.isSubmitting || isUploading}>
-            {form.formState.isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Changes"
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Title</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter artifact title" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push(`/artifacts/${artifact.id}`)}
-            disabled={form.formState.isSubmitting || isUploading}
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
-    </Form>
+          />
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Tell the story of this heirloom" rows={4} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="space-y-3">
+            <FormLabel>Photos</FormLabel>
+
+            {/* Upload button */}
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer">
+                <Button type="button" variant="outline" disabled={isUploading} asChild>
+                  <span>
+                    <Upload className="mr-2 h-4 w-4" />
+                    {isUploading ? "Uploading..." : "Upload Photos"}
+                  </span>
+                </Button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  disabled={isUploading}
+                />
+              </label>
+              <FormDescription className="!mt-0">Upload photos (max 15MB per file, 30MB total)</FormDescription>
+            </div>
+
+            {/* Image previews */}
+            {uploadedImages.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {uploadedImages.map((url, index) => (
+                  <div key={index} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
+                    <img
+                      src={url || "/placeholder.svg"}
+                      alt={`Upload ${index + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-md transition-transform hover:scale-110"
+                      title="Delete this photo"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Empty state */}
+            {uploadedImages.length === 0 && !isUploading && (
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                <ImageIcon className="mb-2 h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">No photos uploaded yet</p>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button type="submit" disabled={form.formState.isSubmitting || isUploading}>
+              {form.formState.isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleNavigation(`/artifacts/${artifact.id}`)}
+              disabled={form.formState.isSubmitting || isUploading}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Form>
+
+      <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingNavigation(null)}>Stay on Page</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmNavigation}>Leave Without Saving</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

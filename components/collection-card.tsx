@@ -14,6 +14,7 @@ interface CollectionCardProps {
     user_id: string
     authorName?: string | null
     thumbnailImages?: string[]
+    isUnsorted?: boolean // Add flag for unsorted collection
   }
   mode?: "all" | "mine"
 }
@@ -42,7 +43,14 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
         </div>
 
         <CardHeader className="pb-0">
-          <h3 className="font-semibold leading-tight line-clamp-1 text-2xl">{collection.title}</h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold leading-tight line-clamp-1 text-2xl">{collection.title}</h3>
+            {collection.isUnsorted && (
+              <span className="inline-flex items-center rounded-md border border-muted bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground whitespace-nowrap">
+                System Collection
+              </span>
+            )}
+          </div>
         </CardHeader>
 
         <CardContent className="pt-0 pb-4 space-y-4 -mt-2">
