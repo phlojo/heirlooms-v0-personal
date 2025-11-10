@@ -25,7 +25,7 @@ export function HomeCard({ title, description, href, backgroundImage }: HomeCard
           <div className="absolute inset-0 bg-black/60" />
         </>
       )}
-      <div className="relative z-10">
+      <div className="relative z-10 pr-20">
         <h2 className={`text-xl font-semibold ${backgroundImage ? "text-white" : ""}`}>{title}</h2>
         <p className={`mt-2 text-sm ${backgroundImage ? "text-white/90" : "text-muted-foreground"}`}>{description}</p>
       </div>
