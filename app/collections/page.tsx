@@ -6,11 +6,14 @@ async function getMyCollections(userId: string) {
   const supabase = await createClient()
 
   try {
+    console.log("[v0] Fetching unsorted artifacts for user:", userId)
     const { data: unsortedArtifacts, error: unsortedError } = await supabase
       .from("artifacts")
       .select("id, media_urls")
       .eq("user_id", userId)
       .is("collection_id", null)
+
+    console.log("[v0] Unsorted artifacts query result:", { count: unsortedArtifacts?.length, error: unsortedError })
 
     const unsortedCount = unsortedArtifacts?.length || 0
     const unsortedThumbnails = unsortedArtifacts?.map((a) => a.media_urls?.[0]).filter(Boolean) || []
@@ -50,6 +53,7 @@ async function getMyCollections(userId: string) {
     )
 
     if (unsortedCount > 0) {
+      console.log("[v0] Creating Unsorted collection with", unsortedCount, "artifacts")
       return [
         {
           id: "unsorted",
@@ -69,6 +73,7 @@ async function getMyCollections(userId: string) {
       ]
     }
 
+    console.log("[v0] No unsorted artifacts found, returning", collectionsWithImages.length, "collections")
     return collectionsWithImages
   } catch (error) {
     console.error("[v0] Unexpected error in getMyCollections:", error)
