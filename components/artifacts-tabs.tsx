@@ -18,7 +18,7 @@ interface Artifact {
     id: string
     title: string
     is_public: boolean
-  }
+  } | null
 }
 
 interface ArtifactsTabsProps {

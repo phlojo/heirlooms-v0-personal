@@ -6,6 +6,25 @@ async function getMyCollections(userId: string) {
   const supabase = await createClient()
 
   try {
+    console.log("[v0] getMyCollections - Fetching unsorted artifacts for user:", userId)
+
+    const { data: unsortedArtifacts, error: unsortedError } = await supabase
+      .from("artifacts")
+      .select("id, media_urls")
+      .eq("user_id", userId)
+      .is("collection_id", null)
+
+    console.log("[v0] getMyCollections - Unsorted artifacts found:", unsortedArtifacts?.length, "Error:", unsortedError)
+
+    if (unsortedError) {
+      console.error("[v0] Error fetching unsorted artifacts:", unsortedError)
+    }
+
+    const unsortedCount = unsortedArtifacts?.length || 0
+    const unsortedThumbnails = unsortedArtifacts?.map((a) => a.media_urls?.[0]).filter(Boolean) || []
+
+    console.log("[v0] getMyCollections - Unsorted count:", unsortedCount, "Thumbnails:", unsortedThumbnails.length)
+
     const { data: collections, error } = await supabase
       .from("collections")
       .select(`
@@ -35,11 +54,32 @@ async function getMyCollections(userId: string) {
           ...collection,
           thumbnailImages,
           itemCount: collection.artifacts?.[0]?.count || 0,
-          slug: collection.slug, // Ensure slug is included
+          slug: collection.slug,
         }
       }),
     )
 
+    if (unsortedCount > 0) {
+      console.log("[v0] getMyCollections - Creating Unsorted collection")
+      const unsortedCollection = {
+        id: "unsorted",
+        title: "Unsorted",
+        description: "Artifacts that haven't been added to a collection yet",
+        slug: "unsorted",
+        thumbnailImages: unsortedThumbnails.slice(0, 5),
+        itemCount: unsortedCount,
+        user_id: userId,
+        is_public: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        cover_image: null,
+        isUnsorted: true,
+      }
+
+      return [unsortedCollection, ...collectionsWithImages]
+    }
+
+    console.log("[v0] getMyCollections - No unsorted artifacts, returning only regular collections")
     return collectionsWithImages
   } catch (error) {
     console.error("[v0] Unexpected error in getMyCollections:", error)
@@ -61,7 +101,7 @@ async function getAllPublicCollections() {
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("[v0] Error fetching public collections:", error)
+      console.error("Error fetching public collections:", error)
       return []
     }
 
@@ -80,14 +120,14 @@ async function getAllPublicCollections() {
           ...collection,
           thumbnailImages,
           itemCount: collection.artifacts?.[0]?.count || 0,
-          slug: collection.slug, // Ensure slug is included
+          slug: collection.slug,
         }
       }),
     )
 
     return collectionsWithImages
   } catch (error) {
-    console.error("[v0] Unexpected error in getAllPublicCollections:", error)
+    console.error("Unexpected error in getAllPublicCollections:", error)
     return []
   }
 }

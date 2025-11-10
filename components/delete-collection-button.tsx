@@ -15,6 +15,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { deleteCollection } from "@/lib/actions/collections"
 import { toast } from "sonner"
 
@@ -26,16 +28,21 @@ interface DeleteCollectionButtonProps {
 export function DeleteCollectionButton({ collectionId, collectionTitle }: DeleteCollectionButtonProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const [deleteArtifacts, setDeleteArtifacts] = useState<"delete" | "keep">("keep")
   const router = useRouter()
 
   const handleDelete = async () => {
     setIsDeleting(true)
 
     try {
-      const result = await deleteCollection(collectionId)
+      const result = await deleteCollection(collectionId, deleteArtifacts === "delete")
 
       if (result.success) {
-        toast.success("Collection deleted successfully")
+        toast.success(
+          deleteArtifacts === "delete"
+            ? "Collection and artifacts deleted successfully"
+            : "Collection deleted. Artifacts moved to Unsorted",
+        )
         router.push("/collections")
         router.refresh()
       } else {
@@ -61,12 +68,36 @@ export function DeleteCollectionButton({ collectionId, collectionTitle }: Delete
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogTitle>Delete Collection</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently delete the collection <strong>"{collectionTitle}"</strong> and all artifacts within
-            it. This action cannot be undone and will also remove all associated media from storage.
+            You are about to delete the collection <strong>"{collectionTitle}"</strong>. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        <div className="space-y-4 py-4">
+          <Label className="text-base font-semibold">What should happen to the artifacts in this collection?</Label>
+          <RadioGroup value={deleteArtifacts} onValueChange={(value) => setDeleteArtifacts(value as "delete" | "keep")}>
+            <div className="flex items-start space-x-3 space-y-0">
+              <RadioGroupItem value="keep" id="keep" />
+              <Label htmlFor="keep" className="font-normal cursor-pointer">
+                <div className="font-medium">Move to Unsorted</div>
+                <div className="text-sm text-muted-foreground">
+                  Keep artifacts and move them to your Unsorted collection
+                </div>
+              </Label>
+            </div>
+            <div className="flex items-start space-x-3 space-y-0">
+              <RadioGroupItem value="delete" id="delete" />
+              <Label htmlFor="delete" className="font-normal cursor-pointer">
+                <div className="font-medium">Delete artifacts</div>
+                <div className="text-sm text-muted-foreground">
+                  Permanently delete all artifacts and their media from storage
+                </div>
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction

@@ -13,11 +13,8 @@ export function resetClient() {
  */
 export function createClient() {
   if (globalClient) {
-    console.log("[v0] Reusing existing Supabase client")
     return globalClient
   }
-
-  console.log("[v0] Creating new Supabase client")
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -33,7 +30,20 @@ export function createClient() {
     throw new Error("Invalid Supabase URL configuration")
   }
 
-  globalClient = createSupabaseBrowserClient(supabaseUrl, supabaseAnonKey)
+  globalClient = createSupabaseBrowserClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      detectSessionInUrl: true,
+      persistSession: true,
+      storageKey: "sb-auth-token",
+    },
+    global: {
+      headers: {
+        "X-Client-Info": "supabase-js-web",
+      },
+    },
+    // Suppress the multiple instances warning in development
+    isSingleton: true,
+  })
 
   return globalClient
 }

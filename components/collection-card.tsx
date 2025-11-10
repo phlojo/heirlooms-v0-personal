@@ -14,6 +14,8 @@ interface CollectionCardProps {
     user_id: string
     authorName?: string | null
     thumbnailImages?: string[]
+    isUnsorted?: boolean
+    is_public?: boolean
   }
   mode?: "all" | "mine"
 }
@@ -42,7 +44,19 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
         </div>
 
         <CardHeader className="pb-0">
-          <h3 className="font-semibold leading-tight line-clamp-1 text-2xl">{collection.title}</h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold leading-tight line-clamp-1 text-2xl">{collection.title}</h3>
+            {collection.is_public === false && (
+              <span className="inline-flex items-center rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-400 border border-purple-500/20">
+                Private
+              </span>
+            )}
+            {collection.isUnsorted && (
+              <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400 border border-blue-500/20">
+                Default
+              </span>
+            )}
+          </div>
         </CardHeader>
 
         <CardContent className="pt-0 pb-4 space-y-4 -mt-2">
