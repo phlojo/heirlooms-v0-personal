@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import Link from "next/link"
-import { signInWithPassword, signInWithMagicLink, signInWithGoogle } from "@/lib/actions/auth"
+import { signInWithPassword, signInWithMagicLink } from "@/lib/actions/auth"
+import { createClient } from "@/lib/supabase/client"
 import BottomNav from "@/components/navigation/bottom-nav"
 import { useIsMobile } from "@/hooks/use-mobile"
 
@@ -26,10 +27,32 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const result = await signInWithGoogle()
-      if (result?.error) {
-        setError(`Google sign-in failed: ${result.error}. Please try again.`)
+      const supabase = createClient()
+
+      // Use window.location.origin for current domain (works in preview and prod)
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/callback`
+          : process.env.NEXT_PUBLIC_SITE_URL
+            ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+            : "/auth/callback"
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          queryParams: {
+            prompt: "select_account",
+          },
+        },
+      })
+
+      if (error) {
+        setError(`Google sign-in failed: ${error.message}. Please try again.`)
         setIsGoogleLoading(false)
+      } else if (data?.url) {
+        // Browser will redirect to Google OAuth
+        window.location.href = data.url
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An error occurred"
