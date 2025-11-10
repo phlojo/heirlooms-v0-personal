@@ -27,7 +27,7 @@ export function HomeCard({ title, description, href, backgroundImage }: HomeCard
       )}
       <div className="relative z-10 pr-20">
         <h2 className={`font-semibold text-3xl ${backgroundImage ? "text-white" : ""}`}>{title}</h2>
-        <p className={`mt-2 text-base ${backgroundImage ? "text-white/90" : "text-muted-foreground"}`}>{description}</p>
+        <p className={`mt-2 text-sm ${backgroundImage ? "text-white/90" : "text-muted-foreground"}`}>{description}</p>
       </div>
       <div className="flex justify-end relative z-10 self-end">
         <div
