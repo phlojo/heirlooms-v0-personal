@@ -17,7 +17,7 @@ interface ArtifactCardProps {
     collection?: {
       id: string
       title: string
-    }
+    } | null
   }
   showAuthor?: boolean
   authorName?: string | null
