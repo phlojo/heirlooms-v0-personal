@@ -29,13 +29,15 @@ export default function LoginPage() {
     try {
       const supabase = createClient()
 
-      // Use window.location.origin for current domain (works in preview and prod)
       const redirectTo =
         typeof window !== "undefined"
           ? `${window.location.origin}/auth/callback`
           : process.env.NEXT_PUBLIC_SITE_URL
             ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
             : "/auth/callback"
+
+      console.log("[v0] Google OAuth redirect URL:", redirectTo)
+      console.log("[v0] Current origin:", window.location.origin)
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -46,6 +48,8 @@ export default function LoginPage() {
           },
         },
       })
+
+      console.log("[v0] OAuth response:", { url: data?.url, error })
 
       if (error) {
         setError(`Google sign-in failed: ${error.message}. Please try again.`)
