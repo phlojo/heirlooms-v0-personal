@@ -45,7 +45,7 @@ export function ArtifactCard({ artifact, showAuthor = false, authorName }: Artif
         </div>
 
         <CardHeader className="pb-3">
-          {artifact.collection && (
+          {artifact.collection ? (
             <div className="mb-2">
               <CollectionLabel
                 collectionId={artifact.collection.id}
@@ -53,6 +53,10 @@ export function ArtifactCard({ artifact, showAuthor = false, authorName }: Artif
                 size="sm"
                 clickable={false}
               />
+            </div>
+          ) : (
+            <div className="mb-2">
+              <CollectionLabel collectionId="unsorted" collectionName="Unsorted" size="sm" clickable={false} />
             </div>
           )}
           <h3 className="font-semibold leading-tight line-clamp-1">{artifact.title}</h3>
