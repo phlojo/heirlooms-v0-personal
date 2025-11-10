@@ -279,6 +279,15 @@ export async function deleteCollection(collectionId: string, deleteArtifacts = f
     data: { user },
   } = await supabase.auth.getUser()
 
+  console.log(
+    "[v0] Delete collection - User:",
+    user?.id,
+    "Collection:",
+    collectionId,
+    "Delete artifacts:",
+    deleteArtifacts,
+  )
+
   if (!user) {
     return { success: false, error: "Unauthorized" }
   }
@@ -293,6 +302,7 @@ export async function deleteCollection(collectionId: string, deleteArtifacts = f
   }
 
   if (deleteArtifacts) {
+    console.log("[v0] Deleting artifacts and their media")
     // Get all artifacts to delete their media
     const artifacts = await getArtifactsByCollection(collectionId)
 
@@ -313,13 +323,18 @@ export async function deleteCollection(collectionId: string, deleteArtifacts = f
 
     await supabase.from("artifacts").delete().eq("collection_id", collectionId)
   } else {
-    const { error: updateError } = await supabase
+    console.log("[v0] Moving artifacts to Unsorted (setting collection_id to null)")
+    const { data: updatedArtifacts, error: updateError } = await supabase
       .from("artifacts")
       .update({ collection_id: null })
       .eq("collection_id", collectionId)
+      .select()
+
+    console.log("[v0] Artifacts moved to Unsorted:", updatedArtifacts?.length, "Error:", updateError)
 
     if (updateError) {
-      console.error("Error moving artifacts to Unsorted:", updateError)
+      console.error("[v0] Error moving artifacts to Unsorted:", updateError)
+      return { success: false, error: "Failed to move artifacts to Unsorted" }
     }
   }
 
@@ -327,7 +342,7 @@ export async function deleteCollection(collectionId: string, deleteArtifacts = f
   const { error } = await supabase.from("collections").delete().eq("id", collectionId)
 
   if (error) {
-    console.error("Collection deletion error:", error)
+    console.error("[v0] Collection deletion error:", error)
     return { success: false, error: "Failed to delete collection. Please try again." }
   }
 

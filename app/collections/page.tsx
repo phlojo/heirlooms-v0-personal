@@ -6,18 +6,24 @@ async function getMyCollections(userId: string) {
   const supabase = await createClient()
 
   try {
+    console.log("[v0] getMyCollections - Fetching unsorted artifacts for user:", userId)
+
     const { data: unsortedArtifacts, error: unsortedError } = await supabase
       .from("artifacts")
       .select("id, media_urls")
       .eq("user_id", userId)
       .is("collection_id", null)
 
+    console.log("[v0] getMyCollections - Unsorted artifacts found:", unsortedArtifacts?.length, "Error:", unsortedError)
+
     if (unsortedError) {
-      console.error("Error fetching unsorted artifacts:", unsortedError)
+      console.error("[v0] Error fetching unsorted artifacts:", unsortedError)
     }
 
     const unsortedCount = unsortedArtifacts?.length || 0
     const unsortedThumbnails = unsortedArtifacts?.map((a) => a.media_urls?.[0]).filter(Boolean) || []
+
+    console.log("[v0] getMyCollections - Unsorted count:", unsortedCount, "Thumbnails:", unsortedThumbnails.length)
 
     const { data: collections, error } = await supabase
       .from("collections")
@@ -29,7 +35,7 @@ async function getMyCollections(userId: string) {
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("Error fetching my collections:", error)
+      console.error("[v0] Error fetching my collections:", error)
       return []
     }
 
@@ -54,6 +60,7 @@ async function getMyCollections(userId: string) {
     )
 
     if (unsortedCount > 0) {
+      console.log("[v0] getMyCollections - Creating Unsorted collection")
       const unsortedCollection = {
         id: "unsorted",
         title: "Unsorted",
@@ -72,9 +79,10 @@ async function getMyCollections(userId: string) {
       return [unsortedCollection, ...collectionsWithImages]
     }
 
+    console.log("[v0] getMyCollections - No unsorted artifacts, returning only regular collections")
     return collectionsWithImages
   } catch (error) {
-    console.error("Unexpected error in getMyCollections:", error)
+    console.error("[v0] Unexpected error in getMyCollections:", error)
     return []
   }
 }

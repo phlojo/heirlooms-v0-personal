@@ -188,6 +188,8 @@ export async function getAllPublicArtifacts() {
 export async function getMyArtifacts(userId: string) {
   const supabase = await createClient()
 
+  console.log("[v0] getMyArtifacts - Fetching artifacts for user:", userId)
+
   const { data, error } = await supabase
     .from("artifacts")
     .select(`
@@ -196,6 +198,12 @@ export async function getMyArtifacts(userId: string) {
     `)
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
+
+  console.log("[v0] getMyArtifacts - Found artifacts:", data?.length, "Error:", error)
+  console.log(
+    "[v0] getMyArtifacts - Artifacts with null collection_id:",
+    data?.filter((a) => a.collection_id === null).length,
+  )
 
   if (error) {
     console.error("[v0] Error fetching my artifacts:", error)
