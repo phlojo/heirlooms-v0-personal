@@ -7,7 +7,6 @@ import { getCurrentUser, createClient } from "@/lib/supabase/server"
 import { getCollectionBySlug, getAdjacentCollections } from "@/lib/actions/collections"
 import { getArtifactsByCollection } from "@/lib/actions/artifacts"
 import { ArtifactCard } from "@/components/artifact-card"
-import { DeleteCollectionButton } from "@/components/delete-collection-button"
 import { CollectionsStickyNav } from "@/components/collections-sticky-nav"
 import { CollectionSwipeWrapper } from "@/components/collection-swipe-wrapper"
 
@@ -134,19 +133,18 @@ export default async function CollectionDetailPage({
 
             {canEdit && !isUnsorted && (
               <div className="flex items-center gap-3">
+                <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Link href={`/artifacts/new?collectionId=${collection.id}`}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Artifact
+                  </Link>
+                </Button>
                 <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
                   <Link href={`/collections/${collection.id}/edit`}>
                     <Edit className="mr-2 h-4 w-4" />
                     Edit Collection
                   </Link>
                 </Button>
-                <Button asChild variant="outline">
-                  <Link href={`/artifacts/new?collectionId=${collection.id}`}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Artifact
-                  </Link>
-                </Button>
-                <DeleteCollectionButton collectionId={collection.id} collectionTitle={collection.title} />
               </div>
             )}
 
