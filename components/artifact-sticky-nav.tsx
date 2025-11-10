@@ -52,7 +52,7 @@ export function ArtifactStickyNav({
   const displayLabel = truncateBackLabel(backLabel)
 
   return (
-    <div className="sticky top-3 lg:top-16 z-50 bg-background/90 border-b rounded-lg">
+    <div className="sticky top-3 lg:top-16 z-50 bg-background/90 border rounded-lg">
       <div className="container max-w-7xl mx-auto lg:px-8 py-3 px-0 rounded-lg border-none">
         <div className="flex items-center justify-between gap-4">
           {/* Left: Previous button */}
