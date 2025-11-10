@@ -53,7 +53,7 @@ export function ArtifactStickyNav({
 
   return (
     <div className="sticky top-3 lg:top-16 z-50 bg-background/90 border-b rounded-lg">
-      <div className="container max-w-7xl mx-auto lg:px-8 py-3 px-0 rounded-lg">
+      <div className="container max-w-7xl mx-auto lg:px-8 py-3 px-0 rounded-lg border-none">
         <div className="flex items-center justify-between gap-4">
           {/* Left: Previous button */}
           <div className="flex items-center gap-2 min-w-0">
@@ -78,7 +78,7 @@ export function ArtifactStickyNav({
 
           {/* Center: Title and Author */}
           <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
-            <h1 className="text-balance font-bold tracking-tight text-center text-base truncate w-full">{title}</h1>
+            <h1 className="text-balance font-bold tracking-tight text-center truncate w-full text-lg">{title}</h1>
             {(collectionId || authorUserId) && (
               <div className="flex items-center gap-1.5 text-xs flex-wrap justify-center">
                 {collectionId && collectionName && (
