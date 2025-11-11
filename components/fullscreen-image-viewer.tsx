@@ -18,6 +18,7 @@ export function FullscreenImageViewer({ src, alt, onClose }: FullscreenImageView
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
+  const lastTapTime = useRef<number>(0)
 
   useEffect(() => {
     document.body.style.overflow = "hidden"
@@ -59,6 +60,10 @@ export function FullscreenImageViewer({ src, alt, onClose }: FullscreenImageView
     setPosition({ x: 0, y: 0 })
   }
 
+  const handleDoubleTap = () => {
+    handleReset()
+  }
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (scale > 1) {
       setIsDragging(true)
@@ -83,6 +88,18 @@ export function FullscreenImageViewer({ src, alt, onClose }: FullscreenImageView
   }
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    const currentTime = Date.now()
+    const timeSinceLastTap = currentTime - lastTapTime.current
+
+    if (timeSinceLastTap < 300 && timeSinceLastTap > 0 && e.touches.length === 1) {
+      // Double-tap detected
+      handleDoubleTap()
+      lastTapTime.current = 0
+      return
+    }
+
+    lastTapTime.current = currentTime
+
     if (e.touches.length === 1 && scale > 1) {
       setIsDragging(true)
       setDragStart({
