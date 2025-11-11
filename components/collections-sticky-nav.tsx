@@ -1,10 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Heart } from "lucide-react"
 import { Author } from "@/components/author"
-import { Badge } from "@/components/ui/badge" // Added Badge import
+import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 interface CollectionsStickyNavProps {
   title: string
@@ -25,7 +26,7 @@ interface CollectionsStickyNavProps {
   authorUserId?: string
   authorName?: string
   showBackButton?: boolean
-  isPrivate?: boolean // Added isPrivate prop
+  isPrivate?: boolean
 }
 
 export function CollectionsStickyNav({
@@ -41,9 +42,10 @@ export function CollectionsStickyNav({
   authorUserId,
   authorName,
   showBackButton = true,
-  isPrivate = false, // Added isPrivate prop
+  isPrivate = false,
 }: CollectionsStickyNavProps) {
   const router = useRouter()
+  const [isFavorited, setIsFavorited] = useState(false)
 
   const getNavUrl = (id: string) => {
     const baseUrl = `/${itemType}s/${id}`
@@ -64,6 +66,10 @@ export function CollectionsStickyNav({
 
   const handleBack = () => {
     router.back()
+  }
+
+  const toggleFavorite = () => {
+    setIsFavorited(!isFavorited)
   }
 
   return (
@@ -97,12 +103,9 @@ export function CollectionsStickyNav({
             ) : null}
           </div>
 
-          {/* Right: Edit button */}
-          {canEdit && (
-            <Button variant="default" size="sm" onClick={() => router.push(editHref || "")}>
-              Edit
-            </Button>
-          )}
+          <Button variant="ghost" size="sm" onClick={toggleFavorite} className="shrink-0 h-9 w-9 p-0">
+            <Heart className={`h-5 w-5 ${isFavorited ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
+          </Button>
         </div>
       </div>
     </div>

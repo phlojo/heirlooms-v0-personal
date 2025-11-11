@@ -103,7 +103,7 @@ export default async function CollectionDetailPage({
 
         <div className="space-y-4">
           {canEdit && !isUnsorted && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between">
               <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
                 <Link href={`/collections/${collection.id}/edit`}>
                   <Edit className="mr-2 h-4 w-4" />
