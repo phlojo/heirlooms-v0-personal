@@ -45,7 +45,7 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
 
         <CardHeader className="pb-0">
           <div className="flex items-center gap-2 flex-wrap pb-2">
-            <h3 className="font-semibold leading-tight line-clamp-1 text-2xl">{collection.title}</h3>
+            <h3 className="font-semibold leading-tight line-clamp-1 text-2xl pb-0 pt-2">{collection.title}</h3>
             {collection.is_public === false && (
               <span className="inline-flex items-center rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-400 border border-purple-500/20">
                 Private
