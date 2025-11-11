@@ -101,29 +101,29 @@ export default async function CollectionDetailPage({
         />
 
         <div className="space-y-4">
-          {isUnsorted && (
-            <div className="inline-flex items-center gap-2 rounded-md border border-muted bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              <span>System Collection</span>
-            </div>
-          )}
-          {collection.description && <p className="text-muted-foreground">{collection.description}</p>}
-
           {canEdit && !isUnsorted && (
-            <div className="flex items-center justify-between">
-              <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
-                <Link href={`/artifacts/new?collectionId=${collection.id}`}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Artifact
-                </Link>
-              </Button>
+            <div className="flex items-center gap-3">
               <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
                 <Link href={`/collections/${collection.id}/edit`}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Collection
                 </Link>
               </Button>
+              <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Link href={`/artifacts/new?collectionId=${collection.id}`}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Artifact
+                </Link>
+              </Button>
             </div>
           )}
+
+          {isUnsorted && (
+            <div className="inline-flex items-center gap-2 rounded-md border border-muted bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              <span>System Collection</span>
+            </div>
+          )}
+          {collection.description && <p className="text-muted-foreground">{collection.description}</p>}
 
           {isUnsorted && (
             <div className="rounded-lg border border-dashed bg-muted/20 p-4">
