@@ -1,8 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Edit } from "lucide-react"
-import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
 import { Author } from "@/components/author"
 import { useRouter } from "next/navigation"
 
@@ -81,26 +80,17 @@ export function CollectionsStickyNav({
 
           {/* Center-Left: Title and Author stacked, left-justified */}
           <div className="flex flex-col justify-center gap-0.5 flex-1 min-w-0 py-0.5">
-            <h1 className="font-bold tracking-tight w-full leading-tight break-words line-clamp-2 text-2xl text-right">
+            <h1 className="font-bold tracking-tight w-full leading-tight break-words line-clamp-2 text-2xl text-left">
               {title}
             </h1>
             {authorUserId && (
-              <div className="text-right">
+              <div className="text-left">
                 <Author userId={authorUserId} authorName={authorName} size="sm" />
               </div>
             )}
           </div>
 
           {/* Right: Edit button */}
-          <div className="flex items-center gap-2 shrink-0">
-            {canEdit && editHref && (
-              <Button variant="ghost" size="sm" asChild className="h-9">
-                <Link href={editHref}>
-                  <Edit className="h-4 w-4" />
-                </Link>
-              </Button>
-            )}
-          </div>
         </div>
       </div>
     </div>
