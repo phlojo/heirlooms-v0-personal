@@ -33,7 +33,7 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   // Two images - side by side
   if (validImages.length === 2) {
     return (
-      <div className="grid h-full w-full grid-cols-2 gap-1">
+      <div className="grid h-full w-full grid-cols-2 gap-2">
         {validImages.map((img, i) => (
           <img
             key={i}
@@ -49,13 +49,13 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   // Three images - 1 large left, 2 small stacked right
   if (validImages.length === 3) {
     return (
-      <div className="grid h-full w-full grid-cols-2 gap-1">
+      <div className="grid h-full w-full grid-cols-2 gap-2">
         <img
           src={getThumbnailUrl(validImages[0]) || "/placeholder.svg"}
           alt={`${title} 1`}
           className="h-full w-full object-cover"
         />
-        <div className="grid grid-rows-2 gap-1">
+        <div className="grid grid-rows-2 gap-2">
           <img
             src={getThumbnailUrl(validImages[1]) || "/placeholder.svg"}
             alt={`${title} 2`}
@@ -74,7 +74,7 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   // Four images - 2x2 grid
   if (validImages.length === 4) {
     return (
-      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-1">
+      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-2">
         {validImages.map((img, i) => (
           <img
             key={i}
@@ -89,8 +89,8 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
 
   // Five images - 2 large left, 3 small stacked right
   return (
-    <div className="grid h-full w-full grid-cols-3 gap-1">
-      <div className="col-span-2 grid grid-rows-2 gap-1">
+    <div className="grid h-full w-full grid-cols-3 gap-2">
+      <div className="col-span-2 grid grid-rows-2 gap-2">
         <img
           src={getThumbnailUrl(validImages[0]) || "/placeholder.svg"}
           alt={`${title} 1`}
@@ -102,7 +102,7 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
           className="h-full w-full object-cover"
         />
       </div>
-      <div className="grid grid-rows-3 gap-1">
+      <div className="grid grid-rows-3 gap-2">
         <img
           src={getThumbnailUrl(validImages[2]) || "/placeholder.svg"}
           alt={`${title} 3`}
