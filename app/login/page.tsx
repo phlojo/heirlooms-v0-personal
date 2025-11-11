@@ -100,7 +100,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Welcome to Heirlooms</CardTitle>
+            <CardTitle className="text-2xl">Login to Heirlooms</CardTitle>
             <CardDescription>
               {isMagicLink ? "Enter your email to receive a magic link" : "Sign in with your email and password"}
             </CardDescription>
