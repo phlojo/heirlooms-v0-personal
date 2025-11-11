@@ -6,7 +6,7 @@ export default async function StoriesPage() {
 
   return (
     <AppLayout user={user}>
-      <div className="space-y-8">
+      <div className="space-y-0x">
         <div>
           <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-gradient-to-br from-primary to-chart-2 text-primary-foreground shadow-sm rounded-sm">
