@@ -48,7 +48,11 @@ export function ArtifactCard({ artifact, showAuthor = false, authorName }: Artif
         </CardHeader>
 
         <CardContent className="pt-0 pb-3 px-3">
-          {showAuthor && artifact.user_id && <Author userId={artifact.user_id} authorName={authorName} size="sm" />}
+          {showAuthor && artifact.user_id && (
+            <div className="flex justify-end overflow-hidden">
+              <Author userId={artifact.user_id} authorName={authorName} size="sm" />
+            </div>
+          )}
         </CardContent>
       </Card>
     </Link>
