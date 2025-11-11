@@ -4,6 +4,7 @@ import { generateObject } from "ai"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { revalidatePath } from "next/cache"
+import { rateLimit } from "@/lib/utils/rate-limit"
 
 const MAX_TRANSCRIPT_LENGTH = 10000
 const MAX_IMAGE_CAPTIONS = 3
@@ -18,6 +19,15 @@ const summarySchema = z.object({
 })
 
 export async function POST(request: Request) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+  const { ok, retryAfterMs } = rateLimit(ip)
+  if (!ok) {
+    return NextResponse.json(
+      { error: "Too Many Requests" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((retryAfterMs || 0) / 1000)) } },
+    )
+  }
+
   console.log("[v0] === SUMMARY API ROUTE CALLED ===")
   try {
     const body = await request.json()

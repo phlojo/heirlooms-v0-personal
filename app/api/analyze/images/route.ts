@@ -3,6 +3,7 @@ import { openai, getVisionModel } from "@/lib/ai"
 import { generateText } from "ai"
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
+import { rateLimit } from "@/lib/utils/rate-limit"
 
 const MAX_IMAGES = 5
 
@@ -36,6 +37,15 @@ async function isValidImageUrl(url: string): Promise<boolean> {
 }
 
 export async function POST(request: Request) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+  const { ok, retryAfterMs } = rateLimit(ip)
+  if (!ok) {
+    return NextResponse.json(
+      { error: "Too Many Requests" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((retryAfterMs || 0) / 1000)) } },
+    )
+  }
+
   try {
     const { artifactId } = await request.json()
 

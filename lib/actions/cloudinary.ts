@@ -19,31 +19,39 @@ export async function generateCloudinarySignature(userId: string, fileName: stri
   }
 
   try {
-    const timestamp = Math.round(new Date().getTime() / 1000)
-    const folder = "heirloom/artifacts/images"
+    const timestamp = Math.round(Date.now() / 1000)
 
-    // Sanitize filename
-    const fileExtension = fileName.split(".").pop()
-    const sanitizedFileName = fileName
-      .replace(/\.[^/.]+$/, "") // Remove extension
-      .replace(/[^a-zA-Z0-9]/g, "_") // Replace special chars with underscore
+    // Create stable, readable public_id: users/{userId}/artifacts/{yyyy}/{mm}/{fileNameWithoutExt}
+    const safeUser = (userId || "anon").replace(/[^a-zA-Z0-9_-]/g, "")
+    const baseName = (fileName || "file")
+      .replace(/\.[^.]+$/, "") // Remove extension
+      .replace(/[^a-zA-Z0-9_-]/g, "") // Sanitize
       .substring(0, 50) // Limit length
 
-    const publicId = `${folder}/${userId}_${timestamp}_${sanitizedFileName}`
+    const now = new Date()
+    const yyyy = now.getUTCFullYear()
+    const mm = String(now.getUTCMonth() + 1).padStart(2, "0")
+    const publicId = `users/${safeUser}/artifacts/${yyyy}/${mm}/${baseName}`
 
-    const stringToSign = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`
-    const encoder = new TextEncoder()
-    const data = encoder.encode(stringToSign)
-    const hashBuffer = await crypto.subtle.digest("SHA-1", data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    const signature = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+    // Generate two versions: 640x640 for thumbnails, 1200x1200 for detail view
+    const eager = "c_fill,w_640,h_640,q_auto,f_auto|c_limit,w_1200,h_1200,q_auto,f_auto"
+
+    // Use Node crypto for server-side signature generation
+    const crypto = await import("node:crypto")
+    const toSign = `eager=${eager}&public_id=${publicId}&timestamp=${timestamp}`
+    const signature = crypto
+      .createHash("sha1")
+      .update(toSign + apiSecret)
+      .digest("hex")
 
     return {
+      cloudName,
+      apiKey,
       signature,
       timestamp,
       publicId,
-      cloudName,
-      apiKey,
+      eager,
+      folder: undefined, // We build public_id ourselves, no separate folder param
     }
   } catch (error) {
     console.error("[v0] Error generating Cloudinary signature:", error)
@@ -67,22 +75,26 @@ export async function generateCloudinaryAudioSignature(userId: string, fileName:
   }
 
   try {
-    const timestamp = Math.round(new Date().getTime() / 1000)
-    const folder = "heirloom/artifacts/audio"
+    const timestamp = Math.round(Date.now() / 1000)
 
-    const sanitizedFileName = fileName
-      .replace(/\.[^/.]+$/, "")
-      .replace(/[^a-zA-Z0-9]/g, "_")
+    const safeUser = (userId || "anon").replace(/[^a-zA-Z0-9_-]/g, "")
+    const baseName = (fileName || "file")
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "")
       .substring(0, 50)
 
-    const publicId = `${folder}/${userId}_${timestamp}_${sanitizedFileName}`
+    const now = new Date()
+    const yyyy = now.getUTCFullYear()
+    const mm = String(now.getUTCMonth() + 1).padStart(2, "0")
+    const publicId = `users/${safeUser}/artifacts/audio/${yyyy}/${mm}/${baseName}`
 
-    const stringToSign = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`
-    const encoder = new TextEncoder()
-    const data = encoder.encode(stringToSign)
-    const hashBuffer = await crypto.subtle.digest("SHA-1", data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    const signature = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+    // Use Node crypto for server-side signature generation
+    const crypto = await import("node:crypto")
+    const toSign = `public_id=${publicId}&timestamp=${timestamp}`
+    const signature = crypto
+      .createHash("sha1")
+      .update(toSign + apiSecret)
+      .digest("hex")
 
     return {
       signature,
@@ -111,7 +123,7 @@ export async function deleteCloudinaryMedia(publicId: string) {
   }
 
   try {
-    const timestamp = Math.round(new Date().getTime() / 1000)
+    const timestamp = Math.round(Date.now() / 1000)
 
     const stringToSign = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`
     const encoder = new TextEncoder()
