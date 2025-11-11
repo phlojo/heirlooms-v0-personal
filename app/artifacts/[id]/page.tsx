@@ -37,7 +37,7 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
     notFound()
   }
 
-  const { previous, next } = await getAdjacentArtifacts(id, artifact.collection_id)
+  const { previous, next, currentPosition, totalCount } = await getAdjacentArtifacts(id, artifact.collection_id)
 
   const collectionHref = artifact.collection?.slug
     ? `/collections/${artifact.collection.slug}`
@@ -75,6 +75,8 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
           collectionId={artifact.collection_id}
           collectionSlug={artifact.collection?.slug}
           collectionName={artifact.collection?.title}
+          currentPosition={currentPosition}
+          totalCount={totalCount}
         />
 
         <div className="space-y-8">
