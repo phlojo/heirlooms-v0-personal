@@ -2,7 +2,26 @@ import { updateSession } from "@/lib/supabase/middleware"
 import type { NextRequest } from "next/server"
 
 export async function middleware(request: NextRequest) {
-  return await updateSession(request)
+  const res = await updateSession(request)
+
+  const csp = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https://res.cloudinary.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next dev/previews may need 'unsafe-eval'
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "connect-src 'self' https://*.supabase.co https://res.cloudinary.com https://*.vercel.app",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+  ].join("; ")
+
+  res.headers.set("Content-Security-Policy", csp)
+  res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
+  res.headers.set("X-Frame-Options", "DENY")
+  res.headers.set("X-Content-Type-Options", "nosniff")
+  res.headers.set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+  return res
 }
 
 export const config = {
