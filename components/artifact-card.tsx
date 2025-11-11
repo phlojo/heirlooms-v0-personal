@@ -48,16 +48,7 @@ export function ArtifactCard({ artifact, showAuthor = false, authorName }: Artif
         </CardHeader>
 
         <CardContent className="pt-0 pb-3 px-3">
-          <div className="flex gap-2 text-xs text-muted-foreground">
-            {artifact.year_acquired && <span>{artifact.year_acquired}</span>}
-            {artifact.year_acquired && artifact.origin && <span>•</span>}
-            {artifact.origin && <span className="line-clamp-1">{artifact.origin}</span>}
-          </div>
-          {showAuthor && artifact.user_id && (
-            <div className="text-right pt-0">
-              <Author userId={artifact.user_id} authorName={authorName} size="sm" />
-            </div>
-          )}
+          {showAuthor && artifact.user_id && <Author userId={artifact.user_id} authorName={authorName} size="sm" />}
         </CardContent>
       </Card>
     </Link>
