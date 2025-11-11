@@ -61,7 +61,13 @@ export function FullscreenImageViewer({ src, alt, onClose }: FullscreenImageView
   }
 
   const handleDoubleTap = () => {
-    handleReset()
+    if (scale === 1 && position.x === 0 && position.y === 0) {
+      // Already at default fit, close the viewer
+      onClose()
+    } else {
+      // Zoomed in or panned, reset to fit
+      handleReset()
+    }
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
