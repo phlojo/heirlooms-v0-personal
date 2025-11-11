@@ -30,7 +30,7 @@ export default async function HomePage() {
 
   return (
     <AppLayout user={user}>
-      <div className="flex flex-col max-h-[calc(100dvh-4rem)] md:h-auto space-y-0 md:space-y-8 md:overflow-auto">
+      <div className="flex flex-col max-h-[calc(100dvh-4rem)] md:h-auto space-y-0 md:space-y-8 overflow-auto md:overflow-visible">
         <div className="shrink-0 pt-2 md:pt-0">
           <h1 className="flex items-center gap-3 font-bold tracking-tight text-3xl">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-gradient-to-br from-primary to-chart-2 text-primary-foreground shadow-sm rounded-sm">
