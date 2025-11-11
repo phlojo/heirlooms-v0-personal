@@ -62,7 +62,7 @@ export default async function HomePage() {
             HeirloomsApp.com
           </h1>
           <p className="mt-2 text-lg text-muted-foreground">
-            Preserve what matters to you and discover collections from the community.
+            Preserve what matters to you and discover artifacts and collections from the community.
           </p>
         </div>
 
