@@ -28,7 +28,7 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
     <Link href={href}>
       <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          <div className="transition-transform group-hover:scale-105">
+          <div className="h-full transition-transform group-hover:scale-105">
             {collection.thumbnailImages && collection.thumbnailImages.length > 0 ? (
               <CollectionThumbnailGrid images={collection.thumbnailImages} title={collection.title} />
             ) : collection.cover_image ? (
