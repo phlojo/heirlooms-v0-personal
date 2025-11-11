@@ -60,7 +60,7 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   }
 
   return (
-    <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-1">
+    <div className="grid h-full w-full grid-cols-4 gap-1">
       {validImages.map((img, i) => (
         <img
           key={i}
