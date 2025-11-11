@@ -24,6 +24,7 @@ interface CollectionsStickyNavProps {
   authorUserId?: string
   authorName?: string
   showBackButton?: boolean
+  isPrivate?: boolean // Added isPrivate prop
 }
 
 export function CollectionsStickyNav({
@@ -39,6 +40,7 @@ export function CollectionsStickyNav({
   authorUserId,
   authorName,
   showBackButton = true,
+  isPrivate = false, // Added isPrivate prop
 }: CollectionsStickyNavProps) {
   const router = useRouter()
 
@@ -78,19 +80,30 @@ export function CollectionsStickyNav({
           {/* Divider */}
           {showBackButton && <div className="w-px bg-border shrink-0 h-12" />}
 
-          {/* Center-Left: Title and Author stacked, left-justified */}
+          {/* Center-Left: Title and Author/Private pill stacked, left-justified */}
           <div className="flex flex-col justify-center gap-0.5 flex-1 min-w-0 py-0.5">
             <h1 className="font-bold tracking-tight w-full leading-tight break-words line-clamp-2 text-2xl text-left">
               {title}
             </h1>
-            {authorUserId && (
+            {authorUserId ? (
               <div className="text-left">
                 <Author userId={authorUserId} authorName={authorName} size="sm" />
               </div>
-            )}
+            ) : isPrivate ? (
+              <div className="text-left">
+                <span className="inline-flex items-center rounded-md bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-400">
+                  Private
+                </span>
+              </div>
+            ) : null}
           </div>
 
           {/* Right: Edit button */}
+          {canEdit && (
+            <Button variant="default" size="sm" onClick={() => router.push(editHref || "")}>
+              Edit
+            </Button>
+          )}
         </div>
       </div>
     </div>

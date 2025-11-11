@@ -98,6 +98,7 @@ export default async function CollectionDetailPage({
           mode={mode === "both" ? undefined : mode}
           authorUserId={isOwnCollection ? undefined : collection.user_id}
           showBackButton={true}
+          isPrivate={!collection.is_public} // Pass isPrivate prop
         />
 
         <div className="space-y-4">
