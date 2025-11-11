@@ -19,11 +19,19 @@ export function FullscreenImageViewer({ src, alt, onClose }: FullscreenImageView
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Prevent body scroll when fullscreen is open
   useEffect(() => {
     document.body.style.overflow = "hidden"
+
+    // Prevent page zoom on mobile devices
+    const metaViewport = document.querySelector('meta[name="viewport"]')
+    const originalContent = metaViewport?.getAttribute("content") || ""
+    metaViewport?.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no")
+
     return () => {
       document.body.style.overflow = ""
+      if (originalContent) {
+        metaViewport?.setAttribute("content", originalContent)
+      }
     }
   }, [])
 
@@ -123,51 +131,31 @@ export function FullscreenImageViewer({ src, alt, onClose }: FullscreenImageView
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black">
-      {/* Close button - always on top */}
+    <div className="fixed inset-0 z-[100] bg-black">
       <Button
         variant="ghost"
         size="icon"
         onClick={onClose}
-        className="fixed top-4 right-4 z-50 h-10 w-10 rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
+        className="fixed top-4 right-4 z-[200] h-10 w-10 rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
       >
         <X className="h-5 w-5" />
       </Button>
 
-      {/* Zoom controls */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex gap-2 rounded-full bg-black/50 p-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleZoomOut}
-          disabled={scale <= 0.5}
-          className="h-10 w-10 rounded-full text-white hover:bg-white/20 hover:text-white disabled:opacity-30"
-        >
+      <div className="hidden">
+        <Button variant="ghost" size="icon" onClick={handleZoomOut} disabled={scale <= 0.5}>
           <ZoomOut className="h-5 w-5" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleReset}
-          className="h-10 w-10 rounded-full text-white hover:bg-white/20 hover:text-white"
-        >
+        <Button variant="ghost" size="icon" onClick={handleReset}>
           <RotateCcw className="h-5 w-5" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleZoomIn}
-          disabled={scale >= 5}
-          className="h-10 w-10 rounded-full text-white hover:bg-white/20 hover:text-white disabled:opacity-30"
-        >
+        <Button variant="ghost" size="icon" onClick={handleZoomIn} disabled={scale >= 5}>
           <ZoomIn className="h-5 w-5" />
         </Button>
       </div>
 
-      {/* Image container */}
       <div
         ref={containerRef}
-        className="h-full w-full flex items-center justify-center overflow-hidden"
+        className="h-full w-full flex items-center justify-center overflow-hidden touch-none"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
