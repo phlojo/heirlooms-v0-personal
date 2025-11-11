@@ -137,6 +137,8 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       const urls: string[] = []
 
       for (const file of Array.from(files)) {
+        console.log("[v0] Uploading file:", file.name, "Size:", file.size)
+
         const signatureResult = await generateCloudinarySignature(userId, file.name)
 
         if (signatureResult.error || !signatureResult.signature) {
@@ -150,7 +152,14 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
         formData.append("signature", signatureResult.signature)
         formData.append("public_id", signatureResult.publicId!)
 
+        // Add eager transformation if provided
+        if (signatureResult.eager) {
+          formData.append("eager", signatureResult.eager)
+        }
+
         const uploadUrl = `https://api.cloudinary.com/v1_1/${signatureResult.cloudName}/image/upload`
+
+        console.log("[v0] Uploading to Cloudinary:", uploadUrl)
 
         const response = await fetch(uploadUrl, {
           method: "POST",
@@ -158,11 +167,25 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
         })
 
         if (!response.ok) {
-          const errorData = await response.json()
+          const errorText = await response.text()
+          console.error("[v0] Cloudinary upload failed:", {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText,
+          })
+
+          let errorData
+          try {
+            errorData = JSON.parse(errorText)
+          } catch {
+            throw new Error(`Upload failed (${response.status}): ${errorText.substring(0, 100)}`)
+          }
+
           throw new Error(`Failed to upload ${file.name}: ${errorData.error?.message || "Unknown error"}`)
         }
 
         const data = await response.json()
+        console.log("[v0] Successfully uploaded to Cloudinary:", data.secure_url)
         urls.push(data.secure_url)
       }
 

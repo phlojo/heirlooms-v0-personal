@@ -17,6 +17,7 @@ export function AudioPlayer({ src, title }: AudioPlayerProps) {
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
+  const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
     const audio = audioRef.current
@@ -25,17 +26,24 @@ export function AudioPlayer({ src, title }: AudioPlayerProps) {
     const updateTime = () => setCurrentTime(audio.currentTime)
     const updateDuration = () => setDuration(audio.duration)
     const handleEnded = () => setIsPlaying(false)
+    const handleError = (e: Event) => {
+      console.error("[v0] Audio playback error:", e)
+      console.error("[v0] Audio src:", src)
+      setHasError(true)
+    }
 
     audio.addEventListener("timeupdate", updateTime)
     audio.addEventListener("loadedmetadata", updateDuration)
     audio.addEventListener("ended", handleEnded)
+    audio.addEventListener("error", handleError)
 
     return () => {
       audio.removeEventListener("timeupdate", updateTime)
       audio.removeEventListener("loadedmetadata", updateDuration)
       audio.removeEventListener("ended", handleEnded)
+      audio.removeEventListener("error", handleError)
     }
-  }, [])
+  }, [src])
 
   const togglePlay = () => {
     if (!audioRef.current) return
@@ -79,6 +87,20 @@ export function AudioPlayer({ src, title }: AudioPlayerProps) {
     const minutes = Math.floor(time / 60)
     const seconds = Math.floor(time % 60)
     return `${minutes}:${seconds.toString().padStart(2, "0")}`
+  }
+
+  if (hasError) {
+    return (
+      <div className="rounded-2xl border bg-card p-6 shadow-md">
+        {title && <p className="mb-4 text-sm font-medium text-foreground">{title}</p>}
+        <div className="text-center py-8">
+          <p className="text-sm text-destructive">Failed to load audio file</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            The audio file may be corrupted or in an unsupported format
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

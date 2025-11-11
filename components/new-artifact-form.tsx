@@ -91,9 +91,15 @@ export function NewArtifactForm({
         formData.append("signature", signatureResult.signature)
         formData.append("public_id", signatureResult.publicId!)
 
+        // Add eager transformation if provided
+        if (signatureResult.eager) {
+          formData.append("eager", signatureResult.eager)
+        }
+
         const uploadUrl = `https://api.cloudinary.com/v1_1/${signatureResult.cloudName}/image/upload`
 
         console.log("[v0] Uploading to Cloudinary:", uploadUrl)
+        console.log("[v0] Public ID:", signatureResult.publicId)
 
         const response = await fetch(uploadUrl, {
           method: "POST",
@@ -101,8 +107,20 @@ export function NewArtifactForm({
         })
 
         if (!response.ok) {
-          const errorData = await response.json()
-          console.error("[v0] Cloudinary upload error:", errorData)
+          const errorText = await response.text()
+          console.error("[v0] Cloudinary upload failed:", {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText,
+          })
+
+          let errorData
+          try {
+            errorData = JSON.parse(errorText)
+          } catch {
+            throw new Error(`Upload failed (${response.status}): ${errorText.substring(0, 100)}`)
+          }
+
           throw new Error(`Failed to upload ${file.name}: ${errorData.error?.message || "Unknown error"}`)
         }
 
@@ -160,7 +178,6 @@ export function NewArtifactForm({
       console.log("[v0] Upload params:", {
         publicId: signatureResult.publicId,
         timestamp: signatureResult.timestamp,
-        signature: signatureResult.signature,
       })
 
       const response = await fetch(uploadUrl, {
@@ -169,8 +186,20 @@ export function NewArtifactForm({
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        console.error("[v0] Cloudinary audio upload error:", errorData)
+        const errorText = await response.text()
+        console.error("[v0] Cloudinary audio upload failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        })
+
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          throw new Error(`Audio upload failed (${response.status}): ${errorText.substring(0, 100)}`)
+        }
+
         throw new Error(`Failed to upload audio: ${errorData.error?.message || "Unknown error"}`)
       }
 
