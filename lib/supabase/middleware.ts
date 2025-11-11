@@ -38,6 +38,7 @@ export async function updateSession(request: NextRequest) {
       },
     })
 
+    // This is critical for OAuth to work properly
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -45,7 +46,13 @@ export async function updateSession(request: NextRequest) {
     console.log("[v0] Middleware check", {
       path: request.nextUrl.pathname,
       hasUser: !!user,
+      isCallback: request.nextUrl.pathname.startsWith("/auth/callback"),
     })
+
+    if (request.nextUrl.pathname.startsWith("/auth/callback")) {
+      console.log("[v0] Allowing auth callback to proceed")
+      return supabaseResponse
+    }
 
     const isProtectedRoute =
       request.nextUrl.pathname === "/collections/new" || request.nextUrl.pathname === "/artifacts/new"

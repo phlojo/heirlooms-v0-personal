@@ -57,10 +57,8 @@ export default function LoginPage() {
       if (error) {
         setError(`Google sign-in failed: ${error.message}. Please try again.`)
         setIsGoogleLoading(false)
-      } else if (data?.url) {
-        // Browser will redirect to Google OAuth
-        window.location.href = data.url
       }
+      // The signInWithOAuth already handles the redirect
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An error occurred"
       setError(`Google sign-in failed: ${errorMessage}. Please try again.`)
