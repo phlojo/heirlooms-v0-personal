@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/app-layout"
 import { getCurrentUser, createClient } from "@/lib/supabase/server"
 import { CollectionsTabs } from "@/components/collections-tabs"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 async function getMyCollections(userId: string) {
   const supabase = await createClient()
@@ -176,6 +177,9 @@ export default async function CollectionsPage() {
               </svg>
             </div>
             Collections
+            <div className="ml-auto lg:hidden">
+              <ThemeToggle />
+            </div>
           </h1>
         </div>
 

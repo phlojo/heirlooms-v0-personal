@@ -2,6 +2,7 @@ import { AppLayout } from "@/components/app-layout"
 import { getCurrentUser } from "@/lib/supabase/server"
 import { getAllPublicArtifacts, getMyArtifacts } from "@/lib/actions/artifacts"
 import { ArtifactsTabs } from "@/components/artifacts-tabs"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default async function ArtifactsPage() {
   const user = await getCurrentUser()
@@ -41,6 +42,9 @@ export default async function ArtifactsPage() {
               </svg>
             </div>
             Artifacts
+            <div className="ml-auto lg:hidden">
+              <ThemeToggle />
+            </div>
           </h1>
         </div>
 

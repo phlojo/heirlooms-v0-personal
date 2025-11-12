@@ -1,5 +1,6 @@
 import { AppLayout } from "@/components/app-layout"
 import { getCurrentUser } from "@/lib/supabase/server"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default async function StoriesPage() {
   const user = await getCurrentUser()
@@ -36,6 +37,9 @@ export default async function StoriesPage() {
               </svg>
             </div>
             Stories
+            <div className="ml-auto lg:hidden">
+              <ThemeToggle />
+            </div>
           </h1>
         </div>
 
