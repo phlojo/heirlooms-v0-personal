@@ -1,9 +1,10 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ArrowRight, ArrowLeft } from "lucide-react"
+import { ArrowRight, ArrowLeft, Heart } from "lucide-react"
 import Link from "next/link"
 import { CollectionLabel } from "@/components/collection-label"
+import { useState } from "react"
 
 interface ArtifactStickyNavProps {
   title: string
@@ -44,6 +45,8 @@ export function ArtifactStickyNav({
   currentPosition,
   totalCount,
 }: ArtifactStickyNavProps) {
+  const [isFavorited, setIsFavorited] = useState(false)
+
   const getNavUrl = (id: string) => `/artifacts/${id}`
 
   const truncateBackLabel = (label: string) => {
@@ -54,13 +57,20 @@ export function ArtifactStickyNav({
 
   const displayLabel = truncateBackLabel(backLabel)
 
+  const toggleFavorite = () => {
+    setIsFavorited(!isFavorited)
+  }
+
   return (
     <div className="sticky top-3 lg:top-16 z-50 bg-background/90 border rounded-lg">
       <div className="container max-w-7xl mx-auto lg:px-8 rounded-lg border-none px-[4] py-[4]">
         <div className="flex flex-col gap-0">
-          {/* First row: Title only */}
+          {/* First row: Title and Heart icon */}
           <div className="flex items-center justify-between border-b gap-0 pb-0">
             <h1 className="text-balance font-bold tracking-tight flex-1 min-w-0 px-3.5 py-2 text-xl">{title}</h1>
+            <Button variant="ghost" size="sm" onClick={toggleFavorite} className="shrink-0 h-9 w-9 p-0">
+              <Heart className={`h-5 w-5 ${isFavorited ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
+            </Button>
           </div>
 
           {/* Second row: Navigation with left arrow, collection info, right arrow */}
