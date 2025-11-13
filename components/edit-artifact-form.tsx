@@ -309,22 +309,20 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
 
             {/* Upload button */}
             <div className="flex items-center gap-3">
-              <label className="cursor-pointer">
-                <Button type="button" variant="outline" disabled={isUploading} asChild>
-                  <span>
-                    <Upload className="mr-2 h-4 w-4" />
-                    {isUploading ? "Uploading..." : "Upload Photos"}
-                  </span>
-                </Button>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  disabled={isUploading}
-                />
-              </label>
+              <Button type="button" variant="outline" disabled={isUploading} asChild>
+                <label className="cursor-pointer">
+                  <Upload className="mr-2 h-4 w-4" />
+                  {isUploading ? "Uploading..." : "Upload Photos"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={isUploading}
+                  />
+                </label>
+              </Button>
               <FormDescription className="!mt-0">Upload photos (max 15MB per file, 30MB total)</FormDescription>
             </div>
 
