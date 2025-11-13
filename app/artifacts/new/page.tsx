@@ -17,6 +17,7 @@ export default async function NewArtifactPage({
   }
 
   const { collectionId } = await searchParams
+  const effectiveCollectionId = collectionId || "uncategorized"
 
   return (
     <AppLayout user={user}>
@@ -33,7 +34,7 @@ export default async function NewArtifactPage({
           <p className="mt-1 text-muted-foreground">Add a new heirloom to your collection</p>
         </div>
 
-        <NewArtifactForm collectionId={collectionId} userId={user.id} />
+        <NewArtifactForm collectionId={effectiveCollectionId} userId={user.id} />
       </div>
     </AppLayout>
   )

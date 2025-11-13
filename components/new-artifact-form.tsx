@@ -252,12 +252,17 @@ export function NewArtifactForm({
       data.media_urls = uniqueMediaUrls
     }
 
-    console.log("[v0] Submitting artifact with data:", data)
-    console.log("[v0] Form media_urls:", data.media_urls)
+    const submitData = {
+      ...data,
+      collectionId: data.collectionId === "uncategorized" ? null : data.collectionId,
+    }
+
+    console.log("[v0] Submitting artifact with data:", submitData)
+    console.log("[v0] Form media_urls:", submitData.media_urls)
     console.log("[v0] State - uploadedImages:", uploadedImages)
     console.log("[v0] State - audioUrl:", audioUrl)
     setError(null)
-    const result = await createArtifact(data)
+    const result = await createArtifact(submitData)
 
     if (result?.error) {
       console.log("[v0] Artifact creation error:", result)
@@ -342,15 +347,6 @@ export function NewArtifactForm({
             </FormItem>
           )}
         />
-
-        {!collectionId && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
-            <p className="text-sm text-destructive">
-              Artifacts must be associated with a collection. Please navigate to a collection and use the "Add Artifact"
-              button.
-            </p>
-          </div>
-        )}
 
         <input type="hidden" {...form.register("collectionId")} value={collectionId || ""} />
 
@@ -442,10 +438,7 @@ export function NewArtifactForm({
         )}
 
         <div className="flex gap-3">
-          <Button
-            type="submit"
-            disabled={form.formState.isSubmitting || !collectionId || isUploading || isUploadingAudio}
-          >
+          <Button type="submit" disabled={form.formState.isSubmitting || isUploading || isUploadingAudio}>
             {form.formState.isSubmitting ? "Creating..." : "Create Artifact"}
           </Button>
           <Button type="button" variant="outline" asChild>

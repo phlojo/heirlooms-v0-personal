@@ -24,7 +24,7 @@ export type CollectionInput = z.infer<typeof collectionSchema>
 export const createArtifactSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title must be less than 200 characters"),
   description: z.string().max(2000, "Description must be less than 2000 characters").optional(),
-  collectionId: z.string().uuid("Invalid collection ID"), // Now required
+  collectionId: z.string().uuid("Invalid collection ID").nullable(),
   year_acquired: z.number().int().min(1000).max(new Date().getFullYear()).optional(),
   origin: z.string().max(200, "Origin must be less than 200 characters").optional(),
   media_urls: z.array(z.string().url("Invalid media URL")).optional(),
