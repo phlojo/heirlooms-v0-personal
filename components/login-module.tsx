@@ -32,7 +32,7 @@ export function LoginModule({
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const { supabase } = useSupabase()
+  const supabase = useSupabase()
 
   const handleBack = () => {
     router.back()
