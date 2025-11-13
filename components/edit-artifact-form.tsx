@@ -12,11 +12,11 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { useState, useEffect } from "react"
-import { X, Upload, ImageIcon, Loader2 } from "lucide-react"
+import { X, Upload, ImageIcon, Loader2 } from 'lucide-react'
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle2 } from "lucide-react"
+import { CheckCircle2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
@@ -46,7 +46,6 @@ interface EditArtifactFormProps {
 export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
-  const [uploadedImages, setUploadedImages] = useState<string[]>(artifact.media_urls || [])
   const [isUploading, setIsUploading] = useState(false)
   const [success, setSuccess] = useState(false)
   const { toast } = useToast()
@@ -74,11 +73,12 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   }, [form])
 
   useEffect(() => {
+    const currentUrls = form.getValues("media_urls") || []
     const originalUrls = artifact.media_urls || []
-    if (JSON.stringify(originalUrls.sort()) !== JSON.stringify(uploadedImages.sort())) {
+    if (JSON.stringify(originalUrls.sort()) !== JSON.stringify(currentUrls.sort())) {
       setHasUnsavedChanges(true)
     }
-  }, [uploadedImages, artifact.media_urls])
+  }, [form.watch("media_urls"), artifact.media_urls])
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -145,6 +145,8 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
           throw new Error(signatureResult.error || "Failed to generate upload signature")
         }
 
+        console.log("[v0] Using public_id:", signatureResult.publicId)
+
         const formData = new FormData()
         formData.append("file", file)
         formData.append("api_key", signatureResult.apiKey!)
@@ -185,15 +187,15 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
         }
 
         const data = await response.json()
-        console.log("[v0] Successfully uploaded to Cloudinary:", data.secure_url)
+        console.log("[v0] Successfully uploaded to Cloudinary:", data.secure_url, "public_id:", data.public_id)
         urls.push(data.secure_url)
       }
 
-      const newImages = [...uploadedImages, ...urls]
-      const uniqueImages = Array.from(new Set(newImages)) // Remove duplicates
+      const currentUrls = form.getValues("media_urls") || []
+      const newImages = [...currentUrls, ...urls]
+      const uniqueImages = Array.from(new Set(newImages))
       console.log("[v0] Total images before dedup:", newImages.length, "After dedup:", uniqueImages.length)
 
-      setUploadedImages(uniqueImages)
       form.setValue("media_urls", uniqueImages)
     } catch (err) {
       console.error("[v0] Upload error:", err)
@@ -209,18 +211,27 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   }
 
   function removeImage(index: number) {
-    const newImages = uploadedImages.filter((_, i) => i !== index)
-    setUploadedImages(newImages)
+    const currentUrls = form.getValues("media_urls") || []
+    const newImages = currentUrls.filter((_, i) => i !== index)
     form.setValue("media_urls", newImages)
   }
 
   async function onSubmit(data: FormData) {
     setError(null)
 
+    const uniqueMediaUrls = Array.from(new Set(data.media_urls || []))
+    
+    if (uniqueMediaUrls.length !== (data.media_urls?.length || 0)) {
+      console.log("[v0] Found duplicates before submit:", data.media_urls?.length, "→", uniqueMediaUrls.length)
+    }
+
     const submitData = {
       ...data,
+      media_urls: uniqueMediaUrls,
       year_acquired: data.year_acquired || undefined,
     }
+
+    console.log("[v0] Submitting artifact update with", uniqueMediaUrls.length, "media URLs")
 
     const result = await updateArtifact(submitData, artifact.media_urls || [])
 
@@ -259,6 +270,8 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     )
   }
 
+  const uploadedImages = form.watch("media_urls") || []
+
   return (
     <>
       <Form {...form}>
@@ -296,22 +309,20 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
 
             {/* Upload button */}
             <div className="flex items-center gap-3">
-              <label className="cursor-pointer">
-                <Button type="button" variant="outline" disabled={isUploading} asChild>
-                  <span>
-                    <Upload className="mr-2 h-4 w-4" />
-                    {isUploading ? "Uploading..." : "Upload Photos"}
-                  </span>
-                </Button>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  disabled={isUploading}
-                />
-              </label>
+              <Button type="button" variant="outline" disabled={isUploading} asChild>
+                <label className="cursor-pointer">
+                  <Upload className="mr-2 h-4 w-4" />
+                  {isUploading ? "Uploading..." : "Upload Photos"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={isUploading}
+                  />
+                </label>
+              </Button>
               <FormDescription className="!mt-0">Upload photos (max 15MB per file, 30MB total)</FormDescription>
             </div>
 
