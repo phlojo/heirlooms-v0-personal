@@ -1,9 +1,12 @@
+"use client"
+
 import Link from "next/link"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Author } from "@/components/author"
 import { CollectionThumbnailGrid } from "@/components/collection-thumbnail-grid"
 import { Badge } from "@/components/ui/badge"
 import { Settings } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface CollectionCardProps {
   collection: {
@@ -50,9 +53,21 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
             <h3 className="font-semibold leading-tight line-clamp-1 text-2xl pb-0 pt-2">{collection.title}</h3>
             {collection.is_public === false && <Badge variant="purple">Private</Badge>}
             {collection.isUnsorted && (
-              <Badge variant="blue" className="px-1.5">
-                <Settings className="h-4 w-4" />
-              </Badge>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="blue" className="px-1.5 cursor-help" onClick={(e) => e.preventDefault()}>
+                      <Settings className="h-4 w-4" />
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>
+                      This collection holds your uncategorized artifacts — items you&apos;ve created without assigning a
+                      collection, or ones that remained after a collection was deleted.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </CardHeader>
