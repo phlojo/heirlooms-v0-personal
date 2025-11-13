@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useState, useEffect } from "react"
-import { createBrowserClient } from "@/lib/supabase/client"
+import { useSupabase } from "@/lib/supabase/browser-context"
 
 interface TopNavProps {
   onMenuClick: () => void
@@ -28,7 +28,7 @@ export function TopNav({ onMenuClick, user }: TopNavProps) {
   const pathname = usePathname()
   const [displayName, setDisplayName] = useState<string | null>(null)
 
-  const supabase = createBrowserClient()
+  const supabase = useSupabase()
 
   useEffect(() => {
     if (!user?.id) {

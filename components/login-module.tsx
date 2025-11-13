@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { signInWithPassword, signInWithMagicLink } from "@/lib/actions/auth"
-import { createClient } from "@/lib/supabase/client"
+import { useSupabase } from "@/lib/supabase/browser-context"
 import { useRouter } from "next/navigation"
 
 interface LoginModuleProps {
@@ -32,6 +32,7 @@ export function LoginModule({
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const { supabase } = useSupabase()
 
   const handleBack = () => {
     router.back()
@@ -42,7 +43,6 @@ export function LoginModule({
     setError(null)
 
     try {
-      const supabase = createClient()
       const baseUrl = window.location.origin
       const redirectTo = `${baseUrl}/auth/callback?next=${encodeURIComponent(returnTo)}`
 

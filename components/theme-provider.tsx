@@ -3,15 +3,14 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { createBrowserClient } from "@/lib/supabase/client"
+import { useSupabase } from "@/lib/supabase/browser-context"
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const supabase = useSupabase() // Moved hook call to top level
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-
-    const supabase = createBrowserClient()
 
     // Load theme preference from database
     const loadTheme = async () => {

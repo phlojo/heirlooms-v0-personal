@@ -3,7 +3,7 @@
 import { User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEffect, useState } from "react"
-import { createBrowserClient } from "@/lib/supabase/client"
+import { useSupabase } from "@/lib/supabase/browser-context"
 
 interface AuthorProps {
   userId: string
@@ -17,7 +17,7 @@ export function Author({ userId, authorName, size = "md", showAvatar = true, cla
   const [displayName, setDisplayName] = useState(authorName || "Author")
   const [isLoading, setIsLoading] = useState(!authorName)
 
-  const supabase = createBrowserClient()
+  const supabase = useSupabase()
 
   useEffect(() => {
     if (authorName || !userId) {

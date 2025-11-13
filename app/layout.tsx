@@ -6,6 +6,7 @@ import "./globals.css"
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Analytics } from "@vercel/analytics/react"
+import { SupabaseProvider } from "@/lib/supabase/browser-context"
 
 // Initialize fonts
 const _geist = Geist({ subsets: ["latin"], weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"] })
@@ -46,10 +47,12 @@ export default function RootLayout({
         />
       </head>
       <body className={`font-sans antialiased`}>
-        <ThemeProvider>
-          {children}
-          <Analytics />
-        </ThemeProvider>
+        <SupabaseProvider>
+          <ThemeProvider>
+            {children}
+            <Analytics />
+          </ThemeProvider>
+        </SupabaseProvider>
       </body>
     </html>
   )
