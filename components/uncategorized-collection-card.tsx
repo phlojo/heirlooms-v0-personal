@@ -56,7 +56,7 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
           <h3 className="font-semibold leading-tight text-2xl pb-2 pt-2">{collection.title}</h3>
         </Link>
 
-        <div className="flex items-center gap-2 flex-wrap pb-2">
+        <div className="flex items-center gap-2 flex-wrap pb-2 relative">
           {collection.is_public === false && <Badge variant="purple">Private</Badge>}
           {collection.isUnsorted && (
             <TooltipProvider delayDuration={0}>
@@ -77,7 +77,7 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
                     <Settings className="h-3 w-3" />
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" align="center" className="max-w-xs">
+                <TooltipContent side="bottom" align="start" sideOffset={8} className="max-w-xs">
                   <p>
                     This collection holds your uncategorized artifacts — items you&apos;ve created without assigning a
                     collection, or ones that remained after a collection was deleted.
