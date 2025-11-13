@@ -36,7 +36,18 @@ export function TranscriptionInput({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream)
+
+      const options = { mimeType: "audio/webm;codecs=opus" }
+      let mediaRecorder: MediaRecorder
+
+      try {
+        mediaRecorder = new MediaRecorder(stream, options)
+      } catch (e) {
+        // Fallback to default if opus codec not supported
+        console.log("[v0] Opus codec not supported, using default")
+        mediaRecorder = new MediaRecorder(stream)
+      }
+
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
 
@@ -48,6 +59,7 @@ export function TranscriptionInput({
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+        console.log("[v0] Recording stopped, blob size:", audioBlob.size)
         await handleTranscription(audioBlob)
 
         // Stop all tracks to release microphone
@@ -56,6 +68,7 @@ export function TranscriptionInput({
 
       mediaRecorder.start()
       setIsRecording(true)
+      console.log("[v0] Recording started")
     } catch (error) {
       console.error("[v0] Error starting recording:", error)
       alert("Failed to access microphone. Please check your browser permissions.")
@@ -66,6 +79,7 @@ export function TranscriptionInput({
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
+      console.log("[v0] Stopping recording...")
     }
   }
 
@@ -73,12 +87,39 @@ export function TranscriptionInput({
     setIsTranscribing(true)
 
     try {
-      // First, upload to Cloudinary
+      console.log("[v0] Starting transcription process")
+
+      // First, transcribe the audio
+      const transcriptionFormData = new FormData()
+      transcriptionFormData.append("audio", audioBlob, "audio.webm")
+      transcriptionFormData.append("fieldType", fieldType)
+
+      console.log("[v0] Sending audio to transcription API")
+
+      const transcriptionResponse = await fetch("/api/transcribe", {
+        method: "POST",
+        body: transcriptionFormData,
+      })
+
+      if (!transcriptionResponse.ok) {
+        const errorData = await transcriptionResponse.json()
+        console.error("[v0] Transcription API error:", errorData)
+        throw new Error(errorData.details || errorData.error || "Failed to transcribe audio")
+      }
+
+      const { transcription } = await transcriptionResponse.json()
+      console.log("[v0] Transcription successful:", transcription)
+      onChange(transcription)
+
+      // Then, upload to Cloudinary for storage
       const fileName = `${fieldType}-${Date.now()}.webm`
       const signatureResult = await generateCloudinaryTranscriptionSignature(userId, fileName, fieldType)
 
       if (signatureResult.error || !signatureResult.signature) {
-        throw new Error(signatureResult.error || "Failed to generate upload signature")
+        console.error("[v0] Cloudinary signature error:", signatureResult.error)
+        // Don't throw - transcription worked, just log the storage failure
+        console.warn("[v0] Failed to upload audio to Cloudinary, but transcription succeeded")
+        return
       }
 
       const cloudinaryFormData = new FormData()
@@ -96,31 +137,16 @@ export function TranscriptionInput({
       })
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload audio to Cloudinary")
+        console.warn("[v0] Failed to upload audio to Cloudinary, but transcription succeeded")
+      } else {
+        const uploadData = await uploadResponse.json()
+        console.log("[v0] Transcription audio uploaded to Cloudinary:", uploadData.secure_url)
       }
-
-      const uploadData = await uploadResponse.json()
-      console.log("[v0] Transcription audio uploaded to Cloudinary:", uploadData.secure_url)
-
-      // Then, transcribe the audio
-      const transcriptionFormData = new FormData()
-      transcriptionFormData.append("audio", audioBlob)
-      transcriptionFormData.append("fieldType", fieldType)
-
-      const transcriptionResponse = await fetch("/api/transcribe", {
-        method: "POST",
-        body: transcriptionFormData,
-      })
-
-      if (!transcriptionResponse.ok) {
-        throw new Error("Failed to transcribe audio")
-      }
-
-      const { transcription } = await transcriptionResponse.json()
-      onChange(transcription)
     } catch (error) {
       console.error("[v0] Transcription error:", error)
-      alert("Failed to transcribe audio. Please try again.")
+      alert(
+        `Failed to transcribe audio: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
+      )
     } finally {
       setIsTranscribing(false)
     }
@@ -162,6 +188,7 @@ export function TranscriptionInput({
         onClick={handleMicClick}
         disabled={disabled || isTranscribing}
         className="absolute right-1 top-1 h-8 w-8"
+        title={isRecording ? "Stop recording" : "Start recording"}
       >
         {isTranscribing ? (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
