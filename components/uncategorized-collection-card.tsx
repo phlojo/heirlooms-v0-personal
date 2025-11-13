@@ -30,8 +30,8 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
   const href = mode ? `${baseHref}?mode=${mode}` : baseHref
 
   return (
-    <Link href={href}>
-      <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0">
+    <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0">
+      <Link href={href} className="block">
         <div className="relative aspect-[4/1.5] overflow-hidden bg-muted">
           <div className="h-full transition-transform group-hover:scale-105">
             {collection.thumbnailImages && collection.thumbnailImages.length > 0 ? (
@@ -47,56 +47,48 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
             )}
           </div>
         </div>
+      </Link>
 
-        <CardHeader className="pb-0">
+      <CardHeader className="pb-0">
+        <Link href={href} className="block">
           <h3 className="font-semibold leading-tight text-2xl pb-2 pt-2">{collection.title}</h3>
+        </Link>
 
-          <div className="flex items-center gap-2 flex-wrap pb-2">
-            {collection.is_public === false && <Badge variant="purple">Private</Badge>}
-            {collection.isUnsorted && (
-              <TooltipProvider delayDuration={200}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                      }}
-                      onPointerDown={(e) => {
-                        e.stopPropagation()
-                      }}
-                    >
-                      <Badge variant="blue" className="px-1.5 cursor-help">
-                        <Settings className="h-4 w-4" />
-                      </Badge>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p>
-                      This collection holds your uncategorized artifacts — items you&apos;ve created without assigning a
-                      collection, or ones that remained after a collection was deleted.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
-        </CardHeader>
+        <div className="flex items-center gap-2 flex-wrap pb-2">
+          {collection.is_public === false && <Badge variant="purple">Private</Badge>}
+          {collection.isUnsorted && (
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="blue" className="px-1.5 cursor-help">
+                    <Settings className="h-4 w-4" />
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>
+                    This collection holds your uncategorized artifacts — items you&apos;ve created without assigning a
+                    collection, or ones that remained after a collection was deleted.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+      </CardHeader>
 
-        <CardContent className="pt-0 pb-4 space-y-4 -mt-2">
+      <CardContent className="pt-0 pb-4 space-y-4 -mt-2">
+        <Link href={href} className="block">
           {collection.description && (
             <p className="text-sm text-muted-foreground line-clamp-3">{collection.description}</p>
           )}
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {collection.itemCount} {collection.itemCount === 1 ? "artifact" : "artifacts"}
-            </p>
-            <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
+        </Link>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {collection.itemCount} {collection.itemCount === 1 ? "artifact" : "artifacts"}
+          </p>
+          <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />
+        </div>
+      </CardContent>
+    </Card>
   )
 }
