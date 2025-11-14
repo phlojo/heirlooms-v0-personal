@@ -116,7 +116,7 @@ export default async function CollectionDetailPage({
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className={isUncategorized ? "space-y-2" : "space-y-4"}>
           {!isUncategorized && collection.description && <p className="text-muted-foreground pb-2">{collection.description}</p>}
 
           {isUncategorized && (
