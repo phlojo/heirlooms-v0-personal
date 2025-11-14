@@ -54,6 +54,9 @@ export default async function CollectionDetailPage({
   let artifacts = []
   try {
     if (isUncategorized && user) {
+      console.log("[v0] Fetching uncategorized artifacts for user:", user.id)
+      console.log("[v0] Collection ID:", collection.id)
+      
       // Custom query for uncategorized: include both NULL and matching collection_id
       const { data, error } = await supabase
         .from("artifacts")
@@ -68,6 +71,9 @@ export default async function CollectionDetailPage({
         .or(`collection_id.is.null,collection_id.eq.${collection.id}`)
         .order("created_at", { ascending: false })
 
+      console.log("[v0] Query error:", error)
+      console.log("[v0] Query returned artifacts count:", data?.length || 0)
+      
       if (error) throw error
       artifacts = data || []
     } else {
@@ -76,6 +82,10 @@ export default async function CollectionDetailPage({
   } catch (error) {
     console.error("Error loading artifacts:", error)
   }
+
+  console.log("[v0] Final artifacts count:", artifacts.length)
+  console.log("[v0] isUncategorized:", isUncategorized)
+  console.log("[v0] user exists:", !!user)
 
   return (
     <AppLayout user={user}>
