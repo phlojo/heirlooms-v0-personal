@@ -99,7 +99,7 @@ export function ArtifactSwipeContent({
       )}
 
       <div className="space-y-6 px-6 lg:px-8">
-        
+        {/* Description Section */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Description</h2>
           <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
@@ -120,6 +120,7 @@ export function ArtifactSwipeContent({
           )}
         </section>
 
+        {/* Specs Section */}
         <section>
           <Collapsible open={isSpecsOpen} onOpenChange={setIsSpecsOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border bg-card p-4 hover:bg-accent transition-colors">
@@ -135,19 +136,21 @@ export function ArtifactSwipeContent({
             </CollapsibleContent>
           </Collapsible>
         </section>
+      </div>
 
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Media Items</h2>
-          {mediaUrls.length > 0 ? (
-            <div className="space-y-6">
-              {mediaUrls.map((url, index) =>
-                isAudioFile(url) ? (
-                  <div key={url} className="space-y-3 rounded-lg border bg-card p-4">
-                    <h3 className="text-sm font-semibold">Audio Recording {audioFiles > 1 ? `${index + 1}` : ''}</h3>
+      <section className="space-y-6 my-6">
+        <h2 className="text-xl font-semibold px-6 lg:px-8">Media Items</h2>
+        {mediaUrls.length > 0 ? (
+          <div className="space-y-6">
+            {mediaUrls.map((url, index) =>
+              isAudioFile(url) ? (
+                <div key={url} className="space-y-3 px-6 lg:px-8">
+                  <div className="rounded-lg border bg-card p-4">
+                    <h3 className="text-sm font-semibold mb-3">Audio Recording {audioFiles > 1 ? `${index + 1}` : ''}</h3>
                     <AudioPlayer src={url} title="Audio Recording" />
-                    {canEdit && <TranscribeAudioButton artifactId={artifact.id} audioUrl={url} />}
+                    {canEdit && <div className="mt-3"><TranscribeAudioButton artifactId={artifact.id} audioUrl={url} /></div>}
 
-                    <div className="rounded-lg border bg-muted/30 p-4">
+                    <div className="rounded-lg border bg-muted/30 p-4 mt-3">
                       <h4 className="text-sm font-semibold mb-2">Transcript</h4>
                       {artifact.transcript ? (
                         <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
@@ -161,29 +164,33 @@ export function ArtifactSwipeContent({
                       )}
                     </div>
                   </div>
-                ) : (
-                  <div key={url} className="space-y-3 rounded-lg border bg-card p-4">
-                    <h3 className="text-sm font-semibold">Photo {imageFiles > 1 ? `${index + 1}` : ''}</h3>
-                    <ArtifactImageWithViewer
-                      src={getDetailUrl(url) || "/placeholder.svg"}
-                      alt={`${artifact.title} - Image ${index + 1}`}
-                      setIsImageFullscreen={setIsImageFullscreen}
-                    />
+                </div>
+              ) : (
+                <div key={url} className="space-y-3">
+                  <h3 className="text-sm font-semibold px-6 lg:px-8">Photo {imageFiles > 1 ? `${index + 1}` : ''}</h3>
+                  <ArtifactImageWithViewer
+                    src={getDetailUrl(url) || "/placeholder.svg"}
+                    alt={`${artifact.title} - Image ${index + 1}`}
+                    setIsImageFullscreen={setIsImageFullscreen}
+                  />
+                  <div className="px-6 lg:px-8 space-y-3">
                     {imageCaptions[url] && (
                       <p className="text-sm text-muted-foreground italic leading-relaxed">{imageCaptions[url]}</p>
                     )}
                     {canEdit && <GenerateImageCaptionButton artifactId={artifact.id} imageUrl={url} />}
                   </div>
-                ),
-              )}
-            </div>
-          ) : (
-            <div className="min-h-[200px] rounded-lg border bg-muted/30 flex items-center justify-center">
-              <p className="text-sm text-muted-foreground">No media available</p>
-            </div>
-          )}
-        </section>
+                </div>
+              ),
+            )}
+          </div>
+        ) : (
+          <div className="min-h-[200px] rounded-lg border bg-muted/30 flex items-center justify-center mx-6 lg:mx-8">
+            <p className="text-sm text-muted-foreground">No media available</p>
+          </div>
+        )}
+      </section>
 
+      <div className="px-6 lg:px-8">
         <section className="pb-8">
           <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border bg-card p-4 hover:bg-accent transition-colors">
@@ -252,7 +259,6 @@ export function ArtifactSwipeContent({
             </CollapsibleContent>
           </Collapsible>
         </section>
-
       </div>
     </ArtifactSwipeWrapper>
   )
