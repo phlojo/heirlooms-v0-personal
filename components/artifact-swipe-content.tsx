@@ -15,7 +15,10 @@ import { ArtifactImageWithViewer } from "@/components/artifact-image-with-viewer
 import { Author } from "@/components/author"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
-import { Edit, ChevronDown } from 'lucide-react'
+import { AddMediaModal } from "@/components/add-media-modal"
+import { Edit, ChevronDown, Plus } from 'lucide-react'
+import { updateArtifact } from "@/lib/actions/artifacts"
+import { useRouter } from 'next/navigation'
 
 interface ArtifactSwipeContentProps {
   artifact: any
@@ -43,6 +46,8 @@ export function ArtifactSwipeContent({
   const [isImageFullscreen, setIsImageFullscreen] = useState(false)
   const [isSpecsOpen, setIsSpecsOpen] = useState(false)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isAddMediaOpen, setIsAddMediaOpen] = useState(false)
+  const router = useRouter()
   
   const imageCaptions = artifact.image_captions || {}
   
@@ -51,6 +56,28 @@ export function ArtifactSwipeContent({
   const totalMedia = mediaUrls.length
   const audioFiles = mediaUrls.filter((url) => isAudioFile(url)).length
   const imageFiles = totalMedia - audioFiles
+
+  const handleMediaAdded = async (newUrls: string[]) => {
+    try {
+      const currentUrls = artifact.media_urls || []
+      const combinedUrls = [...currentUrls, ...newUrls]
+      const uniqueUrls = Array.from(new Set(combinedUrls))
+
+      await updateArtifact(
+        {
+          id: artifact.id,
+          title: artifact.title,
+          description: artifact.description,
+          media_urls: uniqueUrls,
+        },
+        artifact.media_urls || []
+      )
+
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Failed to add media:", error)
+    }
+  }
 
   return (
     <ArtifactSwipeWrapper previousUrl={previousUrl} nextUrl={nextUrl} disableSwipe={isImageFullscreen}>
@@ -139,7 +166,20 @@ export function ArtifactSwipeContent({
       </div>
 
       <section className="space-y-6 my-6">
-        <h2 className="text-xl font-semibold px-6 lg:px-8">Media Items</h2>
+        <div className="flex items-center justify-between px-6 lg:px-8">
+          <h2 className="text-xl font-semibold">Media Items</h2>
+          {canEdit && (
+            <Button
+              onClick={() => setIsAddMediaOpen(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              size="sm"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Media
+            </Button>
+          )}
+        </div>
+        
         {mediaUrls.length > 0 ? (
           <div className="space-y-6">
             {mediaUrls.map((url, index) =>
@@ -260,6 +300,16 @@ export function ArtifactSwipeContent({
           </Collapsible>
         </section>
       </div>
+
+      {canEdit && (
+        <AddMediaModal
+          open={isAddMediaOpen}
+          onOpenChange={setIsAddMediaOpen}
+          artifactId={artifact.id}
+          userId={artifact.user_id}
+          onMediaAdded={handleMediaAdded}
+        />
+      )}
     </ArtifactSwipeWrapper>
   )
 }
