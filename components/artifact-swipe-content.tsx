@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
 import { AddMediaModal } from "@/components/add-media-modal"
-import { ChevronDown, Plus, Save, X, Trash2, Loader2 } from 'lucide-react'
+import { ChevronDown, Plus, Save, X, Trash2, Loader2, Pencil } from 'lucide-react'
 import { updateArtifact, deleteMediaFromArtifact, deleteArtifact } from "@/lib/actions/artifacts"
 import { useRouter } from 'next/navigation'
 import { GenerateImageCaptionButton } from "@/components/artifact/GenerateImageCaptionButton"
@@ -178,6 +178,20 @@ export function ArtifactSwipeContent({
         currentPosition={currentPosition}
         totalCount={totalCount}
       />
+
+      {!isEditMode && canEdit && (
+        <div className="py-4 px-6 lg:px-8">
+          <Button 
+            asChild
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <Link href={`/artifacts/${artifact.slug}/edit`}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Artifact
+            </Link>
+          </Button>
+        </div>
+      )}
 
       {isEditMode ? (
         <div className="py-4 px-6 lg:px-8">
