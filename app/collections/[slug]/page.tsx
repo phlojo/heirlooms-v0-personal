@@ -128,7 +128,7 @@ export default async function CollectionDetailPage({
         )}
 
         <div className="space-y-4">
-          {!isUnsorted && collection.description && <p className="text-muted-foreground">{collection.description}</p>}
+          {!isUnsorted && collection.description && <p className="text-muted-foreground pb-2 pb-2 pb-0">{collection.description}</p>}
 
           {isUnsorted && (
             <div className="rounded-lg border border-dashed bg-muted/20 p-4">
