@@ -8,6 +8,7 @@ import { getThumbnailUrl } from "@/lib/cloudinary"
 interface ArtifactCardFullProps {
   artifact: {
     id: string
+    slug: string
     title: string
     description?: string
     year_acquired?: number
@@ -28,7 +29,7 @@ export function ArtifactCardFull({ artifact, showAuthor = false, authorName }: A
   const thumbnailUrl = firstImage ? getThumbnailUrl(firstImage) : null
 
   return (
-    <Link href={`/artifacts/${artifact.id}`}>
+    <Link href={`/artifacts/${artifact.slug}`}>
       <Card className="group overflow-hidden border p-0 transition-all hover:shadow-lg">
         <div className="relative aspect-square overflow-hidden bg-muted">
           {thumbnailUrl ? (

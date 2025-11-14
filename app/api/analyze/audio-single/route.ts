@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     const { data: artifact, error: fetchError } = await supabase
       .from("artifacts")
-      .select("*")
+      .select("*, slug")
       .eq("id", artifactId)
       .single()
 
@@ -108,8 +108,10 @@ export async function POST(request: Request) {
       throw new Error(`Failed to save transcript: ${updateError.message}`)
     }
 
-    revalidatePath(`/artifacts/${artifactId}`)
-    revalidatePath(`/artifacts/${artifactId}/edit`)
+    console.log("[v0] Successfully saved transcript for artifact:", artifactId)
+
+    revalidatePath(`/artifacts/${artifact.slug}`)
+    revalidatePath(`/artifacts/${artifact.slug}/edit`)
 
     return NextResponse.json({ ok: true })
   } catch (error) {

@@ -12,10 +12,12 @@ interface ArtifactStickyNavProps {
   backLabel: string
   previousItem?: {
     id: string
+    slug: string
     title: string
   } | null
   nextItem?: {
     id: string
+    slug: string
     title: string
   } | null
   editHref?: string
@@ -49,7 +51,7 @@ export function ArtifactStickyNav({
 }: ArtifactStickyNavProps) {
   const [isFavorited, setIsFavorited] = useState(false)
 
-  const getNavUrl = (id: string) => isEditMode ? `/artifacts/${id}/edit` : `/artifacts/${id}`
+  const getNavUrl = (slug: string) => isEditMode ? `/artifacts/${slug}/edit` : `/artifacts/${slug}`
 
   const truncateBackLabel = (label: string) => {
     const withoutSuffix = label.endsWith(" Collection") ? label.slice(0, -11) : label
@@ -86,7 +88,7 @@ export function ArtifactStickyNav({
               className={`shrink-0 ${!previousItem ? "!opacity-15 pointer-events-none" : ""}`}
             >
               {previousItem ? (
-                <Link href={getNavUrl(previousItem.id)} title={previousItem.title}>
+                <Link href={getNavUrl(previousItem.slug)} title={previousItem.title}>
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               ) : (
@@ -126,7 +128,7 @@ export function ArtifactStickyNav({
               className={`shrink-0 ${!nextItem ? "!opacity-15 pointer-events-none" : ""}`}
             >
               {nextItem ? (
-                <Link href={getNavUrl(nextItem.id)} title={nextItem.title}>
+                <Link href={getNavUrl(nextItem.slug)} title={nextItem.title}>
                   <ArrowRight className="h-5 w-5" />
                 </Link>
               ) : (

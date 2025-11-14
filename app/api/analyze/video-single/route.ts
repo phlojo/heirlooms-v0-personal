@@ -37,10 +37,9 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    // Load artifact
     const { data: artifact, error: fetchError } = await supabase
       .from("artifacts")
-      .select("*")
+      .select("*, slug")
       .eq("id", artifactId)
       .single()
 
@@ -87,8 +86,8 @@ Create a 10-20 word summary that captures what this video likely contains based 
 
     console.log("[v0] Successfully saved video summary")
 
-    revalidatePath(`/artifacts/${artifactId}`)
-    revalidatePath(`/artifacts/${artifactId}/edit`)
+    revalidatePath(`/artifacts/${artifact.slug}`)
+    revalidatePath(`/artifacts/${artifact.slug}/edit`)
 
     return NextResponse.json({ ok: true, summary })
   } catch (error) {

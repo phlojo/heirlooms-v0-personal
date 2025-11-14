@@ -162,8 +162,8 @@ Focus on creating a meaningful, warm description that captures the essence of th
 
       console.log("[v0] Database update successful:", updateData)
       console.log("[v0] Revalidating paths")
-      revalidatePath(`/artifacts/${artifactId}`)
-      revalidatePath(`/artifacts/${artifactId}/edit`)
+      revalidatePath(`/artifacts/${artifact.slug}`)
+      revalidatePath(`/artifacts/${artifact.slug}/edit`)
 
       console.log("[v0] === SUMMARY API ROUTE COMPLETE ===")
       return NextResponse.json({ ok: true, object: finalObject })

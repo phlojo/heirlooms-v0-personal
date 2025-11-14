@@ -82,7 +82,7 @@ export function ArtifactSwipeContent({
         },
         artifact.media_urls || []
       )
-      router.push(`/artifacts/${artifact.id}`)
+      router.push(`/artifacts/${artifact.slug}`)
     } catch (error) {
       console.error("[v0] Failed to save artifact:", error)
       alert("Failed to save changes. Please try again.")
@@ -133,7 +133,7 @@ export function ArtifactSwipeContent({
         backLabel={`${artifact.collection?.title || "Uncategorized"} Collection`}
         previousItem={previous}
         nextItem={next}
-        editHref={`/artifacts/${artifact.id}/edit`}
+        editHref={`/artifacts/${artifact.slug}/edit`}
         canEdit={canEdit}
         isEditMode={isEditMode}
         authorUserId={artifact.user_id}
@@ -149,7 +149,7 @@ export function ArtifactSwipeContent({
         <div className="flex items-center gap-2">
           {canEdit && !isEditMode && (
             <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
-              <Link href={`/artifacts/${artifact.id}/edit`}>
+              <Link href={`/artifacts/${artifact.slug}/edit`}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Artifact
               </Link>
@@ -169,7 +169,7 @@ export function ArtifactSwipeContent({
                 asChild
                 variant="outline"
               >
-                <Link href={`/artifacts/${artifact.id}`}>
+                <Link href={`/artifacts/${artifact.slug}`}>
                   <X className="mr-2 h-4 w-4" />
                   Cancel
                 </Link>

@@ -58,10 +58,9 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    // Load artifact
     const { data: artifact, error: fetchError } = await supabase
       .from("artifacts")
-      .select("*")
+      .select("*, slug")
       .eq("id", artifactId)
       .single()
 
@@ -117,8 +116,8 @@ export async function POST(request: Request) {
 
     console.log("[v0] Successfully saved image caption")
 
-    revalidatePath(`/artifacts/${artifactId}`)
-    revalidatePath(`/artifacts/${artifactId}/edit`)
+    revalidatePath(`/artifacts/${artifact.slug}`)
+    revalidatePath(`/artifacts/${artifact.slug}/edit`)
 
     return NextResponse.json({ ok: true, caption })
   } catch (error) {

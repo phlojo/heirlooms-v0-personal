@@ -10,6 +10,7 @@ import {
 import { revalidatePath } from "next/cache"
 import { redirect } from 'next/navigation'
 import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "./cloudinary"
+import { generateSlug, generateUniqueSlug } from "@/lib/utils/slug"
 
 /**
  * Server action to create a new artifact
@@ -38,6 +39,12 @@ export async function createArtifact(input: CreateArtifactInput) {
 
   const uniqueMediaUrls = Array.from(new Set(validatedFields.data.media_urls || []))
 
+  const baseSlug = generateSlug(validatedFields.data.title)
+  const slug = await generateUniqueSlug(baseSlug, async (slug) => {
+    const { data } = await supabase.from("artifacts").select("id").eq("slug", slug).maybeSingle()
+    return !!data
+  })
+
   const insertData = {
     title: validatedFields.data.title,
     description: validatedFields.data.description,
@@ -46,6 +53,7 @@ export async function createArtifact(input: CreateArtifactInput) {
     origin: validatedFields.data.origin,
     media_urls: uniqueMediaUrls,
     user_id: user.id,
+    slug,
   }
 
   // Insert artifact into database
@@ -62,7 +70,7 @@ export async function createArtifact(input: CreateArtifactInput) {
     revalidatePath(`/collections/${validatedFields.data.collectionId}`)
   }
 
-  redirect(`/artifacts/${data.id}`)
+  redirect(`/artifacts/${data.slug}`)
 }
 
 /**
@@ -129,7 +137,7 @@ export async function getAdjacentArtifacts(artifactId: string, collectionId: str
   // Get all artifacts in the collection ordered by created_at
   const { data: artifacts, error } = await supabase
     .from("artifacts")
-    .select("id, title, created_at")
+    .select("id, title, slug, created_at")
     .eq("collection_id", collectionId)
     .order("created_at", { ascending: false })
 
@@ -249,7 +257,7 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
   // Verify ownership
   const { data: existingArtifact } = await supabase
     .from("artifacts")
-    .select("user_id, collection_id, collection:collections(slug)")
+    .select("user_id, collection_id, slug, title, collection:collections(slug)")
     .eq("id", validatedFields.data.id)
     .single()
 
@@ -271,12 +279,24 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
   // Deduplicate media_urls before updating in database
   const uniqueMediaUrls = Array.from(new Set(newMediaUrls))
 
+  let newSlug = existingArtifact.slug
+  if (validatedFields.data.title !== existingArtifact.title) {
+    const baseSlug = generateSlug(validatedFields.data.title)
+    newSlug = await generateUniqueSlug(baseSlug, async (slug) => {
+      // Don't count the current artifact's slug as taken
+      if (slug === existingArtifact.slug) return false
+      const { data } = await supabase.from("artifacts").select("id").eq("slug", slug).maybeSingle()
+      return !!data
+    })
+  }
+
   const updateData = {
     title: validatedFields.data.title,
     description: validatedFields.data.description,
     year_acquired: validatedFields.data.year_acquired,
     origin: validatedFields.data.origin,
     media_urls: uniqueMediaUrls,
+    slug: newSlug,
     updated_at: new Date().toISOString(),
   }
 
@@ -293,7 +313,8 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     return { success: false, error: "Failed to update artifact. Please try again." }
   }
 
-  revalidatePath(`/artifacts/${data.id}`)
+  revalidatePath(`/artifacts/${existingArtifact.slug}`)
+  revalidatePath(`/artifacts/${data.slug}`)
   revalidatePath("/collections")
   if (existingArtifact.collection?.slug) {
     revalidatePath(`/collections/${existingArtifact.collection.slug}`)
@@ -322,7 +343,7 @@ export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: stri
   // Get current artifact
   const { data: artifact, error: fetchError } = await supabase
     .from("artifacts")
-    .select("user_id, media_urls, image_captions, video_summaries, audio_transcripts, audio_summaries, collection:collections(slug)")
+    .select("user_id, slug, media_urls, image_captions, video_summaries, audio_transcripts, audio_summaries, collection:collections(slug)")
     .eq("id", artifactId)
     .single()
 
@@ -375,13 +396,44 @@ export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: stri
     await deleteCloudinaryMedia(publicId)
   }
 
-  // Revalidate paths
-  revalidatePath(`/artifacts/${artifactId}`)
-  revalidatePath(`/artifacts/${artifactId}/edit`)
+  revalidatePath(`/artifacts/${artifact.slug}`)
+  revalidatePath(`/artifacts/${artifact.slug}/edit`)
   revalidatePath("/collections")
   if (artifact.collection?.slug) {
     revalidatePath(`/collections/${artifact.collection.slug}`)
   }
 
   return { success: true }
+}
+
+/**
+ * Server action to get a single artifact by slug with collection info
+ */
+export async function getArtifactBySlug(artifactSlug: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("artifacts")
+    .select(`
+      *,
+      collection:collections(id, title, is_public, slug)
+    `)
+    .eq("slug", artifactSlug)
+    .single()
+
+  if (error) {
+    console.error("[v0] Error fetching artifact:", error)
+    return null
+  }
+
+  if (data) {
+    const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", data.user_id).single()
+
+    return {
+      ...data,
+      author_name: profile?.display_name || null,
+    }
+  }
+
+  return data
 }
