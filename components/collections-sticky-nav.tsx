@@ -82,7 +82,7 @@ export function CollectionsStickyNav({
           {showBackButton && (
             <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2 shrink-0 h-9">
               <ArrowLeft className="h-4 w-4" />
-              <span className="text-sm font-medium">Back</span>
+              <span className="font-medium text-xs">Back</span>
             </Button>
           )}
 
