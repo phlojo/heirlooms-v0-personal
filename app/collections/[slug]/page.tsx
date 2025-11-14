@@ -116,7 +116,7 @@ export default async function CollectionDetailPage({
           </div>
         )}
 
-        <div className={isUncategorized ? "space-y-2" : "space-y-4"}>
+        <div className={isUncategorized ? "space-y-2 -mt-4" : "space-y-4"}>
           {!isUncategorized && collection.description && <p className="text-muted-foreground pb-2">{collection.description}</p>}
 
           {isUncategorized && (
@@ -129,7 +129,7 @@ export default async function CollectionDetailPage({
           )}
         </div>
 
-        <div className={isUncategorized ? "-mt-2" : ""}>
+        <div>
           {artifacts.length === 0 ? (
             <div className="rounded-lg border border-dashed p-12 text-center">
               <p className="text-sm text-muted-foreground">
