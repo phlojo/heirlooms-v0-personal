@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 import { useSwipeNavigation } from "@/hooks/use-swipe-navigation"
 import { SwipeGuidance } from "@/components/swipe-guidance"
@@ -16,10 +16,13 @@ interface ArtifactSwipeWrapperProps {
 }
 
 export function ArtifactSwipeWrapper({ previousUrl, nextUrl, children, disableSwipe }: ArtifactSwipeWrapperProps) {
-  const [showGuidance, setShowGuidance] = useState(() => {
-    if (typeof window === "undefined") return false
-    return !localStorage.getItem(STORAGE_KEY) && (previousUrl !== null || nextUrl !== null)
-  })
+  const [showGuidance, setShowGuidance] = useState(false)
+
+  useEffect(() => {
+    // Only check localStorage after component mounts on client
+    const shouldShow = !localStorage.getItem(STORAGE_KEY) && (previousUrl !== null || nextUrl !== null)
+    setShowGuidance(shouldShow)
+  }, [previousUrl, nextUrl])
 
   const handleDismiss = () => {
     setShowGuidance(false)
