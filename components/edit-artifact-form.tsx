@@ -270,7 +270,12 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     )
   }
 
-  const uploadedImages = form.watch("media_urls") || []
+  const uploadedImages = Array.from(new Set(form.watch("media_urls") || []))
+  
+  const rawMediaUrls = form.watch("media_urls") || []
+  if (rawMediaUrls.length !== uploadedImages.length) {
+    console.log("[v0] Duplicates detected in form preview:", rawMediaUrls.length, "→", uploadedImages.length)
+  }
 
   return (
     <>
