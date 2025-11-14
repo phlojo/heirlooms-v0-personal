@@ -14,7 +14,8 @@ import { ArtifactSwipeWrapper } from "@/components/artifact-swipe-wrapper"
 import { ArtifactImageWithViewer } from "@/components/artifact-image-with-viewer"
 import { Author } from "@/components/author"
 import { Button } from "@/components/ui/button"
-import { Edit } from 'lucide-react'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
+import { Edit, ChevronDown } from 'lucide-react'
 
 interface ArtifactSwipeContentProps {
   artifact: any
@@ -40,40 +41,16 @@ export function ArtifactSwipeContent({
   nextUrl,
 }: ArtifactSwipeContentProps) {
   const [isImageFullscreen, setIsImageFullscreen] = useState(false)
+  const [isSpecsOpen, setIsSpecsOpen] = useState(false)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  
   const imageCaptions = artifact.image_captions || {}
-  let fullDescription = artifact.description || "No description provided"
-  if (artifact.ai_description) {
-    fullDescription += `\n\n${artifact.ai_description}`
-  }
-
-  console.log("[v0] Raw artifact.media_urls from database:", artifact.media_urls)
   
   const mediaUrls = Array.from(new Set(artifact.media_urls || []))
   
-  console.log("[v0] After deduplication:", mediaUrls)
-  console.log("[v0] Duplicate count:", (artifact.media_urls?.length || 0) - mediaUrls.length)
-  console.log("[v0] About to render", mediaUrls.length, "media items")
-  
-  // Log each media URL before rendering
-  mediaUrls.forEach((url, index) => {
-    console.log(`[v0] Media item ${index}:`, url)
-    console.log(`[v0] After getDetailUrl for item ${index}:`, getDetailUrl(url))
-  })
-
   const totalMedia = mediaUrls.length
   const audioFiles = mediaUrls.filter((url) => isAudioFile(url)).length
   const imageFiles = totalMedia - audioFiles
-
-  if (artifact.media_urls && artifact.media_urls.length !== mediaUrls.length) {
-    console.log(
-      "[v0] Duplicate URLs detected in artifact:",
-      artifact.id,
-      "Original count:",
-      artifact.media_urls.length,
-      "Unique count:",
-      mediaUrls.length,
-    )
-  }
 
   return (
     <ArtifactSwipeWrapper previousUrl={previousUrl} nextUrl={nextUrl} disableSwipe={isImageFullscreen}>
@@ -94,6 +71,7 @@ export function ArtifactSwipeContent({
         totalCount={totalCount}
       />
 
+      {/* Edit Button & Author Info */}
       <div className={`flex items-center py-4 px-6 lg:px-8 ${canEdit ? "justify-between" : "justify-center"}`}>
         {canEdit && (
           <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
@@ -106,18 +84,71 @@ export function ArtifactSwipeContent({
         {artifact.user_id && <Author userId={artifact.user_id} authorName={artifact.author_name} size="sm" />}
       </div>
 
-      <div className="space-y-8">
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            {mediaUrls.length > 0 ? (
-              mediaUrls.map((url, index) =>
+      {/* AI Panel for editors (right column on desktop) */}
+      {canEdit && (
+        <div className="px-6 lg:px-8 mb-6">
+          <ArtifactAiPanelWrapper
+            artifactId={artifact.id}
+            analysis_status={artifact.analysis_status}
+            analysis_error={artifact.analysis_error}
+            transcript={artifact.transcript}
+            ai_description={artifact.ai_description}
+            image_captions={artifact.image_captions}
+          />
+        </div>
+      )}
+
+      <div className="space-y-6 px-6 lg:px-8">
+        
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Description</h2>
+          <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
+            <ReactMarkdown>
+              {artifact.description || "No description provided"}
+            </ReactMarkdown>
+            {artifact.ai_description && (
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-xs font-semibold text-purple-600 mb-2">AI-Enhanced Description</p>
+                <ReactMarkdown>{artifact.ai_description}</ReactMarkdown>
+              </div>
+            )}
+          </div>
+          {canEdit && (
+            <div>
+              <GenerateDescriptionButton artifactId={artifact.id} />
+            </div>
+          )}
+        </section>
+
+        <section>
+          <Collapsible open={isSpecsOpen} onOpenChange={setIsSpecsOpen}>
+            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border bg-card p-4 hover:bg-accent transition-colors">
+              <h2 className="text-xl font-semibold">Specs</h2>
+              <ChevronDown className={`h-5 w-5 transition-transform ${isSpecsOpen ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 rounded-lg border bg-card p-4">
+                <p className="text-sm text-muted-foreground italic">
+                  No specs added yet. Future updates will include fields for make, model, year, measurements, materials, and condition.
+                </p>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Media Items</h2>
+          {mediaUrls.length > 0 ? (
+            <div className="space-y-6">
+              {mediaUrls.map((url, index) =>
                 isAudioFile(url) ? (
-                  <div key={url} className="space-y-3 px-6 lg:px-8">
+                  <div key={url} className="space-y-3 rounded-lg border bg-card p-4">
+                    <h3 className="text-sm font-semibold">Audio Recording {audioFiles > 1 ? `${index + 1}` : ''}</h3>
                     <AudioPlayer src={url} title="Audio Recording" />
                     {canEdit && <TranscribeAudioButton artifactId={artifact.id} audioUrl={url} />}
 
                     <div className="rounded-lg border bg-muted/30 p-4">
-                      <h3 className="text-sm font-semibold mb-2">Transcript</h3>
+                      <h4 className="text-sm font-semibold mb-2">Transcript</h4>
                       {artifact.transcript ? (
                         <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                           {artifact.transcript}
@@ -131,104 +162,97 @@ export function ArtifactSwipeContent({
                     </div>
                   </div>
                 ) : (
-                  <div key={url} className="space-y-2">
+                  <div key={url} className="space-y-3 rounded-lg border bg-card p-4">
+                    <h3 className="text-sm font-semibold">Photo {imageFiles > 1 ? `${index + 1}` : ''}</h3>
                     <ArtifactImageWithViewer
                       src={getDetailUrl(url) || "/placeholder.svg"}
                       alt={`${artifact.title} - Image ${index + 1}`}
                       setIsImageFullscreen={setIsImageFullscreen}
                     />
-                    <div className="space-y-1 px-6 lg:px-8">
-                      {imageCaptions[url] && (
-                        <p className="text-sm text-muted-foreground italic leading-relaxed">{imageCaptions[url]}</p>
-                      )}
-                      {canEdit && <GenerateImageCaptionButton artifactId={artifact.id} imageUrl={url} />}
-                    </div>
+                    {imageCaptions[url] && (
+                      <p className="text-sm text-muted-foreground italic leading-relaxed">{imageCaptions[url]}</p>
+                    )}
+                    {canEdit && <GenerateImageCaptionButton artifactId={artifact.id} imageUrl={url} />}
                   </div>
                 ),
-              )
-            ) : (
-              <div className="min-h-[400px] overflow-hidden bg-muted flex items-center justify-center">
-                <p className="text-sm text-muted-foreground">No media available</p>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-6 px-6 lg:px-8">
-            {canEdit && (
-              <ArtifactAiPanelWrapper
-                artifactId={artifact.id}
-                analysis_status={artifact.analysis_status}
-                analysis_error={artifact.analysis_error}
-                transcript={artifact.transcript}
-                ai_description={artifact.ai_description}
-                image_captions={artifact.image_captions}
-              />
-            )}
-          </div>
-        </div>
-
-        <div className="px-6 lg:px-8">
-          <div className="space-y-6">
-            <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown>{fullDescription}</ReactMarkdown>
+              )}
             </div>
-            {canEdit && (
-              <div>
-                <GenerateDescriptionButton artifactId={artifact.id} />
-              </div>
-            )}
-          </div>
-        </div>
+          ) : (
+            <div className="min-h-[200px] rounded-lg border bg-muted/30 flex items-center justify-center">
+              <p className="text-sm text-muted-foreground">No media available</p>
+            </div>
+          )}
+        </section>
 
-        <div className="px-6 lg:px-8">
-          <div className="rounded-2xl border bg-card p-6 shadow-md">
-            <h2 className="text-xl font-semibold">Details</h2>
-            <dl className="mt-4 space-y-3 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Collection</dt>
-                <dd className="font-medium">
-                  <Link href={collectionHref} className="text-primary hover:underline">
-                    {artifact.collection?.title || "Unknown"}
-                  </Link>
-                </dd>
+        <section className="pb-8">
+          <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border bg-card p-4 hover:bg-accent transition-colors">
+              <h2 className="text-xl font-semibold">Artifact Insights</h2>
+              <ChevronDown className={`h-5 w-5 transition-transform ${isDetailsOpen ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 rounded-lg border bg-card p-4">
+                <dl className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Collection</dt>
+                    <dd className="font-medium">
+                      <Link href={collectionHref} className="text-primary hover:underline">
+                        {artifact.collection?.title || "Unknown"}
+                      </Link>
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Created</dt>
+                    <dd className="font-medium">{new Date(artifact.created_at).toLocaleDateString()}</dd>
+                  </div>
+                  {artifact.updated_at && artifact.updated_at !== artifact.created_at && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Last Modified</dt>
+                      <dd className="font-medium">{new Date(artifact.updated_at).toLocaleDateString()}</dd>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Total Media Items</dt>
+                    <dd className="font-medium">
+                      {totalMedia} {totalMedia === 1 ? "file" : "files"}
+                    </dd>
+                  </div>
+                  {imageFiles > 0 && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Photos/Videos</dt>
+                      <dd className="font-medium">{imageFiles}</dd>
+                    </div>
+                  )}
+                  {audioFiles > 0 && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Audio Recordings</dt>
+                      <dd className="font-medium">{audioFiles}</dd>
+                    </div>
+                  )}
+                  {artifact.transcript && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">AI Transcription</dt>
+                      <dd className="font-medium text-green-600">Available</dd>
+                    </div>
+                  )}
+                  {artifact.ai_description && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">AI Description</dt>
+                      <dd className="font-medium text-green-600">Generated</dd>
+                    </div>
+                  )}
+                  {imageCaptions && Object.keys(imageCaptions).length > 0 && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">AI Image Captions</dt>
+                      <dd className="font-medium text-green-600">{Object.keys(imageCaptions).length}</dd>
+                    </div>
+                  )}
+                </dl>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Added</dt>
-                <dd className="font-medium">{new Date(artifact.created_at).toLocaleDateString()}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Total Media</dt>
-                <dd className="font-medium">
-                  {totalMedia} {totalMedia === 1 ? "file" : "files"}
-                </dd>
-              </div>
-              {imageFiles > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Photos/Videos</dt>
-                  <dd className="font-medium">{imageFiles}</dd>
-                </div>
-              )}
-              {audioFiles > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Audio Recordings</dt>
-                  <dd className="font-medium">{audioFiles}</dd>
-                </div>
-              )}
-              {artifact.transcript && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Transcription</dt>
-                  <dd className="font-medium text-green-600">Available</dd>
-                </div>
-              )}
-              {artifact.ai_description && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">AI Description</dt>
-                  <dd className="font-medium text-green-600">Generated</dd>
-                </div>
-              )}
-            </dl>
-          </div>
-        </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </section>
+
       </div>
     </ArtifactSwipeWrapper>
   )
