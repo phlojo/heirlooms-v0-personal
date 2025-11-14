@@ -180,6 +180,17 @@ export function ArtifactSwipeContent({
       />
 
       <div className="space-y-6 px-6 lg:px-8">
+        {!isEditMode && canEdit && (
+          <div className="flex justify-start">
+            <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
+              <Link href={`/artifacts/${artifact.slug}/edit`}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit Artifact
+              </Link>
+            </Button>
+          </div>
+        )}
+
         {isEditMode && (
           <section className="space-y-2">
             <label htmlFor="title" className="text-sm font-semibold text-foreground">Title</label>
