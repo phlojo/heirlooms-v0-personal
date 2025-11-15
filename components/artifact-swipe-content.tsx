@@ -79,9 +79,8 @@ export function ArtifactSwipeContent({
   const router = useRouter()
   
   const imageCaptions = artifact.image_captions || {}
-  const videoSummaries = artifact.video_summaries || {}
   const audioTranscripts = artifact.audio_transcripts || {}
-  
+
   const mediaUrls = Array.from(new Set(artifact.media_urls || []))
   
   const totalMedia = mediaUrls.length
@@ -347,7 +346,7 @@ export function ArtifactSwipeContent({
                   </div>
                 )
               } else if (isVideoFile(url)) {
-                const summary = videoSummaries[url]
+                const caption = imageCaptions[url]
                 return (
                   <div key={url} className="space-y-3">
                     {isEditMode && (
@@ -372,10 +371,10 @@ export function ArtifactSwipeContent({
                       Your browser does not support the video tag.
                     </video>
                     <div className="px-6 lg:px-8 space-y-3">
-                      {summary && (
+                      {caption && (
                         <div className="rounded-lg border bg-muted/30 p-3">
-                          <h4 className="text-xs font-semibold mb-1 text-purple-600">AI Summary</h4>
-                          <p className="text-sm text-foreground leading-relaxed">{summary}</p>
+                          <h4 className="text-xs font-semibold mb-1 text-purple-600">AI Caption</h4>
+                          <p className="text-sm text-foreground leading-relaxed">{caption}</p>
                         </div>
                       )}
                       {isEditMode && <GenerateVideoSummaryButton artifactId={artifact.id} videoUrl={url} />}

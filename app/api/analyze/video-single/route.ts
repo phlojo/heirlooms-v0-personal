@@ -14,6 +14,15 @@ function isVideoUrl(url: string): boolean {
   )
 }
 
+function extractVideoFrame(videoUrl: string): string {
+  // Use Cloudinary transformations to extract a frame at 1 second and convert to jpg
+  const urlParts = videoUrl.split('/upload/')
+  if (urlParts.length === 2) {
+    return `${urlParts[0]}/upload/so_1.0,f_jpg/${urlParts[1]}`
+  }
+  return videoUrl
+}
+
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
   const { ok, retryAfterMs } = rateLimit(ip)
@@ -47,53 +56,63 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Artifact not found" }, { status: 404 })
     }
 
-    console.log("[v0] Starting video summary for artifact:", artifactId)
+    console.log("[v0] Starting video caption generation for artifact:", artifactId)
     console.log("[v0] Video URL:", videoUrl.substring(0, 50) + "...")
 
-    // For videos, we'll use a text-based approach since vision models don't directly process video
-    // Generate a summary prompt based on the artifact context
+    const frameUrl = extractVideoFrame(videoUrl)
+    console.log("[v0] Extracted frame URL:", frameUrl.substring(0, 50) + "...")
+
     const result = await generateText({
       model: openai(getVisionModel()),
-      prompt: `Generate a brief, descriptive summary for a video artifact in a family heirloom collection. 
-      
-Context: This is a video from "${artifact.title}"${artifact.description ? `, described as: ${artifact.description}` : ''}.
-
-Create a 10-20 word summary that captures what this video likely contains based on the title and context. Be warm and specific.`,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              image: frameUrl,
+            },
+            {
+              type: "text",
+              text: "Generate a descriptive caption for this video frame in 7-20 words. Be specific and factual about what you see.",
+            },
+          ],
+        },
+      ],
       maxTokens: 100,
     })
 
-    const summary = result.text.trim()
-    console.log("[v0] Generated video summary:", summary)
+    const caption = result.text.trim()
+    console.log("[v0] Generated video caption:", caption)
 
-    // Merge with existing video_summaries
-    const existingSummaries = artifact.video_summaries || {}
-    const updatedSummaries = {
-      ...existingSummaries,
-      [videoUrl]: summary,
+    const existingCaptions = artifact.image_captions || {}
+    const updatedCaptions = {
+      ...existingCaptions,
+      [videoUrl]: caption,
     }
 
     const { error: updateError } = await supabase
       .from("artifacts")
       .update({
-        video_summaries: updatedSummaries,
+        image_captions: updatedCaptions,
         updated_at: new Date().toISOString(),
       })
       .eq("id", artifactId)
 
     if (updateError) {
-      throw new Error(`Failed to save video summary: ${updateError.message}`)
+      throw new Error(`Failed to save video caption: ${updateError.message}`)
     }
 
-    console.log("[v0] Successfully saved video summary")
+    console.log("[v0] Successfully saved video caption")
 
     revalidatePath(`/artifacts/${artifact.slug}`)
     revalidatePath(`/artifacts/${artifact.slug}/edit`)
 
-    return NextResponse.json({ ok: true, summary })
+    return NextResponse.json({ ok: true, caption })
   } catch (error) {
-    console.error("[v0] Video summary error:", error)
+    console.error("[v0] Video caption error:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Video summary generation failed" },
+      { error: error instanceof Error ? error.message : "Video caption generation failed" },
       { status: 500 },
     )
   }

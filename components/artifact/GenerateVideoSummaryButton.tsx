@@ -26,13 +26,13 @@ export function GenerateVideoSummaryButton({ artifactId, videoUrl }: GenerateVid
 
       toast({
         title: "Success",
-        description: "AI video summary generated successfully",
+        description: "AI video caption generated successfully",
       })
 
       router.refresh()
     } catch (err) {
-      console.error("[v0] Generate video summary error:", err)
-      const errorMessage = err instanceof Error ? err.message : "Failed to generate video summary"
+      console.error("[v0] Generate video caption error:", err)
+      const errorMessage = err instanceof Error ? err.message : "Failed to generate video caption"
       toast({
         title: "Error",
         description: errorMessage,
@@ -60,7 +60,7 @@ export function GenerateVideoSummaryButton({ artifactId, videoUrl }: GenerateVid
       ) : (
         <>
           <Sparkles className="h-4 w-4" />
-          Generate AI Summary
+          Generate AI Caption
         </>
       )}
     </Button>
