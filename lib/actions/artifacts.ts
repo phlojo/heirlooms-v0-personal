@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from 'next/navigation'
 import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "./cloudinary"
 import { generateSlug, generateUniqueSlug } from "@/lib/utils/slug"
+import { isCurrentUserAdmin } from "@/lib/utils/admin"
 
 /**
  * Server action to create a new artifact
@@ -266,14 +267,20 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     return { success: false, error: "Unauthorized" }
   }
 
-  // Verify ownership
+  const isAdmin = await isCurrentUserAdmin()
+
+  // Verify ownership or admin status
   const { data: existingArtifact } = await supabase
     .from("artifacts")
     .select("user_id, collection_id, slug, title, collection:collections(slug)")
     .eq("id", validatedFields.data.id)
     .single()
 
-  if (!existingArtifact || existingArtifact.user_id !== user.id) {
+  if (!existingArtifact) {
+    return { success: false, error: "Artifact not found" }
+  }
+
+  if (!isAdmin && existingArtifact.user_id !== user.id) {
     return { success: false, error: "Unauthorized" }
   }
 
@@ -356,6 +363,8 @@ export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: stri
     return { success: false, error: "Unauthorized" }
   }
 
+  const isAdmin = await isCurrentUserAdmin()
+
   // Get current artifact
   const { data: artifact, error: fetchError } = await supabase
     .from("artifacts")
@@ -367,8 +376,8 @@ export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: stri
     return { success: false, error: "Artifact not found" }
   }
 
-  // Verify ownership
-  if (artifact.user_id !== user.id) {
+  // Verify ownership or admin status
+  if (!isAdmin && artifact.user_id !== user.id) {
     return { success: false, error: "Unauthorized" }
   }
 
@@ -469,6 +478,8 @@ export async function deleteArtifact(artifactId: string) {
     return { success: false, error: "Unauthorized" }
   }
 
+  const isAdmin = await isCurrentUserAdmin()
+
   // Get current artifact
   const { data: artifact, error: fetchError } = await supabase
     .from("artifacts")
@@ -480,8 +491,8 @@ export async function deleteArtifact(artifactId: string) {
     return { success: false, error: "Artifact not found" }
   }
 
-  // Verify ownership
-  if (artifact.user_id !== user.id) {
+  // Verify ownership or admin status
+  if (!isAdmin && artifact.user_id !== user.id) {
     return { success: false, error: "Unauthorized" }
   }
 
@@ -527,6 +538,8 @@ export async function updateMediaCaption(artifactId: string, mediaUrl: string, c
     return { success: false, error: "Unauthorized" }
   }
 
+  const isAdmin = await isCurrentUserAdmin()
+
   // Get current artifact
   const { data: artifact, error: fetchError } = await supabase
     .from("artifacts")
@@ -538,8 +551,8 @@ export async function updateMediaCaption(artifactId: string, mediaUrl: string, c
     return { success: false, error: "Artifact not found" }
   }
 
-  // Verify ownership
-  if (artifact.user_id !== user.id) {
+  // Verify ownership or admin status
+  if (!isAdmin && artifact.user_id !== user.id) {
     return { success: false, error: "Unauthorized" }
   }
 

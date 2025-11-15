@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache"
 import { getArtifactsByCollection } from "./artifacts"
 import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "./cloudinary"
 import { generateSlug, generateUniqueSlug } from "@/lib/utils/slug"
+import { isCurrentUserAdmin } from "@/lib/utils/admin"
 
 /**
  * Server action to create a new collection
@@ -238,9 +239,15 @@ export async function updateCollection(collectionId: string, input: CollectionIn
     return { success: false, error: "Unauthorized" }
   }
 
-  // Verify ownership
+  const isAdmin = await isCurrentUserAdmin()
+
+  // Verify ownership or admin status
   const collection = await getCollection(collectionId)
-  if (!collection || collection.user_id !== user.id) {
+  if (!collection) {
+    return { success: false, error: "Collection not found" }
+  }
+  
+  if (!isAdmin && collection.user_id !== user.id) {
     return { success: false, error: "Unauthorized" }
   }
 
@@ -332,12 +339,14 @@ export async function deleteCollection(collectionId: string, deleteArtifacts = f
     return { success: false, error: "Unauthorized" }
   }
 
+  const isAdmin = await isCurrentUserAdmin()
+
   const collection = await getCollection(collectionId)
   if (!collection) {
     return { success: false, error: "Collection not found" }
   }
 
-  if (collection.user_id !== user.id) {
+  if (!isAdmin && collection.user_id !== user.id) {
     return { success: false, error: "You do not have permission to delete this collection" }
   }
 
