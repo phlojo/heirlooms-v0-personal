@@ -302,7 +302,7 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     })
   }
 
-  const updateData = {
+  const updateData: any = {
     title: validatedFields.data.title,
     description: validatedFields.data.description,
     year_acquired: validatedFields.data.year_acquired,
@@ -310,6 +310,10 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     media_urls: uniqueMediaUrls,
     slug: newSlug,
     updated_at: new Date().toISOString(),
+  }
+
+  if (validatedFields.data.image_captions !== undefined) {
+    updateData.image_captions = validatedFields.data.image_captions
   }
 
   // Update artifact in database

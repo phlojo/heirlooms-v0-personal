@@ -49,6 +49,7 @@ export const updateArtifactSchema = z.object({
     .transform((val) => val ?? undefined),
   origin: z.string().max(200, "Origin must be less than 200 characters").optional(),
   media_urls: z.array(z.string().url("Invalid media URL")).optional(),
+  image_captions: z.record(z.string().url(), z.string()).optional(),
 })
 
 export type UpdateArtifactInput = z.infer<typeof updateArtifactSchema>

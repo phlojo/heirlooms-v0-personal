@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { getDetailUrl } from "@/lib/cloudinary"
 import { AudioPlayer } from "@/components/audio-player"
@@ -63,6 +63,14 @@ export function ArtifactSwipeContent({
   previousUrl,
   nextUrl,
 }: ArtifactSwipeContentProps) {
+  const [originalState] = useState({
+    title: artifact.title,
+    description: artifact.description || "",
+    media_urls: artifact.media_urls || [],
+    image_captions: artifact.image_captions || {},
+    audio_transcripts: artifact.audio_transcripts || {},
+  })
+  
   const [isImageFullscreen, setIsImageFullscreen] = useState(false)
   const [isAttributesOpen, setIsAttributesOpen] = useState(false)
   const [isProvenanceOpen, setIsProvenanceOpen] = useState(false)
@@ -71,21 +79,44 @@ export function ArtifactSwipeContent({
   const [comingSoonOpen, setComingSoonOpen] = useState(false)
   const [comingSoonFeature, setComingSoonFeature] = useState("")
   
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  
   const [editingCaption, setEditingCaption] = useState<string | null>(null)
   const [editCaptionText, setEditCaptionText] = useState<string>("")
   const [isSavingCaption, setIsSavingCaption] = useState(false)
   
   const [editTitle, setEditTitle] = useState(artifact.title)
   const [editDescription, setEditDescription] = useState(artifact.description || "")
+  const [editMediaUrls, setEditMediaUrls] = useState<string[]>(artifact.media_urls || [])
+  const [editImageCaptions, setEditImageCaptions] = useState<Record<string, string>>(artifact.image_captions || {})
+  
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   
   const router = useRouter()
   
-  const imageCaptions = artifact.image_captions || {}
+  const imageCaptions = isEditMode ? editImageCaptions : (artifact.image_captions || {})
   const audioTranscripts = artifact.audio_transcripts || {}
+  const mediaUrls = isEditMode ? Array.from(new Set(editMediaUrls)) : Array.from(new Set(artifact.media_urls || []))
+  
+  const hasUnsavedChanges = isEditMode && (
+    editTitle !== originalState.title ||
+    editDescription !== originalState.description ||
+    JSON.stringify(editMediaUrls.sort()) !== JSON.stringify(originalState.media_urls.sort()) ||
+    JSON.stringify(editImageCaptions) !== JSON.stringify(originalState.image_captions)
+  )
 
-  const mediaUrls = Array.from(new Set(artifact.media_urls || []))
+  useEffect(() => {
+    if (!isEditMode || !hasUnsavedChanges) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isEditMode, hasUnsavedChanges])
   
   const totalMedia = mediaUrls.length
   const audioFiles = mediaUrls.filter((url) => isAudioFile(url)).length
@@ -100,11 +131,13 @@ export function ArtifactSwipeContent({
           id: artifact.id,
           title: editTitle,
           description: editDescription,
-          media_urls: artifact.media_urls || [],
+          media_urls: editMediaUrls,
+          image_captions: editImageCaptions,
         },
-        artifact.media_urls || []
+        originalState.media_urls
       )
       router.push(`/artifacts/${artifact.slug}`)
+      router.refresh()
     } catch (error) {
       console.error("[v0] Failed to save artifact:", error)
       alert("Failed to save changes. Please try again.")
@@ -116,12 +149,24 @@ export function ArtifactSwipeContent({
   const handleDeleteMedia = async (urlToDelete: string) => {
     if (!confirm("Are you sure you want to delete this media item?")) return
     
-    try {
-      await deleteMediaFromArtifact(artifact.id, urlToDelete)
-      router.refresh()
-    } catch (error) {
-      console.error("[v0] Failed to delete media:", error)
-      alert("Failed to delete media. Please try again.")
+    if (isEditMode) {
+      // Remove from local state
+      setEditMediaUrls(prev => prev.filter(url => url !== urlToDelete))
+      // Remove caption if exists
+      setEditImageCaptions(prev => {
+        const updated = { ...prev }
+        delete updated[urlToDelete]
+        return updated
+      })
+    } else {
+      // Immediate delete in view mode (shouldn't happen but kept for safety)
+      try {
+        await deleteMediaFromArtifact(artifact.id, urlToDelete)
+        router.refresh()
+      } catch (error) {
+        console.error("[v0] Failed to delete media:", error)
+        alert("Failed to delete media. Please try again.")
+      }
     }
   }
 
@@ -146,24 +191,32 @@ export function ArtifactSwipeContent({
   }
 
   const handleMediaAdded = async (newUrls: string[]) => {
-    try {
-      const currentUrls = artifact.media_urls || []
-      const combinedUrls = [...currentUrls, ...newUrls]
+    if (isEditMode) {
+      // Add to local state
+      const combinedUrls = [...editMediaUrls, ...newUrls]
       const uniqueUrls = Array.from(new Set(combinedUrls))
+      setEditMediaUrls(uniqueUrls)
+    } else {
+      // Immediate save in view mode (shouldn't happen but kept for safety)
+      try {
+        const currentUrls = artifact.media_urls || []
+        const combinedUrls = [...currentUrls, ...newUrls]
+        const uniqueUrls = Array.from(new Set(combinedUrls))
 
-      await updateArtifact(
-        {
-          id: artifact.id,
-          title: artifact.title,
-          description: artifact.description,
-          media_urls: uniqueUrls,
-        },
-        artifact.media_urls || []
-      )
+        await updateArtifact(
+          {
+            id: artifact.id,
+            title: artifact.title,
+            description: artifact.description,
+            media_urls: uniqueUrls,
+          },
+          artifact.media_urls || []
+        )
 
-      router.refresh()
-    } catch (error) {
-      console.error("[v0] Failed to add media:", error)
+        router.refresh()
+      } catch (error) {
+        console.error("[v0] Failed to add media:", error)
+      }
     }
   }
 
@@ -178,27 +231,55 @@ export function ArtifactSwipeContent({
   }
 
   const handleSaveCaption = async (url: string) => {
-    setIsSavingCaption(true)
-    try {
-      const { updateMediaCaption } = await import("@/lib/actions/artifacts")
-      const result = await updateMediaCaption(artifact.id, url, editCaptionText)
-      if (result.success) {
-        setEditingCaption(null)
-        router.refresh()
-      } else {
-        alert(result.error || "Failed to update caption")
+    if (isEditMode) {
+      // Save to local state
+      setEditImageCaptions(prev => ({
+        ...prev,
+        [url]: editCaptionText
+      }))
+      setEditingCaption(null)
+      setEditCaptionText("")
+    } else {
+      // Immediate save in view mode (shouldn't happen but kept for safety)
+      setIsSavingCaption(true)
+      try {
+        const { updateMediaCaption } = await import("@/lib/actions/artifacts")
+        const result = await updateMediaCaption(artifact.id, url, editCaptionText)
+        if (result.success) {
+          setEditingCaption(null)
+          router.refresh()
+        } else {
+          alert(result.error || "Failed to update caption")
+        }
+      } catch (error) {
+        console.error("[v0] Failed to update caption:", error)
+        alert("Failed to update caption. Please try again.")
+      } finally {
+        setIsSavingCaption(false)
       }
-    } catch (error) {
-      console.error("[v0] Failed to update caption:", error)
-      alert("Failed to update caption. Please try again.")
-    } finally {
-      setIsSavingCaption(false)
     }
   }
 
   const handleCancelEditCaption = () => {
     setEditingCaption(null)
     setEditCaptionText("")
+  }
+
+  const handleCancel = () => {
+    if (hasUnsavedChanges) {
+      setCancelDialogOpen(true)
+    } else {
+      router.push(`/artifacts/${artifact.slug}`)
+    }
+  }
+
+  const handleConfirmCancel = () => {
+    setEditTitle(originalState.title)
+    setEditDescription(originalState.description)
+    setEditMediaUrls(originalState.media_urls)
+    setEditImageCaptions(originalState.image_captions)
+    setCancelDialogOpen(false)
+    router.push(`/artifacts/${artifact.slug}`)
   }
 
   return (
@@ -715,18 +796,37 @@ export function ArtifactSwipeContent({
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
               <Button 
-                asChild
+                onClick={handleCancel}
                 variant="outline"
+                disabled={isSaving}
               >
-                <Link href={`/artifacts/${artifact.slug}`}>
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
-                </Link>
+                <X className="mr-2 h-4 w-4" />
+                Cancel
               </Button>
             </div>
           </div>
         </div>
       )}
+
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard Changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. If you cancel now, all changes will be lost. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Editing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancel}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Discard Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ArtifactSwipeWrapper>
   )
 }
