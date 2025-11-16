@@ -53,7 +53,9 @@ export function NewArtifactForm({
   const getAudioUrls = () => getMediaUrls().filter((url) => isAudioUrl(url))
 
   async function onSubmit(data: FormData) {
+    console.log("[v0] Form submit triggered with data:", data)
     const normalizedUrls = normalizeMediaUrls(data.media_urls || [])
+    console.log("[v0] Normalized URLs:", normalizedUrls)
 
     const submitData = {
       ...data,
@@ -64,6 +66,7 @@ export function NewArtifactForm({
 
     try {
       const result = await createArtifact(submitData)
+      console.log("[v0] Create artifact result:", result)
 
       if (result?.error) {
         if (result.fieldErrors) {
@@ -84,6 +87,7 @@ export function NewArtifactForm({
         }
       }
     } catch (error) {
+      console.log("[v0] Create artifact error:", error)
       if (error instanceof Error && error.message === "NEXT_REDIRECT") {
         return
       }
@@ -217,7 +221,12 @@ export function NewArtifactForm({
             artifactId={null}
             userId={userId}
             onMediaAdded={(newUrls) => {
-              form.setValue("media_urls", (prev) => normalizeMediaUrls([...(prev || []), ...newUrls]))
+              console.log("[v0] onMediaAdded called with newUrls:", newUrls)
+              const currentUrls = getMediaUrls()
+              console.log("[v0] Current media_urls:", currentUrls)
+              const combined = normalizeMediaUrls([...currentUrls, ...newUrls])
+              console.log("[v0] Combined and normalized:", combined)
+              form.setValue("media_urls", combined)
             }}
           />
 
