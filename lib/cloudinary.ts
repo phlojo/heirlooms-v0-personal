@@ -54,15 +54,15 @@ export function getThumbnailUrl(url: string): string {
     return '/placeholder.svg'
   }
   
-  // The version number in Cloudinary URLs already provides cache control
+  console.log("[v0] getThumbnailUrl input:", url)
   
-  if (isVideoFile(url)) {
-    // For videos, use Cloudinary video transformation to get a poster frame
-    // pg_1 gets frame at 1 second, so_1.0 sets start offset to 1 second
-    return getCloudinaryUrl(url, "w_400,h_400,c_fill,q_auto,f_auto,so_1.0")
-  }
+  const result = isVideoFile(url) 
+    ? getCloudinaryUrl(url, "w_400,h_400,c_fill,q_auto,f_auto,so_1.0")
+    : getCloudinaryUrl(url, "w_400,h_400,c_fill,q_auto,f_auto")
   
-  return getCloudinaryUrl(url, "w_400,h_400,c_fill,q_auto,f_auto")
+  console.log("[v0] getThumbnailUrl output:", result)
+  
+  return result
 }
 
 /**
