@@ -5,6 +5,7 @@ import { CollectionLabel } from "@/components/collection-label"
 import { Author } from "@/components/author"
 import { getThumbnailUrl } from "@/lib/cloudinary"
 import { getPrimaryVisualMediaUrl } from "@/lib/media"
+import MediaImage from "@/components/media-image"
 
 interface ArtifactCardFullProps {
   artifact: {
@@ -34,10 +35,11 @@ export function ArtifactCardFull({ artifact, showAuthor = false, authorName }: A
       <Card className="group overflow-hidden border p-0 transition-all hover:shadow-lg">
         <div className="relative aspect-square overflow-hidden bg-muted">
           {thumbnailUrl ? (
-            <img
+            <MediaImage
               src={thumbnailUrl || "/placeholder.svg"}
               alt={artifact.title}
-              className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              className="h-full w-full transition-transform group-hover:scale-105"
+              objectFit="cover"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gray-300">

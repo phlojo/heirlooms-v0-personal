@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
 import { FullscreenImageViewer } from "./fullscreen-image-viewer"
+import MediaImage from "@/components/media-image"
 
 interface ArtifactImageWithViewerProps {
   src: string
@@ -61,12 +62,11 @@ export function ArtifactImageWithViewer({ src, alt, setIsImageFullscreen }: Arti
   return (
     <>
       <div ref={imageRef} className="overflow-hidden bg-muted -mx-6 lg:-mx-8 cursor-pointer" onClick={handleImageClick}>
-        <img
+        <MediaImage
           src={src || "/placeholder.svg"}
           alt={alt}
-          crossOrigin="anonymous"
-          className="w-full h-auto object-contain transition-opacity hover:opacity-90"
-          onError={handleImageError}
+          className="w-full h-auto transition-opacity hover:opacity-90"
+          objectFit="contain"
         />
       </div>
 

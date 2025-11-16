@@ -1,5 +1,6 @@
 import { getThumbnailUrl } from "@/lib/cloudinary"
 import { HeirloomsIcon } from "@/components/heirlooms-icon"
+import MediaImage from "@/components/media-image"
 
 interface CollectionThumbnailGridProps {
   images: string[]
@@ -21,10 +22,11 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
 
   if (validImages.length === 1) {
     return (
-      <img
+      <MediaImage
         src={getThumbnailUrl(validImages[0]) || "/placeholder.svg"}
         alt={title}
-        className="h-full w-full object-cover"
+        className="h-full w-full"
+        objectFit="cover"
       />
     )
   }
@@ -33,11 +35,12 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
     return (
       <div className="grid h-full w-full grid-cols-2 gap-1">
         {validImages.map((img) => (
-          <img
+          <MediaImage
             key={img}
             src={getThumbnailUrl(img) || "/placeholder.svg"}
             alt={`${title}`}
-            className="h-full object-cover"
+            className="h-full"
+            objectFit="cover"
           />
         ))}
       </div>
@@ -48,11 +51,12 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
     return (
       <div className="grid h-full w-full grid-cols-3 gap-1">
         {validImages.map((img) => (
-          <img
+          <MediaImage
             key={img}
             src={getThumbnailUrl(img) || "/placeholder.svg"}
             alt={`${title}`}
-            className="h-full object-cover"
+            className="h-full"
+            objectFit="cover"
           />
         ))}
       </div>
@@ -62,11 +66,12 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   return (
     <div className="grid h-full w-full grid-cols-4 gap-1">
       {validImages.map((img) => (
-        <img
+        <MediaImage
           key={img}
           src={getThumbnailUrl(img) || "/placeholder.svg"}
           alt={`${title}`}
-          className="h-full object-cover"
+          className="h-full"
+          objectFit="cover"
         />
       ))}
     </div>
