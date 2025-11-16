@@ -22,6 +22,7 @@ export function HomeCard({ title, description, href, backgroundImage }: HomeCard
               alt=""
               className="w-full h-full"
               objectFit="cover"
+              key={backgroundImage}
             />
           </div>
           <div className="absolute inset-0 bg-black/60" />
