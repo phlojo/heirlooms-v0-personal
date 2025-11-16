@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { updateArtifact } from "@/lib/actions/artifacts"
 import { generateCloudinarySignature } from "@/lib/actions/cloudinary"
 import { updateArtifactSchema } from "@/lib/schemas"
@@ -16,7 +15,6 @@ import { useState, useEffect } from "react"
 import { X, Upload, ImageIcon, Loader2 } from 'lucide-react'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2 } from 'lucide-react'
-import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,7 +46,6 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const { toast } = useToast()
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
@@ -92,7 +89,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [hasUnsavedChanges, success])
 
-  const handleNavigation = (path: string) => {
+  const handleNavigation = (path: string): void => {
     if (hasUnsavedChanges && !success) {
       setPendingNavigation(path)
       setShowUnsavedDialog(true)
@@ -101,13 +98,13 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     }
   }
 
-  const confirmNavigation = () => {
+  const confirmNavigation = (): void => {
     if (pendingNavigation) {
       router.push(pendingNavigation)
     }
   }
 
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
     const files = e.target.files
     if (!files || files.length === 0) return
 
@@ -126,7 +123,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     }
 
     const totalSize = Array.from(files).reduce((sum, file) => sum + file.size, 0)
-    const MAX_TOTAL_SIZE = 1000 * 1024 * 1024 // 1GB total for batch uploads
+    const MAX_TOTAL_SIZE = 1000 * 1024 * 1024
 
     if (totalSize > MAX_TOTAL_SIZE) {
       setError("Total file size exceeds 1GB. Please upload fewer or smaller files.")
@@ -141,15 +138,11 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       const urls: string[] = []
 
       for (const file of Array.from(files)) {
-        console.log("[v0] Uploading file:", file.name, "Size:", file.size)
-
         const signatureResult = await generateCloudinarySignature(userId, file.name)
 
         if (signatureResult.error || !signatureResult.signature) {
           throw new Error(signatureResult.error || "Failed to generate upload signature")
         }
-
-        console.log("[v0] Using public_id:", signatureResult.publicId)
 
         const formData = new FormData()
         formData.append("file", file)
@@ -158,14 +151,11 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
         formData.append("signature", signatureResult.signature)
         formData.append("public_id", signatureResult.publicId!)
 
-        // Add eager transformation if provided
         if (signatureResult.eager) {
           formData.append("eager", signatureResult.eager)
         }
 
         const uploadUrl = `https://api.cloudinary.com/v1_1/${signatureResult.cloudName}/image/upload`
-
-        console.log("[v0] Uploading to Cloudinary:", uploadUrl)
 
         const response = await fetch(uploadUrl, {
           method: "POST",
@@ -174,11 +164,6 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
 
         if (!response.ok) {
           const errorText = await response.text()
-          console.error("[v0] Cloudinary upload failed:", {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorText,
-          })
 
           let errorData
           try {
@@ -191,7 +176,6 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
         }
 
         const data = await response.json()
-        console.log("[v0] Successfully uploaded to Cloudinary:", data.secure_url, "public_id:", data.public_id)
         urls.push(data.secure_url)
       }
 
@@ -199,7 +183,6 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
       form.setValue("media_urls", normalizeMediaUrls([...urlsArray, ...urls]))
     } catch (err) {
-      console.error("[v0] Upload error:", err)
       setError(
         err instanceof Error
           ? err.message
@@ -211,14 +194,14 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     }
   }
 
-  function removeImage(index: number) {
+  function removeImage(index: number): void {
     const currentUrls = form.getValues("media_urls")
     const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
     const newImages = urlsArray.filter((_, i) => i !== index)
     form.setValue("media_urls", normalizeMediaUrls(newImages))
   }
 
-  async function onSubmit(data: FormData) {
+  async function onSubmit(data: FormData): Promise<void> {
     setError(null)
 
     const normalizedUrls = normalizeMediaUrls(data.media_urls || [])
@@ -228,8 +211,6 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       media_urls: normalizedUrls,
       year_acquired: data.year_acquired || undefined,
     }
-
-    console.log("[v0] Submitting artifact update with", normalizedUrls.length, "media URLs")
 
     const result = await updateArtifact(submitData, artifact.media_urls || [])
 
@@ -322,7 +303,6 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
           <div className="space-y-3">
             <FormLabel>Photos</FormLabel>
 
-            {/* Upload button */}
             <div className="flex items-center gap-3">
               <Button type="button" variant="outline" disabled={isUploading} asChild>
                 <label className="cursor-pointer">
@@ -341,7 +321,6 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
               <FormDescription className="!mt-0">Upload photos (max 15MB per file, 30MB total)</FormDescription>
             </div>
 
-            {/* Image previews */}
             {uploadedImages.length > 0 && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                 {uploadedImages.map((url) => (
@@ -364,7 +343,6 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
               </div>
             )}
 
-            {/* Empty state */}
             {uploadedImages.length === 0 && !isUploading && (
               <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                 <ImageIcon className="mb-2 h-8 w-8 text-muted-foreground" />

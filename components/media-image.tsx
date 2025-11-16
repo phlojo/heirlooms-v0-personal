@@ -3,19 +3,21 @@
 import { useState, useEffect } from "react"
 import clsx from "clsx"
 
+interface MediaImageProps {
+  src?: string | null
+  alt?: string
+  className?: string
+  objectFit?: "cover" | "contain"
+  fallbackSrc?: string
+}
+
 function MediaImage({
   src,
   alt = "",
   className = "",
   objectFit = "cover",
   fallbackSrc = "/placeholder.svg",
-}: {
-  src?: string | null
-  alt?: string
-  className?: string
-  objectFit?: "cover" | "contain"
-  fallbackSrc?: string
-}) {
+}: MediaImageProps) {
   const [loaded, setLoaded] = useState(!src || src === "")
   const [error, setError] = useState(false)
   const [effectiveSrc, setEffectiveSrc] = useState(src || fallbackSrc)
@@ -32,16 +34,15 @@ function MediaImage({
     }
   }, [src, fallbackSrc])
 
-  const handleError = () => {
+  const handleError = (): void => {
     if (effectiveSrc !== fallbackSrc) {
-      console.log("[v0] MediaImage error, switching to fallback:", effectiveSrc)
       setEffectiveSrc(fallbackSrc)
       setError(true)
       setLoaded(true)
     }
   }
 
-  const handleLoad = () => {
+  const handleLoad = (): void => {
     setLoaded(true)
   }
 

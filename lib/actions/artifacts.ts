@@ -13,11 +13,7 @@ import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "./cloudinary"
 import { generateSlug, generateUniqueSlug } from "@/lib/utils/slug"
 import { isCurrentUserAdmin } from "@/lib/utils/admin"
 
-/**
- * Server action to create a new artifact
- */
-export async function createArtifact(input: CreateArtifactInput) {
-  // Validate input with Zod
+export async function createArtifact(input: CreateArtifactInput): Promise<{ error: string; fieldErrors?: any } | never> {
   const validatedFields = createArtifactSchema.safeParse(input)
 
   if (!validatedFields.success) {
@@ -29,7 +25,6 @@ export async function createArtifact(input: CreateArtifactInput) {
 
   const supabase = await createClient()
 
-  // Check authentication
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -57,7 +52,6 @@ export async function createArtifact(input: CreateArtifactInput) {
     slug,
   }
 
-  // Insert artifact into database
   const { data, error } = await supabase.from("artifacts").insert(insertData).select().single()
 
   if (error) {
@@ -74,9 +68,6 @@ export async function createArtifact(input: CreateArtifactInput) {
   redirect(`/artifacts/${data.slug}`)
 }
 
-/**
- * Server action to get artifacts by collection ID
- */
 export async function getArtifactsByCollection(collectionId: string) {
   const supabase = await createClient()
 
@@ -100,18 +91,13 @@ export async function getArtifactsByCollection(collectionId: string) {
     .order("created_at", { ascending: false })
 
   if (error) {
-    console.error("[v0] Error fetching artifacts:", error)
+    console.error("Error fetching artifacts:", error)
     return []
   }
-
-  console.log("[v0] Fetched artifacts with slugs:", data?.map(a => ({ id: a.id, slug: a.slug, title: a.title })))
 
   return data
 }
 
-/**
- * Server action to get a single artifact by ID with collection info
- */
 export async function getArtifactById(artifactId: string) {
   const supabase = await createClient()
 
@@ -125,7 +111,7 @@ export async function getArtifactById(artifactId: string) {
     .single()
 
   if (error) {
-    console.error("[v0] Error fetching artifact:", error)
+    console.error("Error fetching artifact:", error)
     return null
   }
 
@@ -141,13 +127,9 @@ export async function getArtifactById(artifactId: string) {
   return data
 }
 
-/**
- * Server action to get previous and next artifacts in the same collection
- */
 export async function getAdjacentArtifacts(artifactId: string, collectionId: string) {
   const supabase = await createClient()
 
-  // Get all artifacts in the collection ordered by created_at
   const { data: artifacts, error } = await supabase
     .from("artifacts")
     .select("id, title, slug, created_at")
@@ -155,18 +137,16 @@ export async function getAdjacentArtifacts(artifactId: string, collectionId: str
     .order("created_at", { ascending: false })
 
   if (error || !artifacts) {
-    console.error("[v0] Error fetching adjacent artifacts:", error)
+    console.error("Error fetching adjacent artifacts:", error)
     return { previous: null, next: null, currentPosition: 0, totalCount: 0 }
   }
 
-  // Find the current artifact's index
   const currentIndex = artifacts.findIndex((a) => a.id === artifactId)
 
   if (currentIndex === -1) {
     return { previous: null, next: null, currentPosition: 0, totalCount: artifacts.length }
   }
 
-  // Previous is the one before in the array (newer), next is the one after (older)
   const previous = currentIndex > 0 ? artifacts[currentIndex - 1] : null
   const next = currentIndex < artifacts.length - 1 ? artifacts[currentIndex + 1] : null
 
@@ -178,9 +158,6 @@ export async function getAdjacentArtifacts(artifactId: string, collectionId: str
   }
 }
 
-/**
- * Server action to get all artifacts from public collections
- */
 export async function getAllPublicArtifacts(excludeUserId?: string) {
   const supabase = await createClient()
 
@@ -192,7 +169,6 @@ export async function getAllPublicArtifacts(excludeUserId?: string) {
     `)
     .eq("collection.is_public", true)
 
-  // Exclude the current user's artifacts if specified
   if (excludeUserId) {
     query = query.neq("user_id", excludeUserId)
   }
@@ -200,7 +176,7 @@ export async function getAllPublicArtifacts(excludeUserId?: string) {
   const { data, error } = await query.order("created_at", { ascending: false })
 
   if (error) {
-    console.error("[v0] Error fetching public artifacts:", error)
+    console.error("Error fetching public artifacts:", error)
     return []
   }
 
@@ -215,9 +191,6 @@ export async function getAllPublicArtifacts(excludeUserId?: string) {
   }))
 }
 
-/**
- * Server action to get artifacts created by the current user
- */
 export async function getMyArtifacts(userId: string) {
   const supabase = await createClient()
 
@@ -237,15 +210,11 @@ export async function getMyArtifacts(userId: string) {
 
   return data.map((artifact) => ({
     ...artifact,
-    author_name: null, // User's own artifacts don't need author name
+    author_name: null,
   }))
 }
 
-/**
- * Server action to update an existing artifact
- */
 export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: string[] = []) {
-  // Validate input with Zod
   const validatedFields = updateArtifactSchema.safeParse(input)
 
   if (!validatedFields.success) {
@@ -258,7 +227,6 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
 
   const supabase = await createClient()
 
-  // Check authentication
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -269,7 +237,6 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
 
   const isAdmin = await isCurrentUserAdmin()
 
-  // Verify ownership or admin status
   const { data: existingArtifact } = await supabase
     .from("artifacts")
     .select("user_id, collection_id, slug, title, collection:collections(slug)")
@@ -284,7 +251,6 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     return { success: false, error: "Unauthorized" }
   }
 
-  // Delete removed images from Cloudinary
   const newMediaUrls = validatedFields.data.media_urls || []
   const removedUrls = oldMediaUrls.filter((url) => !newMediaUrls.includes(url))
 
@@ -295,14 +261,12 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     }
   }
 
-  // Deduplicate media_urls before updating in database
   const uniqueMediaUrls = Array.from(new Set(newMediaUrls))
 
   let newSlug = existingArtifact.slug
   if (validatedFields.data.title !== existingArtifact.title) {
     const baseSlug = generateSlug(validatedFields.data.title)
     newSlug = await generateUniqueSlug(baseSlug, async (slug) => {
-      // Don't count the current artifact's slug as taken
       if (slug === existingArtifact.slug) return false
       const { data } = await supabase.from("artifacts").select("id").eq("slug", slug).maybeSingle()
       return !!data
@@ -323,7 +287,6 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     updateData.image_captions = validatedFields.data.image_captions
   }
 
-  // Update artifact in database
   const { data, error } = await supabase
     .from("artifacts")
     .update(updateData)
@@ -348,13 +311,9 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
   return { success: true, data }
 }
 
-/**
- * Server action to delete a single media item from an artifact
- */
 export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: string) {
   const supabase = await createClient()
 
-  // Check authentication
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -365,7 +324,6 @@ export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: stri
 
   const isAdmin = await isCurrentUserAdmin()
 
-  // Get current artifact
   const { data: artifact, error: fetchError } = await supabase
     .from("artifacts")
     .select("user_id, slug, media_urls, image_captions, video_summaries, audio_transcripts, audio_summaries, collection:collections(slug)")
@@ -376,15 +334,12 @@ export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: stri
     return { success: false, error: "Artifact not found" }
   }
 
-  // Verify ownership or admin status
   if (!isAdmin && artifact.user_id !== user.id) {
     return { success: false, error: "Unauthorized" }
   }
 
-  // Remove the URL from media_urls array
   const updatedMediaUrls = (artifact.media_urls || []).filter((url: string) => url !== mediaUrl)
 
-  // Remove associated AI metadata
   const updatedImageCaptions = { ...(artifact.image_captions || {}) }
   delete updatedImageCaptions[mediaUrl]
 
@@ -397,7 +352,6 @@ export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: stri
   const updatedAudioSummaries = { ...(artifact.audio_summaries || {}) }
   delete updatedAudioSummaries[mediaUrl]
 
-  // Update the artifact
   const { error: updateError } = await supabase
     .from("artifacts")
     .update({
@@ -411,11 +365,10 @@ export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: stri
     .eq("id", artifactId)
 
   if (updateError) {
-    console.error("[v0] Error deleting media:", updateError)
+    console.error("Error deleting media:", updateError)
     return { success: false, error: "Failed to delete media" }
   }
 
-  // Delete from Cloudinary
   const publicId = await extractPublicIdFromUrl(mediaUrl)
   if (publicId) {
     await deleteCloudinaryMedia(publicId)
@@ -431,9 +384,6 @@ export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: stri
   return { success: true }
 }
 
-/**
- * Server action to get a single artifact by slug with collection info
- */
 export async function getArtifactBySlug(artifactSlug: string) {
   const supabase = await createClient()
 
@@ -447,7 +397,7 @@ export async function getArtifactBySlug(artifactSlug: string) {
     .single()
 
   if (error) {
-    console.error("[v0] Error fetching artifact:", error)
+    console.error("Error fetching artifact:", error)
     return null
   }
 
@@ -463,13 +413,9 @@ export async function getArtifactBySlug(artifactSlug: string) {
   return data
 }
 
-/**
- * Server action to delete an artifact and all its media
- */
 export async function deleteArtifact(artifactId: string) {
   const supabase = await createClient()
 
-  // Check authentication
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -480,7 +426,6 @@ export async function deleteArtifact(artifactId: string) {
 
   const isAdmin = await isCurrentUserAdmin()
 
-  // Get current artifact
   const { data: artifact, error: fetchError } = await supabase
     .from("artifacts")
     .select("user_id, slug, media_urls, collection:collections(slug)")
@@ -491,12 +436,10 @@ export async function deleteArtifact(artifactId: string) {
     return { success: false, error: "Artifact not found" }
   }
 
-  // Verify ownership or admin status
   if (!isAdmin && artifact.user_id !== user.id) {
     return { success: false, error: "Unauthorized" }
   }
 
-  // Delete all media from Cloudinary
   const mediaUrls = artifact.media_urls || []
   for (const url of mediaUrls) {
     const publicId = await extractPublicIdFromUrl(url)
@@ -505,15 +448,13 @@ export async function deleteArtifact(artifactId: string) {
     }
   }
 
-  // Delete the artifact from database
   const { error: deleteError } = await supabase.from("artifacts").delete().eq("id", artifactId)
 
   if (deleteError) {
-    console.error("[v0] Error deleting artifact:", deleteError)
+    console.error("Error deleting artifact:", deleteError)
     return { success: false, error: "Failed to delete artifact" }
   }
 
-  // Revalidate paths
   revalidatePath(`/artifacts/${artifact.slug}`)
   revalidatePath("/collections")
   if (artifact.collection?.slug) {
@@ -523,13 +464,9 @@ export async function deleteArtifact(artifactId: string) {
   return { success: true }
 }
 
-/**
- * Server action to update a caption for a specific media item
- */
 export async function updateMediaCaption(artifactId: string, mediaUrl: string, caption: string) {
   const supabase = await createClient()
 
-  // Check authentication
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -540,7 +477,6 @@ export async function updateMediaCaption(artifactId: string, mediaUrl: string, c
 
   const isAdmin = await isCurrentUserAdmin()
 
-  // Get current artifact
   const { data: artifact, error: fetchError } = await supabase
     .from("artifacts")
     .select("user_id, slug, image_captions, collection:collections(slug)")
@@ -551,18 +487,15 @@ export async function updateMediaCaption(artifactId: string, mediaUrl: string, c
     return { success: false, error: "Artifact not found" }
   }
 
-  // Verify ownership or admin status
   if (!isAdmin && artifact.user_id !== user.id) {
     return { success: false, error: "Unauthorized" }
   }
 
-  // Update the caption for this specific media URL
   const updatedImageCaptions = {
     ...(artifact.image_captions || {}),
     [mediaUrl]: caption,
   }
 
-  // Update the artifact
   const { error: updateError } = await supabase
     .from("artifacts")
     .update({
@@ -572,7 +505,7 @@ export async function updateMediaCaption(artifactId: string, mediaUrl: string, c
     .eq("id", artifactId)
 
   if (updateError) {
-    console.error("[v0] Error updating caption:", updateError)
+    console.error("Error updating caption:", updateError)
     return { success: false, error: "Failed to update caption" }
   }
 

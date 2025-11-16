@@ -1,12 +1,6 @@
 "use server"
 
-/**
- * Generate a signature for direct client-side upload to Cloudinary
- * This allows large files to be uploaded directly from the browser to Cloudinary
- * without going through Next.js server action payload limits
- */
 export async function generateCloudinarySignature(userId: string, fileName: string) {
-  // Check for required environment variables
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME
   const apiKey = process.env.CLOUDINARY_API_KEY
   const apiSecret = process.env.CLOUDINARY_API_SECRET
@@ -21,22 +15,19 @@ export async function generateCloudinarySignature(userId: string, fileName: stri
   try {
     const timestamp = Math.round(Date.now() / 1000)
 
-    // Create stable, readable public_id: users/{userId}/artifacts/{yyyy}/{mm}/{fileNameWithoutExt}
     const safeUser = (userId || "anon").replace(/[^a-zA-Z0-9_-]/g, "")
     const baseName = (fileName || "file")
-      .replace(/\.[^.]+$/, "") // Remove extension
-      .replace(/[^a-zA-Z0-9_-]/g, "") // Sanitize
-      .substring(0, 50) // Limit length
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "")
+      .substring(0, 50)
 
     const now = new Date()
     const yyyy = now.getUTCFullYear()
     const mm = String(now.getUTCMonth() + 1).padStart(2, "0")
     const publicId = `users/${safeUser}/artifacts/${yyyy}/${mm}/${baseName}`
 
-    // Generate two versions: 640x640 for thumbnails, 1200x1200 for detail view
     const eager = "c_fill,w_640,h_640,q_auto,f_auto|c_limit,w_1200,h_1200,q_auto,f_auto"
 
-    // Use Node crypto for server-side signature generation
     const crypto = await import("node:crypto")
     const toSign = `eager=${eager}&public_id=${publicId}&timestamp=${timestamp}`
     const signature = crypto
@@ -51,17 +42,14 @@ export async function generateCloudinarySignature(userId: string, fileName: stri
       timestamp,
       publicId,
       eager,
-      folder: undefined, // We build public_id ourselves, no separate folder param
+      folder: undefined,
     }
   } catch (error) {
-    console.error("[v0] Error generating Cloudinary signature:", error)
+    console.error("Error generating Cloudinary signature:", error)
     return { error: "Failed to generate upload signature. Please try again." }
   }
 }
 
-/**
- * Generate a signature for audio file upload to Cloudinary
- */
 export async function generateCloudinaryAudioSignature(userId: string, fileName: string) {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME
   const apiKey = process.env.CLOUDINARY_API_KEY
@@ -88,7 +76,6 @@ export async function generateCloudinaryAudioSignature(userId: string, fileName:
     const mm = String(now.getUTCMonth() + 1).padStart(2, "0")
     const publicId = `users/${safeUser}/artifacts/audio/${yyyy}/${mm}/${baseName}`
 
-    // Use Node crypto for server-side signature generation
     const crypto = await import("node:crypto")
     const toSign = `public_id=${publicId}&timestamp=${timestamp}`
     const signature = crypto
@@ -104,21 +91,18 @@ export async function generateCloudinaryAudioSignature(userId: string, fileName:
       apiKey,
     }
   } catch (error) {
-    console.error("[v0] Error generating Cloudinary audio signature:", error)
+    console.error("Error generating Cloudinary audio signature:", error)
     return { error: "Failed to generate upload signature. Please try again." }
   }
 }
 
-/**
- * Delete a media file from Cloudinary by its public ID
- */
 export async function deleteCloudinaryMedia(publicId: string) {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME
   const apiKey = process.env.CLOUDINARY_API_KEY
   const apiSecret = process.env.CLOUDINARY_API_SECRET
 
   if (!cloudName || !apiKey || !apiSecret) {
-    console.error("[v0] Cloudinary credentials not configured")
+    console.error("Cloudinary credentials not configured")
     return { error: "Cloudinary credentials not configured" }
   }
 
@@ -148,33 +132,25 @@ export async function deleteCloudinaryMedia(publicId: string) {
     if (result.result === "ok") {
       return { success: true }
     } else {
-      console.error("[v0] Cloudinary deletion failed:", result)
+      console.error("Cloudinary deletion failed:", result)
       return { error: "Failed to delete media from Cloudinary" }
     }
   } catch (error) {
-    console.error("[v0] Error deleting from Cloudinary:", error)
+    console.error("Error deleting from Cloudinary:", error)
     return { error: "Failed to delete media from Cloudinary" }
   }
 }
 
-/**
- * Extract public ID from a Cloudinary URL
- */
 export async function extractPublicIdFromUrl(url: string): Promise<string | null> {
   try {
-    // Cloudinary URLs follow pattern: https://res.cloudinary.com/{cloud_name}/image/upload/{transformations}/{public_id}.{format}
     const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[^.]+$/)
     return match ? match[1] : null
   } catch (error) {
-    console.error("[v0] Error extracting public ID:", error)
+    console.error("Error extracting public ID:", error)
     return null
   }
 }
 
-/**
- * Generate a signature for transcription audio file upload to Cloudinary
- * These are stored separately from artifact media and used for transcription purposes
- */
 export async function generateCloudinaryTranscriptionSignature(
   userId: string,
   fileName: string,
@@ -204,10 +180,8 @@ export async function generateCloudinaryTranscriptionSignature(
     const now = new Date()
     const yyyy = now.getUTCFullYear()
     const mm = String(now.getUTCMonth() + 1).padStart(2, "0")
-    // Store transcription audio: users/{userId}/transcriptions/{entityType}/{fieldType}/{yyyy}/{mm}/{fileName}
     const publicId = `users/${safeUser}/transcriptions/${entityType}/${fieldType}/${yyyy}/${mm}/${baseName}`
 
-    // Use Node crypto for server-side signature generation
     const crypto = await import("node:crypto")
     const toSign = `public_id=${publicId}&timestamp=${timestamp}`
     const signature = crypto
@@ -223,7 +197,7 @@ export async function generateCloudinaryTranscriptionSignature(
       apiKey,
     }
   } catch (error) {
-    console.error("[v0] Error generating Cloudinary transcription signature:", error)
+    console.error("Error generating Cloudinary transcription signature:", error)
     return { error: "Failed to generate upload signature. Please try again." }
   }
 }
