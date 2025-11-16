@@ -1,20 +1,22 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname } from 'next/navigation'
 import { cn } from "@/lib/utils"
-import { Home, FolderOpen, Package, BookOpen, User } from "lucide-react"
+import { Home, FolderOpen, BookOpen, User } from 'lucide-react'
 import type { LucideIcon } from "lucide-react"
+import { AnimatedArtifactsIcon } from "./animated-artifacts-icon"
 
 interface NavItem {
   href: string
   label: string
-  icon: LucideIcon
+  icon?: LucideIcon
+  useAnimatedIcon?: boolean
 }
 
 const navItems: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/artifacts", label: "Artifacts", icon: Package },
+  { href: "/artifacts", label: "Artifacts", useAnimatedIcon: true },
   { href: "/collections", label: "Collections", icon: FolderOpen },
   { href: "/stories", label: "Stories", icon: BookOpen },
   { href: "/profile", label: "Profile", icon: User },
@@ -79,7 +81,6 @@ export default function BottomNav() {
     >
       <div className="flex h-20 items-center justify-around px-2">
         {navItems.map((item) => {
-          const Icon = item.icon
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
 
           return (
@@ -104,7 +105,11 @@ export default function BottomNav() {
                 })
               }}
             >
-              <Icon className="h-6 w-6" />
+              {item.useAnimatedIcon ? (
+                <AnimatedArtifactsIcon className="h-6 w-6" />
+              ) : (
+                item.icon && <item.icon className="h-6 w-6" />
+              )}
               <span className="text-[11px] leading-none">{item.label}</span>
               {isActive && (
                 <div className="absolute bottom-0 left-1/2 h-1 w-12 -translate-x-1/2 rounded-t-full bg-primary" />
