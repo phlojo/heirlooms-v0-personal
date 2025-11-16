@@ -59,10 +59,10 @@ export function getThumbnailUrl(url: string): string {
   if (isVideoFile(url)) {
     // For videos, use Cloudinary video transformation to get a poster frame
     // pg_1 gets frame at 1 second, so_1.0 sets start offset to 1 second
-    return getCloudinaryUrl(url, `w_400,h_400,c_fill,q_auto,f_auto,so_1.0/${cacheBuster}`)
+    return getCloudinaryUrl(url, `w_400,h_400,c_fill,q_auto,f_auto,so_1.0,${cacheBuster}`)
   }
   
-  return getCloudinaryUrl(url, `w_400,h_400,c_fill,q_auto,f_auto/${cacheBuster}`)
+  return getCloudinaryUrl(url, `w_400,h_400,c_fill,q_auto,f_auto,${cacheBuster}`)
 }
 
 /**
