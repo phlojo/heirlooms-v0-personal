@@ -101,8 +101,11 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
         }
 
         if (signatureResult.error || !signatureResult.signature) {
+          console.error("[v0] Signature generation failed:", signatureResult.error)
           throw new Error(signatureResult.error || "Failed to generate upload signature")
         }
+
+        console.log("[v0] Signature generated successfully, public_id:", signatureResult.publicId)
 
         const formData = new FormData()
         formData.append("file", file)
@@ -116,6 +119,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
         }
 
         console.log("[v0] Uploading to:", uploadUrl)
+        console.log("[v0] FormData keys:", Array.from(formData.keys()))
         
         const response = await fetch(uploadUrl, {
           method: "POST",
@@ -128,14 +132,24 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
           let errorData
           try {
             errorData = JSON.parse(errorText)
+            console.error("[v0] Parsed error:", errorData)
           } catch {
-            throw new Error(`Upload failed (${response.status}): ${errorText.substring(0, 100)}`)
+            console.error("[v0] Could not parse error response")
+            throw new Error(`Upload failed (${response.status}): ${errorText.substring(0, 200)}`)
           }
-          throw new Error(`Failed to upload ${file.name}: ${errorData.error?.message || "Unknown error"}`)
+          throw new Error(`Failed to upload ${file.name}: ${errorData.error?.message || errorData.message || "Unknown error"}`)
         }
 
         const data = await response.json()
-        console.log("[v0] Upload successful, URL:", data.secure_url)
+        console.log("[v0] Upload successful!")
+        console.log("[v0] Response data:", {
+          public_id: data.public_id,
+          secure_url: data.secure_url,
+          format: data.format,
+          resource_type: data.resource_type,
+          width: data.width,
+          height: data.height
+        })
         urls.push(data.secure_url)
       }
 
