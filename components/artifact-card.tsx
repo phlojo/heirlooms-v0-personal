@@ -26,8 +26,12 @@ interface ArtifactCardProps {
 }
 
 export function ArtifactCard({ artifact, showAuthor = false, authorName }: ArtifactCardProps) {
+  console.log("[v0] ArtifactCard rendering:", artifact.slug, "media_urls:", artifact.media_urls)
+  
   const primaryMedia = getPrimaryVisualMediaUrl(artifact.media_urls)
   const thumbnailUrl = primaryMedia ? getThumbnailUrl(primaryMedia) : null
+  
+  console.log("[v0] ArtifactCard thumbnail:", thumbnailUrl)
 
   return (
     <Link href={`/artifacts/${artifact.slug}`}>
@@ -35,6 +39,7 @@ export function ArtifactCard({ artifact, showAuthor = false, authorName }: Artif
         <div className="relative aspect-square overflow-hidden bg-muted">
           {thumbnailUrl ? (
             <MediaImage
+              key={thumbnailUrl}
               src={thumbnailUrl}
               alt={artifact.title}
               className="h-full w-full transition-transform group-hover:scale-105"

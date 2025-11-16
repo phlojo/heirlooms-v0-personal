@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import clsx from "clsx"
 
 interface MediaImageProps {
@@ -18,37 +18,29 @@ function MediaImage({
   objectFit = "cover",
   fallbackSrc = "/placeholder.svg",
 }: MediaImageProps) {
-  const [loaded, setLoaded] = useState(!src || src === "")
-  const [error, setError] = useState(false)
-  const [effectiveSrc, setEffectiveSrc] = useState(src || fallbackSrc)
-
-  useEffect(() => {
-    if (!src || src === "") {
-      setEffectiveSrc(fallbackSrc)
-      setLoaded(true)
-      setError(false)
-    } else {
-      setEffectiveSrc(src)
-      setLoaded(false)
-      setError(false)
-    }
-  }, [src, fallbackSrc])
+  const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'error'>(
+    (!src || src === "") ? 'loaded' : 'loading'
+  )
+  const [imageSrc, setImageSrc] = useState<string>(src || fallbackSrc)
 
   const handleError = (): void => {
-    if (effectiveSrc !== fallbackSrc) {
-      setEffectiveSrc(fallbackSrc)
-      setError(true)
-      setLoaded(true)
+    console.log("[v0] MediaImage error for:", imageSrc)
+    if (imageSrc !== fallbackSrc) {
+      setImageSrc(fallbackSrc)
+      setLoadState('loaded')
     }
   }
 
   const handleLoad = (): void => {
-    setLoaded(true)
+    console.log("[v0] MediaImage loaded:", imageSrc)
+    setLoadState('loaded')
   }
+
+  const effectiveSrc = src || fallbackSrc
 
   return (
     <div className={clsx("relative w-full h-full overflow-hidden", className)}>
-      {!loaded && (
+      {loadState === 'loading' && (
         <div className="absolute inset-0 animate-pulse bg-neutral-200 dark:bg-neutral-800 rounded-md" />
       )}
 
@@ -57,9 +49,10 @@ function MediaImage({
         alt={alt}
         onLoad={handleLoad}
         onError={handleError}
+        loading="eager"
         className={clsx(
-          "w-full h-full transition-opacity duration-500",
-          loaded ? "opacity-100" : "opacity-0",
+          "w-full h-full transition-opacity duration-300",
+          loadState === 'loaded' ? "opacity-100" : "opacity-0",
           objectFit === "cover" ? "object-cover" : "object-contain"
         )}
       />

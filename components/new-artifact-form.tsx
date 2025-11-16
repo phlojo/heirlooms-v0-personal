@@ -69,7 +69,11 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   const getAudioUrls = (): string[] => getMediaUrls().filter((url) => isAudioUrl(url))
 
   async function onSubmit(data: FormData): Promise<void> {
+    console.log("[v0] Creating artifact with media_urls:", data.media_urls)
+    
     const normalizedUrls = normalizeMediaUrls(data.media_urls || [])
+    
+    console.log("[v0] Normalized URLs:", normalizedUrls)
 
     const submitData = {
       ...data,
@@ -100,12 +104,15 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
         } else {
           setError(result.error)
         }
+      } else {
+        console.log("[v0] Artifact created successfully")
       }
     } catch (error) {
       hasNavigatedRef.current = false
       if (error instanceof Error && error.message === "NEXT_REDIRECT") {
         return
       }
+      console.error("[v0] Error creating artifact:", error)
       setError(error instanceof Error ? error.message : "An unexpected error occurred")
     }
   }

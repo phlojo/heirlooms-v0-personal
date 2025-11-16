@@ -84,6 +84,8 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
       const urls: string[] = []
 
       for (const file of Array.from(files)) {
+        console.log("[v0] Uploading file:", file.name, file.type, formatFileSize(file.size))
+        
         let uploadUrl: string
         let signatureResult: any
 
@@ -113,6 +115,8 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
           formData.append("eager", signatureResult.eager)
         }
 
+        console.log("[v0] Uploading to:", uploadUrl)
+        
         const response = await fetch(uploadUrl, {
           method: "POST",
           body: formData,
@@ -120,6 +124,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
 
         if (!response.ok) {
           const errorText = await response.text()
+          console.error("[v0] Upload failed:", response.status, errorText)
           let errorData
           try {
             errorData = JSON.parse(errorText)
@@ -130,12 +135,15 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
         }
 
         const data = await response.json()
+        console.log("[v0] Upload successful, URL:", data.secure_url)
         urls.push(data.secure_url)
       }
 
+      console.log("[v0] All uploads complete, URLs:", urls)
       onMediaAdded(urls)
       handleClose()
     } catch (err) {
+      console.error("[v0] Upload error:", err)
       setError(err instanceof Error ? err.message : "Failed to upload files. Please try again.")
     } finally {
       setIsUploading(false)
