@@ -43,7 +43,10 @@ export function NewArtifactForm({
     },
   })
 
-  const getMediaUrls = () => form.getValues("media_urls") || []
+  const getMediaUrls = () => {
+    const urls = form.getValues("media_urls")
+    return Array.isArray(urls) ? urls : []
+  }
 
   const getImageUrls = () => getMediaUrls().filter((url) => !isAudioUrl(url) && !isVideoUrl(url))
   const getVideoUrls = () => getMediaUrls().filter((url) => isVideoUrl(url))

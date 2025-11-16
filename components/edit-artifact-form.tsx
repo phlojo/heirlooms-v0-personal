@@ -207,8 +207,9 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   }
 
   function removeImage(index: number) {
-    const currentUrls = form.getValues("media_urls") || []
-    const newImages = currentUrls.filter((_, i) => i !== index)
+    const currentUrls = form.getValues("media_urls")
+    const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
+    const newImages = urlsArray.filter((_, i) => i !== index)
     form.setValue("media_urls", normalizeMediaUrls(newImages))
   }
 

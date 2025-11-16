@@ -68,7 +68,7 @@ export function isImageUrl(url: string): boolean {
  * Priority: first image > first video > null
  */
 export function getPrimaryVisualMediaUrl(urls?: string[] | null): string | null {
-  if (!urls || urls.length === 0) return null;
+  if (!urls || !Array.isArray(urls) || urls.length === 0) return null;
   
   // Find first image
   const firstImage = urls.find(url => isImageUrl(url));
@@ -88,7 +88,7 @@ export function getPrimaryVisualMediaUrl(urls?: string[] | null): string | null 
  * 3. Ordering as: images → videos → audio
  */
 export function normalizeMediaUrls(urls: string[]): string[] {
-  if (!urls || urls.length === 0) return [];
+  if (!urls || !Array.isArray(urls) || urls.length === 0) return [];
   
   // Remove duplicates and filter out empty/null values
   const uniqueUrls = Array.from(
