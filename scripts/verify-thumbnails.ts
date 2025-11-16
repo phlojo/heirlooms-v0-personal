@@ -4,13 +4,70 @@
  * Reports any issues and suggests fixes
  */
 
-import { createClient } from "@/lib/supabase/server"
-import { getPrimaryVisualMediaUrl, isImageUrl, isVideoUrl, isAudioUrl } from "@/lib/media"
+import { createClient } from "@supabase/supabase-js"
+
+function isAudioUrl(url: string): boolean {
+  if (!url) return false
+  
+  const lowerUrl = url.toLowerCase()
+  
+  const audioExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.opus', '.webm']
+  if (audioExtensions.some(ext => lowerUrl.includes(ext))) {
+    return true
+  }
+  
+  if (lowerUrl.includes('/video/upload/') && audioExtensions.some(ext => lowerUrl.includes(ext))) {
+    return true
+  }
+  
+  return false
+}
+
+function isVideoUrl(url: string): boolean {
+  if (!url) return false
+  
+  const lowerUrl = url.toLowerCase()
+  
+  if (lowerUrl.includes('/video/upload/')) {
+    const audioExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.opus']
+    if (audioExtensions.some(ext => lowerUrl.includes(ext))) {
+      return false
+    }
+    return true
+  }
+  
+  const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v', '.flv', '.wmv']
+  return videoExtensions.some(ext => lowerUrl.includes(ext))
+}
+
+function isImageUrl(url: string): boolean {
+  if (!url) return false
+  
+  const lowerUrl = url.toLowerCase()
+  
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif']
+  return imageExtensions.some(ext => lowerUrl.includes(ext))
+}
+
+function getPrimaryVisualMediaUrl(urls?: string[] | null): string | null {
+  if (!urls || !Array.isArray(urls) || urls.length === 0) return null
+  
+  const firstImage = urls.find(url => isImageUrl(url))
+  if (firstImage) return firstImage
+  
+  const firstVideo = urls.find(url => isVideoUrl(url))
+  if (firstVideo) return firstVideo
+  
+  return null
+}
 
 async function verifyThumbnails() {
   console.log("🔍 Starting thumbnail verification...\n")
   
-  const supabase = await createClient()
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
   
   // Check artifacts
   console.log("📦 Checking artifacts...")
@@ -32,7 +89,6 @@ async function verifyThumbnails() {
     const primaryMedia = getPrimaryVisualMediaUrl(artifact.media_urls)
     
     if (!primaryMedia) {
-      // Check if they only have audio files
       const hasAudio = artifact.media_urls?.some(url => isAudioUrl(url))
       if (hasAudio) {
         artifactsWithOnlyAudio++
@@ -48,7 +104,6 @@ async function verifyThumbnails() {
     } else {
       artifactsWithValidThumbnails++
       
-      // Validate that it's actually a visual media
       const isValid = isImageUrl(primaryMedia) || isVideoUrl(primaryMedia)
       if (!isValid) {
         console.log(`⚠️  ${artifact.slug || artifact.id}: "${artifact.title}" - Thumbnail URL doesn't match image/video pattern:`, primaryMedia)
@@ -86,7 +141,6 @@ async function verifyThumbnails() {
   for (const collection of collections || []) {
     const hasCoverImage = !!collection.cover_image
     
-    // Check if collection has any visual media from artifacts
     const artifactThumbnails = collection.artifacts
       ?.map(artifact => getPrimaryVisualMediaUrl(artifact.media_urls))
       .filter(Boolean)
@@ -115,5 +169,4 @@ async function verifyThumbnails() {
   console.log("   - Collections use artifact thumbnails or optional cover_image")
 }
 
-// Run verification
 verifyThumbnails().catch(console.error)
