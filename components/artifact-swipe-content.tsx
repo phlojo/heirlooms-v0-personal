@@ -102,7 +102,7 @@ export function ArtifactSwipeContent({
   const hasUnsavedChanges = isEditMode && (
     editTitle !== originalState.title ||
     editDescription !== originalState.description ||
-    JSON.stringify(editMediaUrls.sort()) !== JSON.stringify(originalState.media_urls.sort()) ||
+    JSON.stringify(editMediaUrls) !== JSON.stringify(originalState.media_urls) ||
     JSON.stringify(editImageCaptions) !== JSON.stringify(originalState.image_captions)
   )
 
@@ -430,42 +430,40 @@ export function ArtifactSwipeContent({
         
         {mediaUrls.length > 0 ? (
           <div className="space-y-6">
-            {mediaUrls.map((url, index) => {
+            {mediaUrls.map((url) => {
               if (isAudioFile(url)) {
                 const transcript = audioTranscripts[url]
                 return (
                   <div key={url} className="space-y-3 px-6 lg:px-8">
-                    <div className="rounded-lg border bg-card p-4 relative">
-                      {isEditMode && (
-                        <h3 className="text-sm font-semibold mb-3">Audio Recording {audioFiles > 1 ? `${index + 1}` : ''}</h3>
-                      )}
-                      {isEditMode && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteMedia(url)}
-                          className="absolute top-2 right-2 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <AudioPlayer src={url} title="Audio Recording" />
-                      
-                      {isEditMode && (
-                        <div className="mt-3">
-                          <TranscribeAudioButtonPerMedia artifactId={artifact.id} audioUrl={url} />
-                        </div>
-                      )}
+                    {isEditMode && (
+                      <h3 className="text-sm font-semibold mb-3">Audio Recording {audioFiles > 1 ? `${mediaUrls.indexOf(url) + 1}` : ''}</h3>
+                    )}
+                    {isEditMode && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteMedia(url)}
+                        className="absolute top-2 right-2 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <AudioPlayer src={url} title="Audio Recording" />
+                    
+                    {isEditMode && (
+                      <div className="mt-3">
+                        <TranscribeAudioButtonPerMedia artifactId={artifact.id} audioUrl={url} />
+                      </div>
+                    )}
 
-                      {transcript && (
-                        <div className="rounded-lg border bg-muted/30 p-4 mt-3">
-                          <h4 className="text-sm font-semibold mb-2">Transcript</h4>
-                          <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                            {transcript}
-                          </div>
+                    {transcript && (
+                      <div className="rounded-lg border bg-muted/30 p-4 mt-3">
+                        <h4 className="text-sm font-semibold mb-2">Transcript</h4>
+                        <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                          {transcript}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )
               } else if (isVideoFile(url)) {
@@ -475,7 +473,7 @@ export function ArtifactSwipeContent({
                   <div key={url} className="space-y-3">
                     {isEditMode && (
                       <div className="flex items-center justify-between px-6 lg:px-8">
-                        <h3 className="text-sm font-semibold">Video {videoFiles > 1 ? `${index + 1}` : ''}</h3>
+                        <h3 className="text-sm font-semibold">Video {videoFiles > 1 ? `${mediaUrls.indexOf(url) + 1}` : ''}</h3>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -560,7 +558,7 @@ export function ArtifactSwipeContent({
                   <div key={url} className="space-y-3">
                     {isEditMode && (
                       <div className="flex items-center justify-between px-6 lg:px-8">
-                        <h3 className="text-sm font-semibold">Photo {imageFiles > 1 ? `${index + 1}` : ''}</h3>
+                        <h3 className="text-sm font-semibold">Photo {imageFiles > 1 ? `${mediaUrls.indexOf(url) + 1}` : ''}</h3>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -573,7 +571,7 @@ export function ArtifactSwipeContent({
                     )}
                     <ArtifactImageWithViewer
                       src={getDetailUrl(url) || "/placeholder.svg"}
-                      alt={`${artifact.title} - Image ${index + 1}`}
+                      alt={`${artifact.title} - Image ${mediaUrls.indexOf(url) + 1}`}
                       setIsImageFullscreen={setIsImageFullscreen}
                     />
                     <div className="px-6 lg:px-8 space-y-3">

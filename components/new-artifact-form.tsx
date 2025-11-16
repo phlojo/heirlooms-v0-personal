@@ -12,10 +12,13 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
-import { useState } from "react"
-import { ChevronDown, Plus } from 'lucide-react'
+import { useState, useEffect, useRef } from "react"
+import { ChevronDown, Plus, X } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { AddMediaModal } from "@/components/add-media-modal"
+import { normalizeMediaUrls, isAudioUrl, isVideoUrl, isImageUrl } from "@/lib/media"
+import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "@/lib/actions/cloudinary"
+import MediaImage from "@/components/media-image"
 
 type FormData = z.infer<typeof createArtifactSchema>
 
@@ -29,6 +32,8 @@ export function NewArtifactForm({
   const [error, setError] = useState<string | null>(null)
   const [isAttributesOpen, setIsAttributesOpen] = useState(false)
   const [isAddMediaOpen, setIsAddMediaOpen] = useState(false)
+  const [uploadedMediaUrls, setUploadedMediaUrls] = useState<string[]>([])
+  const hasNavigatedRef = useRef(false)
 
   const form = useForm<FormData>({
     resolver: zodResolver(createArtifactSchema),
@@ -42,40 +47,54 @@ export function NewArtifactForm({
     },
   })
 
-  const getMediaUrls = () => form.getValues("media_urls") || []
+  useEffect(() => {
+    return () => {
+      if (!hasNavigatedRef.current && uploadedMediaUrls.length > 0) {
+        console.log("[v0] Cleaning up abandoned media:", uploadedMediaUrls.length, "files")
+        // Cleanup in background - don't await
+        uploadedMediaUrls.forEach(async (url) => {
+          const publicId = await extractPublicIdFromUrl(url)
+          if (publicId) {
+            await deleteCloudinaryMedia(publicId)
+          }
+        })
+      }
+    }
+  }, [uploadedMediaUrls])
 
-  const isAudioUrl = (url: string) => {
-    return /\.(mp3|wav|m4a|aac|ogg|webm|opus)(\?.*)?$/i.test(url)
+  const getMediaUrls = () => {
+    const urls = form.getValues("media_urls")
+    return Array.isArray(urls) ? urls : []
   }
 
-  const isVideoUrl = (url: string) => {
-    return /\.(mp4|mov|avi|wmv|flv|webm|mkv)(\?.*)?$/i.test(url) || url.includes('/video/upload/')
-  }
-
-  const getImageUrls = () => getMediaUrls().filter((url) => !isAudioUrl(url) && !isVideoUrl(url))
+  const getImageUrls = () => getMediaUrls().filter((url) => isImageUrl(url))
   const getVideoUrls = () => getMediaUrls().filter((url) => isVideoUrl(url))
   const getAudioUrls = () => getMediaUrls().filter((url) => isAudioUrl(url))
 
+  const handleCaptionGenerated = (imageUrl: string, caption: string) => {
+    console.log("[v0] Caption generated for", imageUrl, ":", caption)
+    // Could store captions in form state if needed for display before submission
+  }
+
   async function onSubmit(data: FormData) {
-    const uniqueMediaUrls = Array.from(new Set(data.media_urls || []))
-
-    if (uniqueMediaUrls.length !== (data.media_urls?.length || 0)) {
-      console.log("[v0] Found duplicates in media_urls before submit:", data.media_urls?.length, "→", uniqueMediaUrls.length)
-      data.media_urls = uniqueMediaUrls
-    }
-
-    console.log("[v0] Submitting artifact with media_urls:", uniqueMediaUrls)
+    console.log("[v0] Form submit triggered with data:", data)
+    const normalizedUrls = normalizeMediaUrls(data.media_urls || [])
+    console.log("[v0] Normalized URLs (order preserved):", normalizedUrls)
 
     const submitData = {
       ...data,
+      media_urls: normalizedUrls,
     }
 
     setError(null)
 
     try {
+      hasNavigatedRef.current = true // Mark as navigating to prevent cleanup
       const result = await createArtifact(submitData)
+      console.log("[v0] Create artifact result:", result)
 
       if (result?.error) {
+        hasNavigatedRef.current = false // Reset if error
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, messages]) => {
             if (messages && Array.isArray(messages) && messages.length > 0) {
@@ -94,6 +113,8 @@ export function NewArtifactForm({
         }
       }
     } catch (error) {
+      hasNavigatedRef.current = false // Reset if error
+      console.log("[v0] Create artifact error:", error)
       if (error instanceof Error && error.message === "NEXT_REDIRECT") {
         return
       }
@@ -227,10 +248,14 @@ export function NewArtifactForm({
             artifactId={null}
             userId={userId}
             onMediaAdded={(newUrls) => {
-              const currentUrls = form.getValues("media_urls") || []
-              const allUrls = [...currentUrls, ...newUrls]
-              const uniqueUrls = Array.from(new Set(allUrls))
-              form.setValue("media_urls", uniqueUrls)
+              console.log("[v0] onMediaAdded called with newUrls:", newUrls)
+              const currentUrls = getMediaUrls()
+              console.log("[v0] Current media_urls:", currentUrls)
+              const combined = normalizeMediaUrls([...currentUrls, ...newUrls])
+              console.log("[v0] Combined and normalized (order preserved):", combined)
+              form.setValue("media_urls", combined)
+              // Track for cleanup
+              setUploadedMediaUrls(prev => [...prev, ...newUrls])
             }}
           />
 
@@ -244,53 +269,63 @@ export function NewArtifactForm({
             </div>
           ) : (
             <div className="space-y-8">
-              {/* Photos */}
-              {uploadedImages.map((url, index) => (
-                <div key={`photo-${index}`}>
-                  <img
-                    src={url || "/placeholder.svg"}
-                    alt={`Photo ${index + 1}`}
-                    className="w-full h-auto"
-                  />
-                  <div className="px-6 lg:px-8 pt-3">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Photo {index + 1}
-                    </p>
-                  </div>
-                </div>
-              ))}
+              {getMediaUrls().map((url) => {
+                const isImage = isImageUrl(url)
+                const isVideo = isVideoUrl(url)
+                const isAudio = isAudioUrl(url)
 
-              {/* Videos */}
-              {uploadedVideos.map((url, index) => (
-                <div key={`video-${index}`}>
-                  <video
-                    src={url}
-                    controls
-                    className="w-full h-auto bg-black"
-                    crossOrigin="anonymous"
-                  />
-                  <div className="px-6 lg:px-8 pt-3">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Video {index + 1}
-                    </p>
+                return (
+                  <div key={url}>
+                    {isImage && (
+                      <>
+                        <MediaImage
+                          src={url}
+                          alt="Photo"
+                          className="w-full h-auto"
+                        />
+                        <div className="px-6 lg:px-8 pt-3 flex items-center justify-between">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Photo
+                          </p>
+                          <GenerateImageCaptionButton
+                            artifactId="temp" 
+                            imageUrl={url}
+                            onCaptionGenerated={handleCaptionGenerated}
+                          />
+                        </div>
+                      </>
+                    )}
+                    {isVideo && (
+                      <>
+                        <video
+                          src={url}
+                          controls
+                          className="w-full h-auto bg-black"
+                          crossOrigin="anonymous"
+                        />
+                        <div className="px-6 lg:px-8 pt-3">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Video
+                          </p>
+                        </div>
+                      </>
+                    )}
+                    {isAudio && (
+                      <div className="px-6 lg:px-8">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                          Audio
+                        </p>
+                        <audio
+                          src={url}
+                          controls
+                          className="w-full"
+                          crossOrigin="anonymous"
+                        />
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
-
-              {/* Audio */}
-              {uploadedAudio.map((url, index) => (
-                <div key={`audio-${index}`} className="px-6 lg:px-8">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                    Audio {index + 1}
-                  </p>
-                  <audio
-                    src={url}
-                    controls
-                    className="w-full"
-                    crossOrigin="anonymous"
-                  />
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

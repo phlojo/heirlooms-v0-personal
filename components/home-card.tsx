@@ -1,6 +1,8 @@
+"use client"
+
 import Link from "next/link"
-import { Plus } from "lucide-react"
-import Image from "next/image"
+import { Plus } from 'lucide-react'
+import MediaImage from "@/components/media-image"
 
 interface HomeCardProps {
   title: string
@@ -14,14 +16,14 @@ export function HomeCard({ title, description, href, backgroundImage }: HomeCard
     <div className="relative h-full overflow-hidden p-8 bg-black">
       {backgroundImage && (
         <>
-          <Image
-            src={backgroundImage || "/placeholder.svg"}
-            alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            priority
-          />
+          <div className="absolute inset-0">
+            <MediaImage
+              src={backgroundImage || "/placeholder.svg"}
+              alt=""
+              className="w-full h-full"
+              objectFit="cover"
+            />
+          </div>
           <div className="absolute inset-0 bg-black/60" />
         </>
       )}

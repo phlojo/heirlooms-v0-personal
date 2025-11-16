@@ -1,5 +1,6 @@
 import { getThumbnailUrl } from "@/lib/cloudinary"
 import { HeirloomsIcon } from "@/components/heirlooms-icon"
+import MediaImage from "@/components/media-image"
 
 interface CollectionThumbnailGridProps {
   images: string[]
@@ -21,10 +22,11 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
 
   if (validImages.length === 1) {
     return (
-      <img
+      <MediaImage
         src={getThumbnailUrl(validImages[0]) || "/placeholder.svg"}
         alt={title}
-        className="h-full w-full object-cover"
+        className="h-full w-full"
+        objectFit="cover"
       />
     )
   }
@@ -32,12 +34,13 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   if (validImages.length === 2) {
     return (
       <div className="grid h-full w-full grid-cols-2 gap-1">
-        {validImages.map((img, i) => (
-          <img
-            key={i}
+        {validImages.map((img) => (
+          <MediaImage
+            key={img}
             src={getThumbnailUrl(img) || "/placeholder.svg"}
-            alt={`${title} ${i + 1}`}
-            className="h-full object-cover"
+            alt={`${title}`}
+            className="h-full"
+            objectFit="cover"
           />
         ))}
       </div>
@@ -47,12 +50,13 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   if (validImages.length === 3) {
     return (
       <div className="grid h-full w-full grid-cols-3 gap-1">
-        {validImages.map((img, i) => (
-          <img
-            key={i}
+        {validImages.map((img) => (
+          <MediaImage
+            key={img}
             src={getThumbnailUrl(img) || "/placeholder.svg"}
-            alt={`${title} ${i + 1}`}
-            className="h-full object-cover"
+            alt={`${title}`}
+            className="h-full"
+            objectFit="cover"
           />
         ))}
       </div>
@@ -61,12 +65,13 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
 
   return (
     <div className="grid h-full w-full grid-cols-4 gap-1">
-      {validImages.map((img, i) => (
-        <img
-          key={i}
+      {validImages.map((img) => (
+        <MediaImage
+          key={img}
           src={getThumbnailUrl(img) || "/placeholder.svg"}
-          alt={`${title} ${i + 1}`}
-          className="h-full object-cover"
+          alt={`${title}`}
+          className="h-full"
+          objectFit="cover"
         />
       ))}
     </div>

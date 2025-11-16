@@ -28,6 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { normalizeMediaUrls, getFileSizeLimit, formatFileSize } from "@/lib/media"
 
 type FormData = z.infer<typeof updateArtifactSchema>
 
@@ -75,7 +76,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   useEffect(() => {
     const currentUrls = form.getValues("media_urls") || []
     const originalUrls = artifact.media_urls || []
-    if (JSON.stringify(originalUrls.sort()) !== JSON.stringify(currentUrls.sort())) {
+    if (JSON.stringify(originalUrls) !== JSON.stringify(currentUrls)) {
       setHasUnsavedChanges(true)
     }
   }, [form.watch("media_urls"), artifact.media_urls])
@@ -111,21 +112,25 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     const files = e.target.files
     if (!files || files.length === 0) return
 
-    const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15MB per file
-    const oversizedFiles = Array.from(files).filter((file) => file.size > MAX_FILE_SIZE)
+    const oversizedFiles = Array.from(files).filter((file) => {
+      const limit = getFileSizeLimit(file)
+      return file.size > limit
+    })
 
     if (oversizedFiles.length > 0) {
-      const fileNames = oversizedFiles.map((f) => f.name).join(", ")
-      setError(`The following files are too large (max 15MB): ${fileNames}`)
+      const fileErrors = oversizedFiles.map((f) => 
+        `${f.name} (${formatFileSize(f.size)}, max: ${formatFileSize(getFileSizeLimit(f))})`
+      ).join(", ")
+      setError(`The following files are too large: ${fileErrors}`)
       e.target.value = ""
       return
     }
 
     const totalSize = Array.from(files).reduce((sum, file) => sum + file.size, 0)
-    const MAX_TOTAL_SIZE = 30 * 1024 * 1024 // 30MB total
+    const MAX_TOTAL_SIZE = 1000 * 1024 * 1024 // 1GB total for batch uploads
 
     if (totalSize > MAX_TOTAL_SIZE) {
-      setError("Total file size exceeds 30MB. Please upload fewer or smaller images.")
+      setError("Total file size exceeds 1GB. Please upload fewer or smaller files.")
       e.target.value = ""
       return
     }
@@ -192,11 +197,8 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       }
 
       const currentUrls = form.getValues("media_urls") || []
-      const newImages = [...currentUrls, ...urls]
-      const uniqueImages = Array.from(new Set(newImages))
-      console.log("[v0] Total images before dedup:", newImages.length, "After dedup:", uniqueImages.length)
-
-      form.setValue("media_urls", uniqueImages)
+      const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
+      form.setValue("media_urls", normalizeMediaUrls([...urlsArray, ...urls]))
     } catch (err) {
       console.error("[v0] Upload error:", err)
       setError(
@@ -211,27 +213,24 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   }
 
   function removeImage(index: number) {
-    const currentUrls = form.getValues("media_urls") || []
-    const newImages = currentUrls.filter((_, i) => i !== index)
-    form.setValue("media_urls", newImages)
+    const currentUrls = form.getValues("media_urls")
+    const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
+    const newImages = urlsArray.filter((_, i) => i !== index)
+    form.setValue("media_urls", normalizeMediaUrls(newImages))
   }
 
   async function onSubmit(data: FormData) {
     setError(null)
 
-    const uniqueMediaUrls = Array.from(new Set(data.media_urls || []))
-    
-    if (uniqueMediaUrls.length !== (data.media_urls?.length || 0)) {
-      console.log("[v0] Found duplicates before submit:", data.media_urls?.length, "→", uniqueMediaUrls.length)
-    }
+    const normalizedUrls = normalizeMediaUrls(data.media_urls || [])
 
     const submitData = {
       ...data,
-      media_urls: uniqueMediaUrls,
+      media_urls: normalizedUrls,
       year_acquired: data.year_acquired || undefined,
     }
 
-    console.log("[v0] Submitting artifact update with", uniqueMediaUrls.length, "media URLs")
+    console.log("[v0] Submitting artifact update with", normalizedUrls.length, "media URLs")
 
     const result = await updateArtifact(submitData, artifact.media_urls || [])
 
@@ -270,12 +269,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     )
   }
 
-  const uploadedImages = Array.from(new Set(form.watch("media_urls") || []))
-  
-  const rawMediaUrls = form.watch("media_urls") || []
-  if (rawMediaUrls.length !== uploadedImages.length) {
-    console.log("[v0] Duplicates detected in form preview:", rawMediaUrls.length, "→", uploadedImages.length)
-  }
+  const uploadedImages = form.watch("media_urls") || []
 
   return (
     <>
@@ -334,16 +328,16 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
             {/* Image previews */}
             {uploadedImages.length > 0 && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {uploadedImages.map((url, index) => (
-                  <div key={index} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
+                {uploadedImages.map((url) => (
+                  <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
                     <img
                       src={url || "/placeholder.svg"}
-                      alt={`Upload ${index + 1}`}
+                      alt={`Upload ${url}`}
                       className="h-full w-full object-cover"
                     />
                     <button
                       type="button"
-                      onClick={() => removeImage(index)}
+                      onClick={() => removeImage(uploadedImages.indexOf(url))}
                       className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-md transition-transform hover:scale-110"
                       title="Delete this photo"
                     >
