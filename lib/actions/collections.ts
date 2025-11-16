@@ -349,6 +349,8 @@ export async function getAllPublicCollectionsPaginated(
   const supabase = await createClient()
 
   try {
+    const isAdmin = await isCurrentUserAdmin()
+
     let query = supabase
       .from("collections")
       .select(`
@@ -398,7 +400,9 @@ export async function getAllPublicCollectionsPaginated(
       }),
     )
 
-    const filteredCollections = collectionsWithImages.filter((collection) => collection.itemCount > 0)
+    const filteredCollections = isAdmin 
+      ? collectionsWithImages 
+      : collectionsWithImages.filter((collection) => collection.itemCount > 0)
 
     return { collections: filteredCollections, hasMore }
   } catch (error) {
