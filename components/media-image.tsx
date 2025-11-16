@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import clsx from "clsx"
 
 function MediaImage({
@@ -8,13 +8,42 @@ function MediaImage({
   alt = "",
   className = "",
   objectFit = "cover",
+  fallbackSrc = "/placeholder.svg",
 }: {
-  src: string
+  src?: string | null
   alt?: string
   className?: string
   objectFit?: "cover" | "contain"
+  fallbackSrc?: string
 }) {
-  const [loaded, setLoaded] = useState(false)
+  const [loaded, setLoaded] = useState(!src || src === "")
+  const [error, setError] = useState(false)
+  const [effectiveSrc, setEffectiveSrc] = useState(src || fallbackSrc)
+
+  useEffect(() => {
+    if (!src || src === "") {
+      setEffectiveSrc(fallbackSrc)
+      setLoaded(true)
+      setError(false)
+    } else {
+      setEffectiveSrc(src)
+      setLoaded(false)
+      setError(false)
+    }
+  }, [src, fallbackSrc])
+
+  const handleError = () => {
+    if (effectiveSrc !== fallbackSrc) {
+      console.log("[v0] MediaImage error, switching to fallback:", effectiveSrc)
+      setEffectiveSrc(fallbackSrc)
+      setError(true)
+      setLoaded(true)
+    }
+  }
+
+  const handleLoad = () => {
+    setLoaded(true)
+  }
 
   return (
     <div className={clsx("relative w-full h-full overflow-hidden", className)}>
@@ -23,9 +52,10 @@ function MediaImage({
       )}
 
       <img
-        src={src || "/placeholder.svg"}
+        src={effectiveSrc || "/placeholder.svg"}
         alt={alt}
-        onLoad={() => setLoaded(true)}
+        onLoad={handleLoad}
+        onError={handleError}
         className={clsx(
           "w-full h-full transition-opacity duration-500",
           loaded ? "opacity-100" : "opacity-0",

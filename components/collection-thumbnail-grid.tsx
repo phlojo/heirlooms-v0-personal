@@ -8,9 +8,7 @@ interface CollectionThumbnailGridProps {
 }
 
 export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGridProps) {
-  const validImages = images.filter(Boolean).slice(0, 4)
-
-  console.log("[v0] CollectionThumbnailGrid rendering with", validImages.length, "images")
+  const validImages = images.filter(img => img && typeof img === 'string' && img.trim() !== '').slice(0, 4)
 
   if (validImages.length === 0) {
     return (
@@ -21,9 +19,10 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   }
 
   if (validImages.length === 1) {
+    const thumbnailUrl = getThumbnailUrl(validImages[0])
     return (
       <MediaImage
-        src={getThumbnailUrl(validImages[0]) || "/placeholder.svg"}
+        src={thumbnailUrl}
         alt={title}
         className="h-full w-full"
         objectFit="cover"
@@ -34,15 +33,18 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   if (validImages.length === 2) {
     return (
       <div className="grid h-full w-full grid-cols-2 gap-1">
-        {validImages.map((img) => (
-          <MediaImage
-            key={img}
-            src={getThumbnailUrl(img) || "/placeholder.svg"}
-            alt={`${title}`}
-            className="h-full"
-            objectFit="cover"
-          />
-        ))}
+        {validImages.map((img) => {
+          const thumbnailUrl = getThumbnailUrl(img)
+          return (
+            <MediaImage
+              key={img}
+              src={thumbnailUrl}
+              alt={`${title}`}
+              className="h-full"
+              objectFit="cover"
+            />
+          )
+        })}
       </div>
     )
   }
@@ -50,30 +52,36 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   if (validImages.length === 3) {
     return (
       <div className="grid h-full w-full grid-cols-3 gap-1">
-        {validImages.map((img) => (
-          <MediaImage
-            key={img}
-            src={getThumbnailUrl(img) || "/placeholder.svg"}
-            alt={`${title}`}
-            className="h-full"
-            objectFit="cover"
-          />
-        ))}
+        {validImages.map((img) => {
+          const thumbnailUrl = getThumbnailUrl(img)
+          return (
+            <MediaImage
+              key={img}
+              src={thumbnailUrl}
+              alt={`${title}`}
+              className="h-full"
+              objectFit="cover"
+            />
+          )
+        })}
       </div>
     )
   }
 
   return (
     <div className="grid h-full w-full grid-cols-4 gap-1">
-      {validImages.map((img) => (
-        <MediaImage
-          key={img}
-          src={getThumbnailUrl(img) || "/placeholder.svg"}
-          alt={`${title}`}
-          className="h-full"
-          objectFit="cover"
-        />
-      ))}
+      {validImages.map((img) => {
+        const thumbnailUrl = getThumbnailUrl(img)
+        return (
+          <MediaImage
+            key={img}
+            src={thumbnailUrl}
+            alt={`${title}`}
+            className="h-full"
+            objectFit="cover"
+          />
+        )
+      })}
     </div>
   )
 }

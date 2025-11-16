@@ -18,7 +18,7 @@ export function HomeCard({ title, description, href, backgroundImage }: HomeCard
         <>
           <div className="absolute inset-0">
             <MediaImage
-              src={backgroundImage || "/placeholder.svg"}
+              src={backgroundImage}
               alt=""
               className="w-full h-full"
               objectFit="cover"

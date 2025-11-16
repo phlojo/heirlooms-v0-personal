@@ -63,7 +63,7 @@ export function ArtifactImageWithViewer({ src, alt, setIsImageFullscreen }: Arti
     <>
       <div ref={imageRef} className="overflow-hidden bg-muted -mx-6 lg:-mx-8 cursor-pointer" onClick={handleImageClick}>
         <MediaImage
-          src={src || "/placeholder.svg"}
+          src={src}
           alt={alt}
           className="w-full h-auto transition-opacity hover:opacity-90"
           objectFit="contain"

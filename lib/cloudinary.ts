@@ -49,6 +49,10 @@ function isVideoFile(url: string): boolean {
  * For videos, generates a poster frame from 1 second mark
  */
 export function getThumbnailUrl(url: string): string {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return '/placeholder.svg'
+  }
+  
   if (isVideoFile(url)) {
     // For videos, use Cloudinary video transformation to get a poster frame
     // pg_1 gets frame at 1 second, so_1.0 sets start offset to 1 second
@@ -63,6 +67,9 @@ export function getThumbnailUrl(url: string): string {
  * Perfect for: larger cards, list views
  */
 export function getCardUrl(url: string): string {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return '/placeholder.svg'
+  }
   return getCloudinaryUrl(url, "w_800,h_600,c_fit,q_auto,f_auto")
 }
 
@@ -71,6 +78,9 @@ export function getCardUrl(url: string): string {
  * Perfect for: artifact detail pages, full-screen views
  */
 export function getDetailUrl(url: string): string {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return '/placeholder.svg'
+  }
   return getCloudinaryUrl(url, "w_1200,h_1200,c_limit,q_auto,f_auto")
 }
 
@@ -79,5 +89,8 @@ export function getDetailUrl(url: string): string {
  * Perfect for: download, print, high-res viewing
  */
 export function getFullResUrl(url: string): string {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return '/placeholder.svg'
+  }
   return getCloudinaryUrl(url, "q_auto,f_auto")
 }
