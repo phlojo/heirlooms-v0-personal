@@ -2,14 +2,15 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, Loader2 } from 'lucide-react'
 import Link from "next/link"
 import { CollectionCard } from "@/components/collection-card"
 import { UncategorizedCollectionCard } from "@/components/uncategorized-collection-card"
 import { EmptyCollections } from "@/components/empty-collections"
 import { LoginModule } from "@/components/login-module"
 import { useEffect, useState } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname } from 'next/navigation'
+import { getAllPublicCollectionsPaginated, getMyCollectionsPaginated } from "@/lib/actions/collections"
 
 interface Collection {
   id: string
@@ -19,19 +20,30 @@ interface Collection {
   thumbnailImages: string[]
   itemCount: number
   isUnsorted?: boolean
+  created_at: string
 }
 
 interface CollectionsTabsProps {
   user: any
   myCollections: Collection[]
   allCollections: Collection[]
+  myHasMore: boolean
+  allHasMore: boolean
 }
 
 const STORAGE_KEY = "heirloom-collections-tab"
+const PAGE_SIZE = 24
 
-export function CollectionsTabs({ user, myCollections, allCollections }: CollectionsTabsProps) {
+export function CollectionsTabs({ user, myCollections, allCollections, myHasMore: initialMyHasMore, allHasMore: initialAllHasMore }: CollectionsTabsProps) {
   const [activeTab, setActiveTab] = useState<string>("all")
   const pathname = usePathname()
+
+  const [allCollectionsList, setAllCollectionsList] = useState<Collection[]>(allCollections)
+  const [myCollectionsList, setMyCollectionsList] = useState<Collection[]>(myCollections)
+  const [allHasMore, setAllHasMore] = useState(initialAllHasMore)
+  const [myHasMore, setMyHasMore] = useState(initialMyHasMore)
+  const [isLoadingAll, setIsLoadingAll] = useState(false)
+  const [isLoadingMy, setIsLoadingMy] = useState(false)
 
   useEffect(() => {
     const savedTab = sessionStorage.getItem(STORAGE_KEY)
@@ -43,6 +55,44 @@ export function CollectionsTabs({ user, myCollections, allCollections }: Collect
   const handleTabChange = (value: string) => {
     setActiveTab(value)
     sessionStorage.setItem(STORAGE_KEY, value)
+  }
+
+  const handleLoadMoreAll = async () => {
+    if (isLoadingAll || !allHasMore) return
+
+    setIsLoadingAll(true)
+    try {
+      const lastCollection = allCollectionsList[allCollectionsList.length - 1]
+      const cursor = lastCollection ? { createdAt: lastCollection.created_at, id: lastCollection.id } : undefined
+
+      const result = await getAllPublicCollectionsPaginated(user?.id, PAGE_SIZE, cursor)
+      
+      setAllCollectionsList((prev) => [...prev, ...result.collections])
+      setAllHasMore(result.hasMore)
+    } catch (error) {
+      console.error("Error loading more collections:", error)
+    } finally {
+      setIsLoadingAll(false)
+    }
+  }
+
+  const handleLoadMoreMy = async () => {
+    if (isLoadingMy || !myHasMore || !user) return
+
+    setIsLoadingMy(true)
+    try {
+      const lastCollection = myCollectionsList[myCollectionsList.length - 1]
+      const cursor = lastCollection ? { createdAt: lastCollection.created_at, id: lastCollection.id } : undefined
+
+      const result = await getMyCollectionsPaginated(user.id, PAGE_SIZE, cursor)
+      
+      setMyCollectionsList((prev) => [...prev, ...result.collections])
+      setMyHasMore(result.hasMore)
+    } catch (error) {
+      console.error("Error loading more collections:", error)
+    } finally {
+      setIsLoadingMy(false)
+    }
   }
 
   return (
@@ -67,12 +117,34 @@ export function CollectionsTabs({ user, myCollections, allCollections }: Collect
       </div>
 
       <TabsContent value="all" className="mt-6">
-        {allCollections.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {allCollections.map((collection) => (
-              <CollectionCard key={collection.id} collection={collection} mode="all" />
-            ))}
-          </div>
+        {allCollectionsList.length > 0 ? (
+          <>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {allCollectionsList.map((collection) => (
+                <CollectionCard key={collection.id} collection={collection} mode="all" />
+              ))}
+            </div>
+            {allHasMore && (
+              <div className="mt-8 pb-12 flex justify-center">
+                <Button
+                  onClick={handleLoadMoreAll}
+                  disabled={isLoadingAll}
+                  size="lg"
+                  variant="outline"
+                  className="min-w-[200px]"
+                >
+                  {isLoadingAll ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    "Load more collections"
+                  )}
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="rounded-lg border border-dashed p-12 text-center">
             <p className="text-sm text-muted-foreground">No public collections available yet.</p>
@@ -85,16 +157,38 @@ export function CollectionsTabs({ user, myCollections, allCollections }: Collect
           <div className="mx-auto max-w-md">
             <LoginModule returnTo={pathname} title="Access Your Collections" showBackButton={false} />
           </div>
-        ) : myCollections.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {myCollections.map((collection) =>
-              collection.isUnsorted ? (
-                <UncategorizedCollectionCard key={collection.id} collection={collection} mode="mine" />
-              ) : (
-                <CollectionCard key={collection.id} collection={collection} mode="mine" />
-              ),
+        ) : myCollectionsList.length > 0 ? (
+          <>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {myCollectionsList.map((collection) =>
+                collection.isUnsorted ? (
+                  <UncategorizedCollectionCard key={collection.id} collection={collection} mode="mine" />
+                ) : (
+                  <CollectionCard key={collection.id} collection={collection} mode="mine" />
+                ),
+              )}
+            </div>
+            {myHasMore && (
+              <div className="mt-8 pb-12 flex justify-center">
+                <Button
+                  onClick={handleLoadMoreMy}
+                  disabled={isLoadingMy}
+                  size="lg"
+                  variant="outline"
+                  className="min-w-[200px]"
+                >
+                  {isLoadingMy ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    "Load more collections"
+                  )}
+                </Button>
+              </div>
             )}
-          </div>
+          </>
         ) : (
           <EmptyCollections />
         )}

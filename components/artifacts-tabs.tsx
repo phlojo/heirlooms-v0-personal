@@ -124,7 +124,7 @@ export function ArtifactsTabs({ user, myArtifacts, allArtifacts }: ArtifactsTabs
               ))}
             </div>
             {allHasMore && (
-              <div className="mt-8 flex justify-center">
+              <div className="mt-8 pb-12 flex justify-center">
                 <Button
                   onClick={handleLoadMoreAll}
                   disabled={isLoadingAll}
@@ -164,7 +164,7 @@ export function ArtifactsTabs({ user, myArtifacts, allArtifacts }: ArtifactsTabs
               ))}
             </div>
             {myHasMore && (
-              <div className="mt-8 flex justify-center">
+              <div className="mt-8 pb-12 flex justify-center">
                 <Button
                   onClick={handleLoadMoreMy}
                   disabled={isLoadingMy}
