@@ -32,11 +32,11 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   if (validImages.length === 2) {
     return (
       <div className="grid h-full w-full grid-cols-2 gap-1">
-        {validImages.map((img, i) => (
+        {validImages.map((img) => (
           <img
-            key={i}
+            key={img}
             src={getThumbnailUrl(img) || "/placeholder.svg"}
-            alt={`${title} ${i + 1}`}
+            alt={`${title}`}
             className="h-full object-cover"
           />
         ))}
@@ -47,11 +47,11 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
   if (validImages.length === 3) {
     return (
       <div className="grid h-full w-full grid-cols-3 gap-1">
-        {validImages.map((img, i) => (
+        {validImages.map((img) => (
           <img
-            key={i}
+            key={img}
             src={getThumbnailUrl(img) || "/placeholder.svg"}
-            alt={`${title} ${i + 1}`}
+            alt={`${title}`}
             className="h-full object-cover"
           />
         ))}
@@ -61,11 +61,11 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
 
   return (
     <div className="grid h-full w-full grid-cols-4 gap-1">
-      {validImages.map((img, i) => (
+      {validImages.map((img) => (
         <img
-          key={i}
+          key={img}
           src={getThumbnailUrl(img) || "/placeholder.svg"}
-          alt={`${title} ${i + 1}`}
+          alt={`${title}`}
           className="h-full object-cover"
         />
       ))}

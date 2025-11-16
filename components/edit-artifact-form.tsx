@@ -321,16 +321,16 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
             {/* Image previews */}
             {uploadedImages.length > 0 && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {uploadedImages.map((url, index) => (
-                  <div key={index} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
+                {uploadedImages.map((url) => (
+                  <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
                     <img
                       src={url || "/placeholder.svg"}
-                      alt={`Upload ${index + 1}`}
+                      alt={`Upload ${url}`}
                       className="h-full w-full object-cover"
                     />
                     <button
                       type="button"
-                      onClick={() => removeImage(index)}
+                      onClick={() => removeImage(uploadedImages.indexOf(url))}
                       className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-md transition-transform hover:scale-110"
                       title="Delete this photo"
                     >

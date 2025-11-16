@@ -2,17 +2,7 @@
 
 import { useState } from "react"
 import ReactMarkdown from "react-markdown"
-import {
-  Loader2,
-  Mic,
-  ImageIcon,
-  FileText,
-  PlayCircle,
-  RefreshCw,
-  ChevronDown,
-  ChevronUp,
-  Sparkles,
-} from "lucide-react"
+import { Loader2, Mic, ImageIcon, FileText, PlayCircle, RefreshCw, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -212,10 +202,10 @@ export function ArtifactAiPanel({
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2">
             <ul className="space-y-2">
-              {captionEntries.map(([url, caption], index) => (
+              {captionEntries.map(([url, caption]) => (
                 <li key={url} className="flex items-start gap-3 rounded-lg bg-muted/50 p-3 text-sm">
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-                    {index + 1}
+                    {captionEntries.indexOf([url, caption]) + 1}
                   </span>
                   <p className="flex-1">{caption}</p>
                 </li>

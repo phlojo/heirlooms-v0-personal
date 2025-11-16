@@ -229,24 +229,24 @@ export function NewArtifactForm({
           ) : (
             <div className="space-y-8">
               {/* Photos */}
-              {uploadedImages.map((url, index) => (
-                <div key={`photo-${index}`}>
+              {uploadedImages.map((url) => (
+                <div key={url}>
                   <img
                     src={url || "/placeholder.svg"}
-                    alt={`Photo ${index + 1}`}
+                    alt={`Photo`}
                     className="w-full h-auto"
                   />
                   <div className="px-6 lg:px-8 pt-3">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Photo {index + 1}
+                      Photo
                     </p>
                   </div>
                 </div>
               ))}
 
               {/* Videos */}
-              {uploadedVideos.map((url, index) => (
-                <div key={`video-${index}`}>
+              {uploadedVideos.map((url) => (
+                <div key={url}>
                   <video
                     src={url}
                     controls
@@ -255,17 +255,17 @@ export function NewArtifactForm({
                   />
                   <div className="px-6 lg:px-8 pt-3">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Video {index + 1}
+                      Video
                     </p>
                   </div>
                 </div>
               ))}
 
               {/* Audio */}
-              {uploadedAudio.map((url, index) => (
-                <div key={`audio-${index}`} className="px-6 lg:px-8">
+              {uploadedAudio.map((url) => (
+                <div key={url} className="px-6 lg:px-8">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                    Audio {index + 1}
+                    Audio
                   </p>
                   <audio
                     src={url}
