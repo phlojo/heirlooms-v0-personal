@@ -106,18 +106,6 @@ export function ArtifactSwipeContent({
     })
   }, [supabase])
 
-  useEffect(() => {
-    if (!isEditMode || !hasUnsavedChanges) return
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
-      e.returnValue = ''
-    }
-
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [isEditMode, hasUnsavedChanges])
-  
   const totalMedia = editMediaUrls.length
   const audioFiles = editMediaUrls.filter((url) => isAudioFile(url)).length
   const videoFiles = editMediaUrls.filter((url) => isVideoFile(url)).length
@@ -134,6 +122,18 @@ export function ArtifactSwipeContent({
     JSON.stringify(editImageCaptions) !== JSON.stringify(originalState.image_captions)
   )
 
+  useEffect(() => {
+    if (!isEditMode || !hasUnsavedChanges) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isEditMode, hasUnsavedChanges])
+  
   const handleSave = async () => {
     setIsSaving(true)
     try {
