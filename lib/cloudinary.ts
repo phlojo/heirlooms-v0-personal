@@ -50,16 +50,19 @@ function isVideoFile(url: string): boolean {
  */
 export function getThumbnailUrl(url: string): string {
   if (!url || typeof url !== 'string' || url.trim() === '') {
+    console.log("[v0] getThumbnailUrl: Invalid URL, returning placeholder")
     return '/placeholder.svg'
   }
   
-  if (isVideoFile(url)) {
-    // For videos, use Cloudinary video transformation to get a poster frame
-    // pg_1 gets frame at 1 second, so_1.0 sets start offset to 1 second
-    return getCloudinaryUrl(url, "w_400,h_400,c_fill,q_auto,f_auto,so_1.0")
-  }
+  console.log("[v0] getThumbnailUrl input:", url)
   
-  return getCloudinaryUrl(url, "w_400,h_400,c_fill,q_auto,f_auto")
+  const result = isVideoFile(url) 
+    ? getCloudinaryUrl(url, "w_400,h_400,c_fill,q_auto,f_auto,so_1.0")
+    : getCloudinaryUrl(url, "w_400,h_400,c_fill,q_auto,f_auto")
+  
+  console.log("[v0] getThumbnailUrl output:", result)
+  
+  return result
 }
 
 /**

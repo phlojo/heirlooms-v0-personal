@@ -3,121 +3,13 @@ import { getCurrentUser, createClient } from "@/lib/supabase/server"
 import { CollectionsTabs } from "@/components/collections-tabs"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { getPrimaryVisualMediaUrl } from "@/lib/media"
-
-async function getMyCollections(userId: string) {
-  const supabase = await createClient()
-
-  try {
-    console.log("[v0] getMyCollections - Fetching unsorted artifacts for user:", userId)
-
-    const { data: collections, error } = await supabase
-      .from("collections")
-      .select(`
-        *,
-        artifacts(count)
-      `)
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-
-    console.log("[v0] getMyCollections - Collections found:", collections?.length, "Error:", error)
-
-    if (error) {
-      console.error("[v0] Error fetching my collections:", error)
-      return []
-    }
-
-    const collectionsWithImages = await Promise.all(
-      (collections || []).map(async (collection) => {
-        const { data: artifacts } = await supabase
-          .from("artifacts")
-          .select("media_urls")
-          .eq("collection_id", collection.id)
-          .order("created_at", { ascending: false })
-          .limit(5)
-
-        const thumbnailImages = artifacts?.map((artifact) => getPrimaryVisualMediaUrl(artifact.media_urls)).filter(Boolean) || []
-
-        const isUncategorized = collection.slug === "uncategorized"
-
-        return {
-          ...collection,
-          thumbnailImages,
-          itemCount: collection.artifacts?.[0]?.count || 0,
-          slug: collection.slug,
-          isUnsorted: isUncategorized,
-        }
-      }),
-    )
-
-    collectionsWithImages.sort((a, b) => {
-      if (a.isUnsorted) return -1
-      if (b.isUnsorted) return 1
-      return 0
-    })
-
-    return collectionsWithImages
-  } catch (error) {
-    console.error("[v0] Unexpected error in getMyCollections:", error)
-    return []
-  }
-}
-
-async function getAllPublicCollections(excludeUserId?: string) {
-  const supabase = await createClient()
-
-  try {
-    let query = supabase
-      .from("collections")
-      .select(`
-        *,
-        artifacts(count)
-      `)
-      .eq("is_public", true)
-
-    // Exclude the current user's collections if specified
-    if (excludeUserId) {
-      query = query.neq("user_id", excludeUserId)
-    }
-
-    const { data: collections, error } = await query.order("created_at", { ascending: false })
-
-    if (error) {
-      console.error("Error fetching public collections:", error)
-      return []
-    }
-
-    const collectionsWithImages = await Promise.all(
-      (collections || []).map(async (collection) => {
-        const { data: artifacts } = await supabase
-          .from("artifacts")
-          .select("media_urls")
-          .eq("collection_id", collection.id)
-          .order("created_at", { ascending: false })
-          .limit(5)
-
-        const thumbnailImages = artifacts?.map((artifact) => getPrimaryVisualMediaUrl(artifact.media_urls)).filter(Boolean) || []
-
-        return {
-          ...collection,
-          thumbnailImages,
-          itemCount: collection.artifacts?.[0]?.count || 0,
-          slug: collection.slug,
-        }
-      }),
-    )
-
-    return collectionsWithImages.filter((collection) => collection.itemCount > 0)
-  } catch (error) {
-    console.error("Unexpected error in getAllPublicCollections:", error)
-    return []
-  }
-}
+import { getAllPublicCollectionsPaginated, getMyCollectionsPaginated } from "@/lib/actions/collections"
 
 export default async function CollectionsPage() {
   const user = await getCurrentUser()
 
-  const myCollections = user ? await getMyCollections(user.id) : []
-  const allCollections = await getAllPublicCollections(user?.id)
+  const myCollectionsResult = user ? await getMyCollectionsPaginated(user.id, 24) : { collections: [], hasMore: false }
+  const allCollectionsResult = await getAllPublicCollectionsPaginated(user?.id, 24)
 
   return (
     <AppLayout user={user}>
@@ -157,7 +49,13 @@ export default async function CollectionsPage() {
           </h1>
         </div>
 
-        <CollectionsTabs user={user} myCollections={myCollections} allCollections={allCollections} />
+        <CollectionsTabs 
+          user={user} 
+          myCollections={myCollectionsResult.collections} 
+          allCollections={allCollectionsResult.collections}
+          myHasMore={myCollectionsResult.hasMore}
+          allHasMore={allCollectionsResult.hasMore}
+        />
       </div>
     </AppLayout>
   )

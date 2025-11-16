@@ -7,6 +7,7 @@ import { getArtifactsByCollection } from "./artifacts"
 import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "./cloudinary"
 import { generateSlug, generateUniqueSlug } from "@/lib/utils/slug"
 import { isCurrentUserAdmin } from "@/lib/utils/admin"
+import { getPrimaryVisualMediaUrl } from "@/lib/media"
 
 export async function createCollection(input: CollectionInput) {
   const validatedFields = collectionSchema.safeParse(input)
@@ -338,4 +339,143 @@ export async function deleteCollection(collectionId: string, deleteArtifacts = f
   revalidatePath(`/collections/${collection.slug}`)
 
   return { success: true }
+}
+
+export async function getAllPublicCollectionsPaginated(
+  excludeUserId?: string,
+  limit: number = 24,
+  cursor?: { createdAt: string; id: string }
+) {
+  const supabase = await createClient()
+
+  try {
+    const isAdmin = await isCurrentUserAdmin()
+
+    let query = supabase
+      .from("collections")
+      .select(`
+        *,
+        artifacts(count)
+      `)
+      .eq("is_public", true)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(limit + 1)
+
+    if (excludeUserId) {
+      query = query.neq("user_id", excludeUserId)
+    }
+
+    if (cursor) {
+      query = query.or(`created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`)
+    }
+
+    const { data: collections, error } = await query
+
+    if (error) {
+      console.error("Error fetching paginated public collections:", error)
+      return { collections: [], hasMore: false }
+    }
+
+    const hasMore = collections.length > limit
+    const resultCollections = hasMore ? collections.slice(0, limit) : collections
+
+    const collectionsWithImages = await Promise.all(
+      resultCollections.map(async (collection) => {
+        const { data: artifacts } = await supabase
+          .from("artifacts")
+          .select("media_urls")
+          .eq("collection_id", collection.id)
+          .order("created_at", { ascending: false })
+          .limit(5)
+
+        const thumbnailImages = artifacts?.map((artifact) => getPrimaryVisualMediaUrl(artifact.media_urls)).filter(Boolean) || []
+
+        return {
+          ...collection,
+          thumbnailImages,
+          itemCount: collection.artifacts?.[0]?.count || 0,
+          slug: collection.slug,
+        }
+      }),
+    )
+
+    const filteredCollections = isAdmin 
+      ? collectionsWithImages 
+      : collectionsWithImages.filter((collection) => collection.itemCount > 0)
+
+    return { collections: filteredCollections, hasMore }
+  } catch (error) {
+    console.error("Unexpected error in getAllPublicCollectionsPaginated:", error)
+    return { collections: [], hasMore: false }
+  }
+}
+
+export async function getMyCollectionsPaginated(
+  userId: string,
+  limit: number = 24,
+  cursor?: { createdAt: string; id: string }
+) {
+  const supabase = await createClient()
+
+  try {
+    let query = supabase
+      .from("collections")
+      .select(`
+        *,
+        artifacts(count)
+      `)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(limit + 1)
+
+    if (cursor) {
+      query = query.or(`created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`)
+    }
+
+    const { data: collections, error } = await query
+
+    if (error) {
+      console.error("Error fetching paginated user collections:", error)
+      return { collections: [], hasMore: false }
+    }
+
+    const hasMore = collections.length > limit
+    const resultCollections = hasMore ? collections.slice(0, limit) : collections
+
+    const collectionsWithImages = await Promise.all(
+      resultCollections.map(async (collection) => {
+        const { data: artifacts } = await supabase
+          .from("artifacts")
+          .select("media_urls")
+          .eq("collection_id", collection.id)
+          .order("created_at", { ascending: false })
+          .limit(5)
+
+        const thumbnailImages = artifacts?.map((artifact) => getPrimaryVisualMediaUrl(artifact.media_urls)).filter(Boolean) || []
+
+        const isUncategorized = collection.slug === "uncategorized"
+
+        return {
+          ...collection,
+          thumbnailImages,
+          itemCount: collection.artifacts?.[0]?.count || 0,
+          slug: collection.slug,
+          isUnsorted: isUncategorized,
+        }
+      }),
+    )
+
+    collectionsWithImages.sort((a, b) => {
+      if (a.isUnsorted) return -1
+      if (b.isUnsorted) return 1
+      return 0
+    })
+
+    return { collections: collectionsWithImages, hasMore }
+  } catch (error) {
+    console.error("Unexpected error in getMyCollectionsPaginated:", error)
+    return { collections: [], hasMore: false }
+  }
 }

@@ -35,6 +35,7 @@ export function ArtifactCard({ artifact, showAuthor = false, authorName }: Artif
         <div className="relative aspect-square overflow-hidden bg-muted">
           {thumbnailUrl ? (
             <MediaImage
+              key={thumbnailUrl}
               src={thumbnailUrl}
               alt={artifact.title}
               className="h-full w-full transition-transform group-hover:scale-105"
