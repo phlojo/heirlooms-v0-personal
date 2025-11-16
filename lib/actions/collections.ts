@@ -8,11 +8,7 @@ import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "./cloudinary"
 import { generateSlug, generateUniqueSlug } from "@/lib/utils/slug"
 import { isCurrentUserAdmin } from "@/lib/utils/admin"
 
-/**
- * Server action to create a new collection
- */
 export async function createCollection(input: CollectionInput) {
-  // Validate input with Zod
   const validatedFields = collectionSchema.safeParse(input)
 
   if (!validatedFields.success) {
@@ -25,7 +21,6 @@ export async function createCollection(input: CollectionInput) {
 
   const supabase = await createClient()
 
-  // Check authentication
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -40,21 +35,20 @@ export async function createCollection(input: CollectionInput) {
     return !!data
   })
 
-  // Insert collection into database
   const { data, error } = await supabase
     .from("collections")
     .insert({
       title: validatedFields.data.title,
       description: validatedFields.data.description,
       is_public: validatedFields.data.is_public,
-      slug, // Add slug to insert
+      slug,
       user_id: user.id,
     })
     .select()
     .single()
 
   if (error) {
-    console.error("[v0] Collection creation error:", error)
+    console.error("Collection creation error:", error)
     return { success: false, error: "Failed to create collection. Please try again." }
   }
 
@@ -62,25 +56,19 @@ export async function createCollection(input: CollectionInput) {
   return { success: true, data }
 }
 
-/**
- * Server action to get a collection by ID
- */
 export async function getCollection(id: string) {
   const supabase = await createClient()
 
   const { data, error } = await supabase.from("collections").select("*").eq("id", id).single()
 
   if (error) {
-    console.error("[v0] Collection fetch error:", error)
+    console.error("Collection fetch error:", error)
     return null
   }
 
   return data
 }
 
-/**
- * Server action to get a collection by slug
- */
 export async function getCollectionBySlug(slug: string) {
   const supabase = await createClient()
 
@@ -88,27 +76,17 @@ export async function getCollectionBySlug(slug: string) {
     const { data, error } = await supabase.from("collections").select("*").eq("slug", slug).single()
 
     if (error) {
-      console.error("[v0] Collection fetch error:", error)
+      console.error("Collection fetch error:", error)
       return null
     }
 
     return data
   } catch (err) {
-    // Handle rate limiting or network errors
-    console.error("[v0] Collection fetch error:", err)
-    if (err instanceof Error && err.message.includes("Too Many")) {
-      console.error("[v0] Rate limit exceeded when fetching collection")
-    }
+    console.error("Collection fetch error:", err)
     return null
   }
 }
 
-/**
- * Server action to get previous and next collections based on filter mode
- * @param collectionId - Current collection ID
- * @param userId - Current user ID (null if not logged in)
- * @param mode - Filter mode: "all" (public only), "mine" (user's collections only), or "both" (public + user's)
- */
 export async function getAdjacentCollections(
   collectionId: string,
   userId: string | null,
@@ -126,23 +104,19 @@ export async function getAdjacentCollections(
     return { previous: null, next: null }
   }
 
-  // Build query based on mode
   let query = supabase
     .from("collections")
     .select("id, title, slug, created_at, user_id, is_public")
     .order("created_at", { ascending: false })
 
   if (mode === "all") {
-    // Only public collections
     query = query.eq("is_public", true)
   } else if (mode === "mine") {
-    // Only user's collections
     if (!userId) {
       return { previous: null, next: null }
     }
     query = query.eq("user_id", userId)
   } else {
-    // Both public and user's collections
     if (userId) {
       query = query.or(`is_public.eq.true,user_id.eq.${userId}`)
     } else {
@@ -153,31 +127,22 @@ export async function getAdjacentCollections(
   const { data: collections, error } = await query
 
   if (error || !collections) {
-    console.error("[v0] Error fetching adjacent collections:", error)
+    console.error("Error fetching adjacent collections:", error)
     return { previous: null, next: null }
   }
 
-  // Find the current collection's index
   const currentIndex = collections.findIndex((c) => c.id === collectionId)
 
   if (currentIndex === -1) {
     return { previous: null, next: null }
   }
 
-  // Previous is the one before in the array (newer), next is the one after (older)
   const previous = currentIndex > 0 ? collections[currentIndex - 1] : null
   const next = currentIndex < collections.length - 1 ? collections[currentIndex + 1] : null
 
   return { previous, next }
 }
 
-/**
- * Server action to find the closest collection when switching filter modes
- * @param currentCollectionId - Current collection ID
- * @param currentCreatedAt - Current collection's created_at timestamp
- * @param userId - Current user ID
- * @param targetMode - Target filter mode to switch to
- */
 export async function getClosestCollection(
   currentCollectionId: string,
   currentCreatedAt: string,
@@ -203,21 +168,16 @@ export async function getClosestCollection(
     return null
   }
 
-  // Check if current collection is in the filtered list
   const currentInList = collections.find((c) => c.id === currentCollectionId)
   if (currentInList) {
     return currentInList
   }
 
-  // Find the closest next collection (older or same timestamp)
   const closestNext = collections.find((c) => new Date(c.created_at) <= new Date(currentCreatedAt))
 
   return closestNext || collections[0]
 }
 
-/**
- * Server action to update an existing collection
- */
 export async function updateCollection(collectionId: string, input: CollectionInput) {
   const validatedFields = collectionSchema.safeParse(input)
 
@@ -241,7 +201,6 @@ export async function updateCollection(collectionId: string, input: CollectionIn
 
   const isAdmin = await isCurrentUserAdmin()
 
-  // Verify ownership or admin status
   const collection = await getCollection(collectionId)
   if (!collection) {
     return { success: false, error: "Collection not found" }
@@ -251,7 +210,6 @@ export async function updateCollection(collectionId: string, input: CollectionIn
     return { success: false, error: "Unauthorized" }
   }
 
-  // Update collection
   const { data, error } = await supabase
     .from("collections")
     .update({
@@ -265,7 +223,7 @@ export async function updateCollection(collectionId: string, input: CollectionIn
     .single()
 
   if (error) {
-    console.error("[v0] Collection update error:", error)
+    console.error("Collection update error:", error)
     return { success: false, error: "Failed to update collection. Please try again." }
   }
 
@@ -274,14 +232,10 @@ export async function updateCollection(collectionId: string, input: CollectionIn
   return { success: true, data }
 }
 
-/**
- * Server action to get or create the uncategorized collection for a user
- */
 export async function getOrCreateUncategorizedCollection(userId: string) {
   const supabase = await createClient()
 
-  // Try to find existing uncategorized collection
-  const { data: existing, error: fetchError } = await supabase
+  const { data: existing } = await supabase
     .from("collections")
     .select("*")
     .eq("user_id", userId)
@@ -292,7 +246,6 @@ export async function getOrCreateUncategorizedCollection(userId: string) {
     return { success: true, data: existing }
   }
 
-  // Create if doesn't exist
   const { data, error } = await supabase
     .from("collections")
     .insert({
@@ -307,33 +260,19 @@ export async function getOrCreateUncategorizedCollection(userId: string) {
     .single()
 
   if (error) {
-    console.error("[v0] Failed to create uncategorized collection:", error)
+    console.error("Failed to create uncategorized collection:", error)
     return { success: false, error: "Failed to create uncategorized collection" }
   }
 
   return { success: true, data }
 }
 
-/**
- * Server action to delete a collection with option to keep artifacts
- * @param collectionId - Collection ID to delete
- * @param deleteArtifacts - If true, delete artifacts; if false, move to uncategorized collection
- */
 export async function deleteCollection(collectionId: string, deleteArtifacts = false) {
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  console.log(
-    "[v0] Delete collection - User:",
-    user?.id,
-    "Collection:",
-    collectionId,
-    "Delete artifacts:",
-    deleteArtifacts,
-  )
 
   if (!user) {
     return { success: false, error: "Unauthorized" }
@@ -351,8 +290,6 @@ export async function deleteCollection(collectionId: string, deleteArtifacts = f
   }
 
   if (deleteArtifacts) {
-    console.log("[v0] Deleting artifacts and their media")
-    // Get all artifacts to delete their media
     const artifacts = await getArtifactsByCollection(collectionId)
 
     const mediaUrls: string[] = []
@@ -362,7 +299,6 @@ export async function deleteCollection(collectionId: string, deleteArtifacts = f
       }
     })
 
-    // Delete each media file from Cloudinary
     for (const url of mediaUrls) {
       const publicId = await extractPublicIdFromUrl(url)
       if (publicId) {
@@ -372,31 +308,18 @@ export async function deleteCollection(collectionId: string, deleteArtifacts = f
 
     await supabase.from("artifacts").delete().eq("collection_id", collectionId)
   } else {
-    console.log("[v0] Moving artifacts to Uncategorized collection")
-
-    // Get or create uncategorized collection
     const uncategorizedResult = await getOrCreateUncategorizedCollection(user.id)
     if (!uncategorizedResult.success || !uncategorizedResult.data) {
       return { success: false, error: "Failed to get uncategorized collection" }
     }
 
-    const { data: updatedArtifacts, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from("artifacts")
       .update({ collection_id: uncategorizedResult.data.id })
       .eq("collection_id", collectionId)
-      .select()
-
-    console.log("[v0] Update query details:", {
-      collectionId,
-      uncategorizedId: uncategorizedResult.data.id,
-      userId: user.id,
-      updatedCount: updatedArtifacts?.length,
-      error: updateError,
-      errorDetails: updateError ? JSON.stringify(updateError, null, 2) : null,
-    })
 
     if (updateError) {
-      console.error("[v0] Error moving artifacts to Uncategorized:", updateError)
+      console.error("Error moving artifacts to Uncategorized:", updateError)
       return {
         success: false,
         error: `Failed to move artifacts to Uncategorized: ${updateError.message || JSON.stringify(updateError)}`,
@@ -404,11 +327,10 @@ export async function deleteCollection(collectionId: string, deleteArtifacts = f
     }
   }
 
-  // Delete the collection
   const { error } = await supabase.from("collections").delete().eq("id", collectionId)
 
   if (error) {
-    console.error("[v0] Collection deletion error:", error)
+    console.error("Collection deletion error:", error)
     return { success: false, error: "Failed to delete collection. Please try again." }
   }
 

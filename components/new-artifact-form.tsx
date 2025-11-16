@@ -2,7 +2,6 @@
 
 import type React from "react"
 import { createArtifact } from "@/lib/actions/artifacts"
-import { generateCloudinarySignature } from "@/lib/actions/cloudinary"
 import { createArtifactSchema } from "@/lib/schemas"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -10,10 +9,9 @@ import type { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
 import { useState, useEffect, useRef } from "react"
-import { ChevronDown, Plus, X } from 'lucide-react'
+import { ChevronDown, Plus } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { AddMediaModal } from "@/components/add-media-modal"
 import { normalizeMediaUrls, isAudioUrl, isVideoUrl, isImageUrl } from "@/lib/media"
@@ -24,13 +22,12 @@ import { useSupabase } from "@/lib/supabase/browser-context"
 
 type FormData = z.infer<typeof createArtifactSchema>
 
-export function NewArtifactForm({
-  collectionId,
-  userId,
-}: {
+interface NewArtifactFormProps {
   collectionId?: string
   userId: string
-}) {
+}
+
+export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [isAttributesOpen, setIsAttributesOpen] = useState(false)
   const [isAddMediaOpen, setIsAddMediaOpen] = useState(false)
@@ -52,8 +49,6 @@ export function NewArtifactForm({
   useEffect(() => {
     return () => {
       if (!hasNavigatedRef.current && uploadedMediaUrls.length > 0) {
-        console.log("[v0] Cleaning up abandoned media:", uploadedMediaUrls.length, "files")
-        // Cleanup in background - don't await
         uploadedMediaUrls.forEach(async (url) => {
           const publicId = await extractPublicIdFromUrl(url)
           if (publicId) {
@@ -64,24 +59,17 @@ export function NewArtifactForm({
     }
   }, [uploadedMediaUrls])
 
-  const getMediaUrls = () => {
+  const getMediaUrls = (): string[] => {
     const urls = form.getValues("media_urls")
     return Array.isArray(urls) ? urls : []
   }
 
-  const getImageUrls = () => getMediaUrls().filter((url) => isImageUrl(url))
-  const getVideoUrls = () => getMediaUrls().filter((url) => isVideoUrl(url))
-  const getAudioUrls = () => getMediaUrls().filter((url) => isAudioUrl(url))
+  const getImageUrls = (): string[] => getMediaUrls().filter((url) => isImageUrl(url))
+  const getVideoUrls = (): string[] => getMediaUrls().filter((url) => isVideoUrl(url))
+  const getAudioUrls = (): string[] => getMediaUrls().filter((url) => isAudioUrl(url))
 
-  const handleCaptionGenerated = (imageUrl: string, caption: string) => {
-    console.log("[v0] Caption generated for", imageUrl, ":", caption)
-    // Could store captions in form state if needed for display before submission
-  }
-
-  async function onSubmit(data: FormData) {
-    console.log("[v0] Form submit triggered with data:", data)
+  async function onSubmit(data: FormData): Promise<void> {
     const normalizedUrls = normalizeMediaUrls(data.media_urls || [])
-    console.log("[v0] Normalized URLs (order preserved):", normalizedUrls)
 
     const submitData = {
       ...data,
@@ -91,12 +79,11 @@ export function NewArtifactForm({
     setError(null)
 
     try {
-      hasNavigatedRef.current = true // Mark as navigating to prevent cleanup
+      hasNavigatedRef.current = true
       const result = await createArtifact(submitData)
-      console.log("[v0] Create artifact result:", result)
 
       if (result?.error) {
-        hasNavigatedRef.current = false // Reset if error
+        hasNavigatedRef.current = false
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, messages]) => {
             if (messages && Array.isArray(messages) && messages.length > 0) {
@@ -115,8 +102,7 @@ export function NewArtifactForm({
         }
       }
     } catch (error) {
-      hasNavigatedRef.current = false // Reset if error
-      console.log("[v0] Create artifact error:", error)
+      hasNavigatedRef.current = false
       if (error instanceof Error && error.message === "NEXT_REDIRECT") {
         return
       }
@@ -258,13 +244,9 @@ export function NewArtifactForm({
             artifactId={null}
             userId={userId}
             onMediaAdded={(newUrls) => {
-              console.log("[v0] onMediaAdded called with newUrls:", newUrls)
               const currentUrls = getMediaUrls()
-              console.log("[v0] Current media_urls:", currentUrls)
               const combined = normalizeMediaUrls([...currentUrls, ...newUrls])
-              console.log("[v0] Combined and normalized (order preserved):", combined)
               form.setValue("media_urls", combined)
-              // Track for cleanup
               setUploadedMediaUrls(prev => [...prev, ...newUrls])
             }}
           />
@@ -293,15 +275,10 @@ export function NewArtifactForm({
                           alt="Photo"
                           className="w-full h-auto"
                         />
-                        <div className="px-6 lg:px-8 pt-3 flex items-center justify-between">
+                        <div className="px-6 lg:px-8 pt-3">
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                             Photo
                           </p>
-                          <GenerateImageCaptionButton
-                            artifactId="temp" 
-                            imageUrl={url}
-                            onCaptionGenerated={handleCaptionGenerated}
-                          />
                         </div>
                       </>
                     )}

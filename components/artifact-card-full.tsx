@@ -36,7 +36,7 @@ export function ArtifactCardFull({ artifact, showAuthor = false, authorName }: A
         <div className="relative aspect-square overflow-hidden bg-muted">
           {thumbnailUrl ? (
             <MediaImage
-              src={thumbnailUrl || "/placeholder.svg"}
+              src={thumbnailUrl}
               alt={artifact.title}
               className="h-full w-full transition-transform group-hover:scale-105"
               objectFit="cover"

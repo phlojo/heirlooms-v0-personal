@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -36,6 +37,10 @@ export async function GET(request: Request) {
     if (error) {
       return NextResponse.redirect(`${requestUrl.origin}/login?error=${encodeURIComponent(error.message)}`)
     }
+
+    revalidatePath("/", "layout")
+    revalidatePath("/collections")
+    revalidatePath("/artifacts")
 
     const redirectUrl = `${requestUrl.origin}${next}`
     return NextResponse.redirect(redirectUrl)

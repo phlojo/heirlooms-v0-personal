@@ -18,9 +18,10 @@ const summarySchema = z.object({
   tags: z.array(z.string()).optional().describe("Relevant tags or categories"),
 })
 
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<NextResponse> {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
   const { ok, retryAfterMs } = rateLimit(ip)
+  
   if (!ok) {
     return NextResponse.json(
       { error: "Too Many Requests" },
@@ -28,22 +29,16 @@ export async function POST(request: Request) {
     )
   }
 
-  console.log("[v0] === SUMMARY API ROUTE CALLED ===")
   try {
     const body = await request.json()
-    console.log("[v0] Request body:", body)
     const { artifactId } = body
 
     if (!artifactId) {
-      console.log("[v0] ERROR: No artifactId provided")
       return NextResponse.json({ error: "artifactId is required" }, { status: 400 })
     }
 
-    console.log("[v0] Creating Supabase client")
     const supabase = await createClient()
 
-    // Load artifact with transcript and image_captions
-    console.log("[v0] Fetching artifact from database:", artifactId)
     const { data: artifact, error: fetchError } = await supabase
       .from("artifacts")
       .select("*")
@@ -51,36 +46,21 @@ export async function POST(request: Request) {
       .single()
 
     if (fetchError || !artifact) {
-      console.log("[v0] ERROR: Artifact not found", fetchError)
       return NextResponse.json({ error: "Artifact not found" }, { status: 404 })
     }
-
-    console.log("[v0] Artifact loaded:", { id: artifact.id, title: artifact.title })
 
     const transcript = artifact.transcript
     const imageCaptions = artifact.image_captions as Record<string, string> | null
 
-    console.log("[v0] Content available:", {
-      hasTranscript: !!transcript,
-      transcriptLength: transcript?.length || 0,
-      hasImageCaptions: !!imageCaptions,
-      imageCaptionsCount: imageCaptions ? Object.keys(imageCaptions).length : 0,
-    })
-
-    // Check if we have any content to summarize
     if (!transcript && (!imageCaptions || Object.keys(imageCaptions).length === 0)) {
-      console.log("[v0] ERROR: No content available for summary")
       return NextResponse.json({ error: "No transcript or image captions available for summary" }, { status: 400 })
     }
 
-    // Set processing status
-    console.log("[v0] Setting analysis_status to 'processing'")
     await supabase
       .from("artifacts")
       .update({ analysis_status: "processing", analysis_error: null })
       .eq("id", artifactId)
 
-    // Build context for AI
     const contextParts: string[] = []
 
     if (transcript) {
@@ -98,10 +78,6 @@ export async function POST(request: Request) {
     }
 
     const context = contextParts.join("\n\n")
-
-    console.log("[v0] Starting AI generation with generateObject")
-    console.log("[v0] Model:", getSummaryModel())
-    console.log("[v0] Context length:", context.length)
 
     try {
       const result = await generateObject({
@@ -129,22 +105,13 @@ Focus on creating a meaningful, warm description that captures the essence of th
         maxTokens: 2000,
       })
 
-      console.log("[v0] AI generation complete")
-      console.log("[v0] Generated object:", JSON.stringify(result, null, 2))
-
       const finalObject = result.object
 
       if (!finalObject || !finalObject.description_markdown || finalObject.description_markdown.trim().length === 0) {
         throw new Error("AI did not generate a valid description")
       }
 
-      if (finalObject.description_markdown.length < 20) {
-        console.log("[v0] WARNING: Description is shorter than 20 characters, but accepting it")
-      }
-
-      // Save the description to the database
-      console.log("[v0] Saving ai_description to database")
-      const { data: updateData, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from("artifacts")
         .update({
           ai_description: finalObject.description_markdown,
@@ -153,43 +120,26 @@ Focus on creating a meaningful, warm description that captures the essence of th
           updated_at: new Date().toISOString(),
         })
         .eq("id", artifactId)
-        .select()
 
       if (updateError) {
-        console.error("[v0] ERROR: Failed to save summary:", updateError)
         throw new Error(`Failed to save summary: ${updateError.message}`)
       }
 
-      console.log("[v0] Database update successful:", updateData)
-      console.log("[v0] Revalidating paths")
       revalidatePath(`/artifacts/${artifact.slug}`)
       revalidatePath(`/artifacts/${artifact.slug}/edit`)
 
-      console.log("[v0] === SUMMARY API ROUTE COMPLETE ===")
       return NextResponse.json({ ok: true, object: finalObject })
     } catch (aiError) {
-      console.error("[v0] AI generation error details:", {
-        error: aiError,
-        message: aiError instanceof Error ? aiError.message : "Unknown error",
-        stack: aiError instanceof Error ? aiError.stack : undefined,
-        name: aiError instanceof Error ? aiError.name : undefined,
-      })
-
       const errorMessage = aiError instanceof Error ? aiError.message : "AI generation failed with unknown error"
-
       throw new Error(errorMessage)
     }
   } catch (error) {
-    console.error("[v0] === SUMMARY API ROUTE ERROR ===", error)
-
-    // Save error status to database
     try {
       const body = await request.json()
       const { artifactId } = body
       if (artifactId) {
         const supabase = await createClient()
         const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
-        console.log("[v0] Saving error to database:", errorMessage)
         await supabase
           .from("artifacts")
           .update({
@@ -199,7 +149,7 @@ Focus on creating a meaningful, warm description that captures the essence of th
           .eq("id", artifactId)
       }
     } catch (dbError) {
-      console.error("[v0] Failed to save error status:", dbError)
+      console.error("Failed to save error status:", dbError)
     }
 
     return NextResponse.json(
