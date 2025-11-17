@@ -26,6 +26,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
   const [error, setError] = useState<string | null>(null)
   
   const cameraInputRef = useRef<HTMLInputElement>(null)
+  const videoCameraInputRef = useRef<HTMLInputElement>(null)
 
   const handleReset = () => {
     setSelectedType(null)
@@ -219,6 +220,12 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
     }
   }
 
+  const handleVideoCameraCapture = () => {
+    if (videoCameraInputRef.current) {
+      videoCameraInputRef.current.click()
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
@@ -305,7 +312,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
                 </label>
               </Button>
 
-              {selectedType === "photo" || selectedType === "video" ? (
+              {selectedType === "photo" ? (
                 <>
                   <Button
                     variant="outline"
@@ -313,19 +320,40 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
                     onClick={handleCameraCapture}
                     disabled={isUploading}
                   >
-                    {selectedType === "photo" ? <Camera className="h-8 w-8" /> : <Video className="h-8 w-8" />}
+                    <Camera className="h-8 w-8" />
                     <div className="text-center">
-                      <div className="font-semibold">
-                        {selectedType === "photo" ? "Take Photo" : "Record Video"}
-                      </div>
+                      <div className="font-semibold">Take Photo</div>
                       <div className="text-xs text-muted-foreground">Use your device camera</div>
                     </div>
                   </Button>
-                  {/* Hidden input for camera capture */}
                   <input
                     ref={cameraInputRef}
                     type="file"
-                    accept={selectedType === "photo" ? "image/*" : "video/*"}
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleMediaUpload}
+                    className="hidden"
+                    disabled={isUploading}
+                  />
+                </>
+              ) : selectedType === "video" ? (
+                <>
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-col gap-2 py-6"
+                    onClick={handleVideoCameraCapture}
+                    disabled={isUploading}
+                  >
+                    <Video className="h-8 w-8" />
+                    <div className="text-center">
+                      <div className="font-semibold">Record Video</div>
+                      <div className="text-xs text-muted-foreground">Use your device camera</div>
+                    </div>
+                  </Button>
+                  <input
+                    ref={videoCameraInputRef}
+                    type="file"
+                    accept="video/*"
                     capture="environment"
                     onChange={handleMediaUpload}
                     className="hidden"
