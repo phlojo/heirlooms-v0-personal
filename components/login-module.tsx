@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { signInWithPassword, signInWithMagicLink } from "@/lib/actions/auth"
 import { useSupabase } from "@/lib/supabase/browser-context"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 
 interface LoginModuleProps {
   /** The URL to redirect to after successful login */
@@ -94,15 +94,22 @@ export function LoginModule({
     setError(null)
     setSuccess(null)
 
+    console.log("[v0] Starting password login...")
+
     try {
       const result = await signInWithPassword(email, password, returnTo)
+      console.log("[v0] Password login result:", result)
+      
       if (result?.error) {
+        console.log("[v0] Login error detected:", result.error)
         setError(`Sign in failed: ${result.error}. Please verify your credentials and try again.`)
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An error occurred"
+      console.log("[v0] Password login exception:", errorMessage)
       setError(`Sign in failed: ${errorMessage}. Please verify your credentials and try again.`)
     } finally {
+      console.log("[v0] Password login completed, setting loading to false")
       setIsLoading(false)
     }
   }

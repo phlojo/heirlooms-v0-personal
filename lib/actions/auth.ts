@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
+import { redirect } from 'next/navigation'
 import { headers } from "next/headers"
 
 async function getAppOrigin() {
@@ -15,15 +15,21 @@ async function getAppOrigin() {
 export async function signInWithPassword(email: string, password: string, returnTo?: string) {
   const supabase = await createClient()
 
+  console.log("[v0] signInWithPassword called for:", email)
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
 
+  console.log("[v0] Supabase auth result - error:", error?.message, "user:", data?.user?.id)
+
   if (error) {
+    console.log("[v0] Returning error to client:", error.message)
     return { error: error.message }
   }
 
+  console.log("[v0] Login successful, revalidating and redirecting to:", returnTo || "/collections")
   revalidatePath("/", "layout")
   redirect(returnTo || "/collections")
 }
