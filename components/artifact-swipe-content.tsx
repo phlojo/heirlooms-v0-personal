@@ -97,11 +97,16 @@ export function ArtifactSwipeContent({
   const router = useRouter()
   const supabase = useSupabase()
   const [userId, setUserId] = useState<string>("")
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUserId(data.user.id)
+    Promise.all([
+      supabase.auth.getUser(),
+      supabase.from("profiles").select("is_admin").single()
+    ]).then(([{ data: userData }, { data: profileData }]) => {
+      if (userData.user) {
+        setUserId(userData.user.id)
+        setIsAdmin(profileData?.is_admin || false)
       }
     })
   }, [supabase])
@@ -324,6 +329,9 @@ export function ArtifactSwipeContent({
         collectionName={artifact.collection?.title}
         currentPosition={currentPosition}
         totalCount={totalCount}
+        currentUserId={userId}
+        isCurrentUserAdmin={isAdmin}
+        contentOwnerId={artifact.user_id}
       />
 
       <div className={`space-y-6 px-6 lg:px-8 ${isEditMode ? 'pt-4' : 'pt-2'}`}>

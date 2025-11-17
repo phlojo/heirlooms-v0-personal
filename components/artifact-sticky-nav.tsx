@@ -5,6 +5,7 @@ import { ArrowRight, ArrowLeft, Heart } from 'lucide-react'
 import Link from "next/link"
 import { CollectionLabel } from "@/components/collection-label"
 import { useState } from "react"
+import { Badge } from "@/components/ui/badge"
 
 interface ArtifactStickyNavProps {
   title: string
@@ -30,6 +31,9 @@ interface ArtifactStickyNavProps {
   collectionName?: string
   currentPosition?: number
   totalCount?: number
+  currentUserId?: string
+  isCurrentUserAdmin?: boolean
+  contentOwnerId?: string
 }
 
 export function ArtifactStickyNav({
@@ -48,6 +52,9 @@ export function ArtifactStickyNav({
   collectionName,
   currentPosition,
   totalCount,
+  currentUserId,
+  isCurrentUserAdmin = false,
+  contentOwnerId,
 }: ArtifactStickyNavProps) {
   const [isFavorited, setIsFavorited] = useState(false)
 
@@ -65,13 +72,22 @@ export function ArtifactStickyNav({
     setIsFavorited(!isFavorited)
   }
 
+  const showSuperUserBadge = isCurrentUserAdmin && contentOwnerId && currentUserId && contentOwnerId !== currentUserId
+
   return (
     <div className="sticky top-3 lg:top-16 z-50 bg-background/90 border rounded-lg">
       <div className="container max-w-7xl mx-auto lg:px-8 rounded-lg border-none px-[4] py-[4]">
         <div className="flex flex-col gap-0">
           {/* First row: Title and Heart icon */}
           <div className="flex items-center justify-between border-b gap-0 pb-0">
-            <h1 className="text-balance font-bold tracking-tight flex-1 min-w-0 px-3.5 py-2 text-xl">{title}</h1>
+            <div className="flex items-center gap-2 flex-1 min-w-0 px-3.5 py-2">
+              <h1 className="text-balance font-bold tracking-tight flex-1 min-w-0 text-xl">{title}</h1>
+              {showSuperUserBadge && (
+                <Badge variant="destructive" className="shrink-0 text-xs">
+                  Super User
+                </Badge>
+              )}
+            </div>
             <Button variant="ghost" size="sm" onClick={toggleFavorite} className="shrink-0 h-9 w-9 p-0">
               <Heart className={`h-5 w-5 ${isFavorited ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
             </Button>

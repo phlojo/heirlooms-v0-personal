@@ -100,6 +100,9 @@ export default async function CollectionDetailPage({
           showBackButton={true}
           isPrivate={!collection.is_public}
           isUnsorted={isUncategorized}
+          currentUserId={user?.id}
+          isCurrentUserAdmin={isAdmin}
+          contentOwnerId={collection.user_id}
         />
 
         {!isOwnCollection && collection.user_id && (
