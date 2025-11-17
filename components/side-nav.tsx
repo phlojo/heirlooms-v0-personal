@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname } from 'next/navigation'
 import { cn } from "@/lib/utils"
-import { Home, FolderOpen, Package, BookOpen, User } from "lucide-react"
+import { Home, FolderOpen, Package, BookOpen, User } from 'lucide-react'
 
 interface SideNavProps {
   isOpen: boolean
@@ -34,7 +34,11 @@ export function SideNav({ isOpen, onClose, isMobile }: SideNavProps) {
         className={cn(
           "h-[calc(100vh-4rem)] w-64 border-r bg-background transition-transform duration-200",
           "fixed left-0 top-16 z-60 lg:sticky lg:top-16",
-          !isOpen && "-translate-x-full",
+          // Hide completely on mobile/tablet (below lg breakpoint)
+          "hidden lg:block",
+          // On desktop (lg+), respect the isOpen state
+          !isOpen && "lg:-translate-x-full",
+          isOpen && "lg:translate-x-0",
         )}
       >
         <nav className="flex h-full flex-col gap-2 p-4">
