@@ -7,6 +7,7 @@ import { Camera, Video, Mic, Upload, X } from 'lucide-react'
 import { AudioRecorder } from "@/components/audio-recorder"
 import { generateCloudinarySignature, generateCloudinaryAudioSignature } from "@/lib/actions/cloudinary"
 import { normalizeMediaUrls, getFileSizeLimit, formatFileSize } from "@/lib/media"
+import { Progress } from "@/components/ui/progress"
 
 interface AddMediaModalProps {
   open: boolean
@@ -19,11 +20,20 @@ interface AddMediaModalProps {
 type MediaType = "photo" | "video" | "audio" | null
 type MediaMode = "upload" | "record" | null
 
+interface UploadProgress {
+  currentFile: number
+  totalFiles: number
+  currentFileName: string
+  currentFileProgress: number
+  estimatedTimeRemaining: number | null
+}
+
 export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaAdded }: AddMediaModalProps) {
   const [selectedType, setSelectedType] = useState<MediaType>(null)
   const [selectedMode, setSelectedMode] = useState<MediaMode>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const videoCameraInputRef = useRef<HTMLInputElement>(null)
@@ -32,6 +42,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
     setSelectedType(null)
     setSelectedMode(null)
     setError(null)
+    setUploadProgress(null)
   }
 
   const handleClose = () => {
@@ -85,8 +96,21 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
 
     try {
       const urls: string[] = []
+      const filesArray = Array.from(files)
+      const startTime = Date.now()
 
-      for (const file of Array.from(files)) {
+      for (let i = 0; i < filesArray.length; i++) {
+        const file = filesArray[i]
+        const fileStartTime = Date.now()
+        
+        setUploadProgress({
+          currentFile: i + 1,
+          totalFiles: filesArray.length,
+          currentFileName: file.name,
+          currentFileProgress: 0,
+          estimatedTimeRemaining: null,
+        })
+
         console.log("[v0] Uploading file:", file.name, file.type, formatFileSize(file.size))
         
         let uploadUrl: string
@@ -124,36 +148,72 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
         console.log("[v0] Uploading to:", uploadUrl)
         console.log("[v0] FormData keys:", Array.from(formData.keys()))
         
-        const response = await fetch(uploadUrl, {
-          method: "POST",
-          body: formData,
+        const uploadPromise = new Promise<string>((resolve, reject) => {
+          const xhr = new XMLHttpRequest()
+
+          xhr.upload.addEventListener("progress", (event) => {
+            if (event.lengthComputable) {
+              const percentComplete = (event.loaded / event.total) * 100
+              
+              // Calculate estimated time remaining based on current file progress
+              const elapsed = Date.now() - fileStartTime
+              const uploadSpeed = event.loaded / elapsed // bytes per ms
+              const remaining = event.total - event.loaded
+              const estimatedMs = remaining / uploadSpeed
+
+              // Calculate overall time remaining including remaining files
+              const filesRemaining = filesArray.length - (i + 1)
+              const avgFileSize = totalSize / filesArray.length
+              const avgTimePerFile = elapsed / (event.loaded / file.size)
+              const totalEstimatedMs = estimatedMs + (filesRemaining * avgTimePerFile)
+
+              setUploadProgress({
+                currentFile: i + 1,
+                totalFiles: filesArray.length,
+                currentFileName: file.name,
+                currentFileProgress: Math.round(percentComplete),
+                estimatedTimeRemaining: Math.round(totalEstimatedMs / 1000), // convert to seconds
+              })
+            }
+          })
+
+          xhr.addEventListener("load", async () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const data = JSON.parse(xhr.responseText)
+                console.log("[v0] Upload successful!")
+                console.log("[v0] Response data:", {
+                  public_id: data.public_id,
+                  secure_url: data.secure_url,
+                  format: data.format,
+                  resource_type: data.resource_type,
+                  width: data.width,
+                  height: data.height
+                })
+                resolve(data.secure_url)
+              } catch (err) {
+                reject(new Error("Failed to parse upload response"))
+              }
+            } else {
+              try {
+                const errorData = JSON.parse(xhr.responseText)
+                reject(new Error(`Failed to upload ${file.name}: ${errorData.error?.message || errorData.message || "Unknown error"}`))
+              } catch {
+                reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText.substring(0, 200)}`))
+              }
+            }
+          })
+
+          xhr.addEventListener("error", () => {
+            reject(new Error(`Network error while uploading ${file.name}`))
+          })
+
+          xhr.open("POST", uploadUrl)
+          xhr.send(formData)
         })
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error("[v0] Upload failed:", response.status, errorText)
-          let errorData
-          try {
-            errorData = JSON.parse(errorText)
-            console.error("[v0] Parsed error:", errorData)
-          } catch {
-            console.error("[v0] Could not parse error response")
-            throw new Error(`Upload failed (${response.status}): ${errorText.substring(0, 200)}`)
-          }
-          throw new Error(`Failed to upload ${file.name}: ${errorData.error?.message || errorData.message || "Unknown error"}`)
-        }
-
-        const data = await response.json()
-        console.log("[v0] Upload successful!")
-        console.log("[v0] Response data:", {
-          public_id: data.public_id,
-          secure_url: data.secure_url,
-          format: data.format,
-          resource_type: data.resource_type,
-          width: data.width,
-          height: data.height
-        })
-        urls.push(data.secure_url)
+        const secureUrl = await uploadPromise
+        urls.push(secureUrl)
       }
 
       console.log("[v0] All uploads complete, URLs:", urls)
@@ -164,6 +224,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
       setError(err instanceof Error ? err.message : "Failed to upload files. Please try again.")
     } finally {
       setIsUploading(false)
+      setUploadProgress(null)
       e.target.value = ""
     }
   }
@@ -171,6 +232,13 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
   const handleAudioRecorded = async (audioBlob: Blob, fileName: string) => {
     setIsUploading(true)
     setError(null)
+    setUploadProgress({
+      currentFile: 1,
+      totalFiles: 1,
+      currentFileName: fileName,
+      currentFileProgress: 0,
+      estimatedTimeRemaining: null,
+    })
 
     try {
       const signatureResult = await generateCloudinaryAudioSignature(userId, fileName)
@@ -188,29 +256,62 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
 
       const uploadUrl = `https://api.cloudinary.com/v1_1/${signatureResult.cloudName}/video/upload`
 
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        body: formData,
+      const uploadPromise = new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        const startTime = Date.now()
+
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = (event.loaded / event.total) * 100
+            const elapsed = Date.now() - startTime
+            const uploadSpeed = event.loaded / elapsed
+            const remaining = event.total - event.loaded
+            const estimatedMs = remaining / uploadSpeed
+
+            setUploadProgress({
+              currentFile: 1,
+              totalFiles: 1,
+              currentFileName: fileName,
+              currentFileProgress: Math.round(percentComplete),
+              estimatedTimeRemaining: Math.round(estimatedMs / 1000),
+            })
+          }
+        })
+
+        xhr.addEventListener("load", async () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText)
+              resolve(data.secure_url)
+            } catch (err) {
+              reject(new Error("Failed to parse upload response"))
+            }
+          } else {
+            try {
+              const errorData = JSON.parse(xhr.responseText)
+              reject(new Error(`Failed to upload audio: ${errorData.error?.message || "Unknown error"}`))
+            } catch {
+              reject(new Error(`Audio upload failed (${xhr.status}): ${xhr.responseText.substring(0, 100)}`))
+            }
+          }
+        })
+
+        xhr.addEventListener("error", () => {
+          reject(new Error("Network error while uploading audio"))
+        })
+
+        xhr.open("POST", uploadUrl)
+        xhr.send(formData)
       })
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        let errorData
-        try {
-          errorData = JSON.parse(errorText)
-        } catch {
-          throw new Error(`Audio upload failed (${response.status}): ${errorText.substring(0, 100)}`)
-        }
-        throw new Error(`Failed to upload audio: ${errorData.error?.message || "Unknown error"}`)
-      }
-
-      const data = await response.json()
-      onMediaAdded([data.secure_url])
+      const secureUrl = await uploadPromise
+      onMediaAdded([secureUrl])
       handleClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to upload audio. Please try again.")
     } finally {
       setIsUploading(false)
+      setUploadProgress(null)
     }
   }
 
@@ -223,6 +324,20 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
   const handleVideoCameraCapture = () => {
     if (videoCameraInputRef.current) {
       videoCameraInputRef.current.click()
+    }
+  }
+
+  const formatTimeRemaining = (seconds: number): string => {
+    if (seconds < 60) {
+      return `${seconds}s`
+    } else if (seconds < 3600) {
+      const mins = Math.floor(seconds / 60)
+      const secs = seconds % 60
+      return `${mins}m ${secs}s`
+    } else {
+      const hours = Math.floor(seconds / 3600)
+      const mins = Math.floor((seconds % 3600) / 60)
+      return `${hours}h ${mins}m`
     }
   }
 
@@ -397,10 +512,30 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
             </div>
           )}
 
-          {/* Upload Progress */}
-          {isUploading && (
-            <div className="rounded-lg border border-dashed p-4 text-center">
-              <p className="text-sm text-muted-foreground">Uploading...</p>
+          {/* Upload Progress - Enhanced with detailed progress tracking */}
+          {isUploading && uploadProgress && (
+            <div className="rounded-lg border border-dashed p-4 space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Uploading file {uploadProgress.currentFile} of {uploadProgress.totalFiles}
+                </span>
+                {uploadProgress.estimatedTimeRemaining !== null && (
+                  <span className="text-muted-foreground">
+                    ~{formatTimeRemaining(uploadProgress.estimatedTimeRemaining)} remaining
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium truncate max-w-[200px]">
+                    {uploadProgress.currentFileName}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {uploadProgress.currentFileProgress}%
+                  </span>
+                </div>
+                <Progress value={uploadProgress.currentFileProgress} className="h-2" />
+              </div>
             </div>
           )}
         </div>
