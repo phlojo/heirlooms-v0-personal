@@ -11,9 +11,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { useState } from "react"
-import { ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, Plus, Trash2, Star } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { normalizeMediaUrls } from "@/lib/media"
+import { normalizeMediaUrls, isImageUrl, isVideoUrl } from "@/lib/media"
 import { TranscriptionInput } from "@/components/transcription-input"
 import { AddMediaModal } from "@/components/add-media-modal"
 import { AudioPlayer } from "@/components/audio-player"
@@ -31,6 +31,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   const [isAttributesOpen, setIsAttributesOpen] = useState(false)
   const [isProvenanceOpen, setIsProvenanceOpen] = useState(false)
   const [isAddMediaOpen, setIsAddMediaOpen] = useState(false)
+  const [selectedThumbnailUrl, setSelectedThumbnailUrl] = useState<string | null>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(createArtifactSchema),
@@ -49,12 +50,29 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
     const combinedUrls = [...currentUrls, ...newUrls]
     const uniqueUrls = Array.from(new Set(combinedUrls))
     form.setValue("media_urls", normalizeMediaUrls(uniqueUrls))
+    
+    if (!selectedThumbnailUrl && newUrls.length > 0) {
+      const firstVisual = newUrls.find(url => isImageUrl(url) || isVideoUrl(url))
+      if (firstVisual) {
+        setSelectedThumbnailUrl(firstVisual)
+      }
+    }
   }
 
   const handleDeleteMedia = (urlToDelete: string) => {
     if (!confirm("Are you sure you want to delete this media item?")) return
     const currentUrls = form.getValues("media_urls") || []
     form.setValue("media_urls", normalizeMediaUrls(currentUrls.filter(url => url !== urlToDelete)))
+    
+    if (selectedThumbnailUrl === urlToDelete) {
+      const remainingUrls = currentUrls.filter(url => url !== urlToDelete)
+      const newThumbnail = remainingUrls.find(url => isImageUrl(url) || isVideoUrl(url))
+      setSelectedThumbnailUrl(newThumbnail || null)
+    }
+  }
+
+  const handleSelectThumbnail = (url: string) => {
+    setSelectedThumbnailUrl(url)
   }
 
   async function onSubmit(data: FormData): Promise<void> {
@@ -68,6 +86,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
     const submitData = {
       ...data,
       media_urls: normalizedUrls,
+      thumbnail_url: selectedThumbnailUrl,
     }
 
     setError(null)
@@ -109,7 +128,6 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Title Section */}
         <section className="space-y-2 px-6 lg:px-8">
           <FormField
             control={form.control}
@@ -134,7 +152,6 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
           />
         </section>
 
-        {/* Description Section */}
         <section className="space-y-2 px-6 lg:px-8">
           <FormField
             control={form.control}
@@ -163,7 +180,6 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
           />
         </section>
 
-        {/* Attributes Section */}
         <section className="space-y-2 px-6 lg:px-8">
           <Collapsible open={isAttributesOpen} onOpenChange={setIsAttributesOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
@@ -208,7 +224,6 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
           </Collapsible>
         </section>
 
-        {/* Media Items Section */}
         <section className="space-y-6 my-6">
           <div className="flex items-center justify-between px-6 lg:px-8">
             <h2 className="text-lg font-semibold text-foreground">Media Items</h2>
@@ -245,19 +260,32 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
                     </div>
                   )
                 } else if (isVideoFile(url)) {
+                  const isSelectedThumbnail = selectedThumbnailUrl === url
                   return (
                     <div key={url} className="space-y-3">
                       <div className="flex items-center justify-between px-6 lg:px-8">
                         <h3 className="text-sm font-semibold">Video {videoFiles.length > 1 ? `${videoFiles.indexOf(url) + 1}` : ''}</h3>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteMedia(url)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSelectThumbnail(url)}
+                            className={isSelectedThumbnail ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}
+                            title="Set as thumbnail"
+                          >
+                            <Star className={`h-4 w-4 ${isSelectedThumbnail ? "fill-current" : ""}`} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteMedia(url)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="w-full max-w-full overflow-hidden">
                         <video 
@@ -272,19 +300,32 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
                     </div>
                   )
                 } else {
+                  const isSelectedThumbnail = selectedThumbnailUrl === url
                   return (
                     <div key={url} className="space-y-3">
                       <div className="flex items-center justify-between px-6 lg:px-8">
                         <h3 className="text-sm font-semibold">Photo {imageFiles.length > 1 ? `${imageFiles.indexOf(url) + 1}` : ''}</h3>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteMedia(url)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSelectThumbnail(url)}
+                            className={isSelectedThumbnail ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}
+                            title="Set as thumbnail"
+                          >
+                            <Star className={`h-4 w-4 ${isSelectedThumbnail ? "fill-current" : ""}`} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteMedia(url)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="w-full max-w-full overflow-hidden">
                         <img
@@ -306,7 +347,6 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
           )}
         </section>
 
-        {/* Provenance Section */}
         <section className="space-y-2 px-6 lg:px-8">
           <Collapsible open={isProvenanceOpen} onOpenChange={setIsProvenanceOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">

@@ -18,7 +18,8 @@ export async function createArtifact(input: CreateArtifactInput): Promise<{ erro
   console.log("[v0] CREATE ARTIFACT - Received input:", {
     title: input.title,
     mediaCount: input.media_urls?.length || 0,
-    collectionId: input.collectionId
+    collectionId: input.collectionId,
+    hasThumbnailUrl: !!input.thumbnail_url // Log if user selected thumbnail
   })
 
   const validatedFields = createArtifactSchema.safeParse(input)
@@ -78,8 +79,11 @@ export async function createArtifact(input: CreateArtifactInput): Promise<{ erro
     return !!data
   })
 
-  const primaryVisualMedia = getPrimaryVisualMediaUrl(validMediaUrls)
-  console.log("[v0] CREATE ARTIFACT - Primary visual media selected for thumbnail:", primaryVisualMedia || "NONE")
+  const thumbnailUrl = validatedFields.data.thumbnail_url || getPrimaryVisualMediaUrl(validMediaUrls)
+  console.log("[v0] CREATE ARTIFACT - Thumbnail selection:", {
+    userSelected: !!validatedFields.data.thumbnail_url,
+    thumbnailUrl: thumbnailUrl || "NONE"
+  })
 
   const insertData = {
     title: validatedFields.data.title,
@@ -90,14 +94,14 @@ export async function createArtifact(input: CreateArtifactInput): Promise<{ erro
     media_urls: validMediaUrls,
     user_id: user.id,
     slug,
-    thumbnail_url: primaryVisualMedia, // Phase 2: Store computed thumbnail
+    thumbnail_url: thumbnailUrl, // Use user's selection or auto-selected
   }
 
   console.log("[v0] CREATE ARTIFACT - Inserting into DB:", {
     ...insertData,
     media_urls: `[${insertData.media_urls.length} URLs]`,
-    hasVisualMedia: !!primaryVisualMedia,
-    thumbnail_url: primaryVisualMedia || "NULL"
+    hasVisualMedia: !!thumbnailUrl,
+    thumbnail_url: thumbnailUrl || "NULL"
   })
 
   const { data, error } = await supabase.from("artifacts").insert(insertData).select().single()
@@ -438,8 +442,14 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     })
   }
 
-  const primaryVisualMedia = getPrimaryVisualMediaUrl(uniqueMediaUrls)
-  console.log("[v0] UPDATE ARTIFACT - Recomputed thumbnail_url:", primaryVisualMedia || "NONE")
+  const thumbnailUrl = validatedFields.data.thumbnail_url !== undefined 
+    ? validatedFields.data.thumbnail_url 
+    : getPrimaryVisualMediaUrl(uniqueMediaUrls)
+    
+  console.log("[v0] UPDATE ARTIFACT - Thumbnail update:", {
+    userProvided: validatedFields.data.thumbnail_url !== undefined,
+    thumbnailUrl: thumbnailUrl || "NONE"
+  })
 
   let newSlug = existingArtifact.slug
   if (validatedFields.data.title !== existingArtifact.title) {
@@ -458,7 +468,7 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     origin: validatedFields.data.origin,
     media_urls: uniqueMediaUrls,
     slug: newSlug,
-    thumbnail_url: primaryVisualMedia, // Phase 2: Store recomputed thumbnail
+    thumbnail_url: thumbnailUrl, // Use user's selection or auto-recomputed
     updated_at: new Date().toISOString(),
   }
 
@@ -469,8 +479,8 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
   console.log("[v0] UPDATE ARTIFACT - Updating with validated data:", {
     artifactId: validatedFields.data.id,
     mediaCount: uniqueMediaUrls.length,
-    hasThumbnail: !!primaryVisualMedia,
-    thumbnail_url: primaryVisualMedia || "NULL"
+    hasThumbnail: !!thumbnailUrl,
+    thumbnail_url: thumbnailUrl || "NULL"
   })
 
   const { data, error } = await supabase

@@ -12,9 +12,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
 import { AddMediaModal } from "@/components/add-media-modal"
-import { ChevronDown, Plus, Save, X, Trash2, Loader2, Pencil, Share2, BarChart3, MessageSquare } from 'lucide-react'
+import { ChevronDown, Plus, Save, X, Trash2, Loader2, Pencil, Share2, BarChart3, MessageSquare, Star } from 'lucide-react'
 import { updateArtifact, deleteMediaFromArtifact, deleteArtifact } from "@/lib/actions/artifacts"
 import { useRouter } from 'next/navigation'
+import { isImageUrl, isVideoUrl } from "@/lib/media"
 import { GenerateImageCaptionButton } from "@/components/artifact/GenerateImageCaptionButton"
 import { GenerateVideoSummaryButton } from "@/components/artifact/GenerateVideoSummaryButton"
 import { TranscribeAudioButtonPerMedia } from "@/components/artifact/TranscribeAudioButtonPerMedia"
@@ -70,6 +71,7 @@ export function ArtifactSwipeContent({
     media_urls: artifact.media_urls || [],
     image_captions: artifact.image_captions || {},
     audio_transcripts: artifact.audio_transcripts || {},
+    thumbnail_url: artifact.thumbnail_url || null, // Track original thumbnail
   })
   
   const [isImageFullscreen, setIsImageFullscreen] = useState(false)
@@ -90,6 +92,7 @@ export function ArtifactSwipeContent({
   const [editDescription, setEditDescription] = useState(artifact.description || "")
   const [editMediaUrls, setEditMediaUrls] = useState<string[]>(artifact.media_urls || [])
   const [editImageCaptions, setEditImageCaptions] = useState<Record<string, string>>(artifact.image_captions || {})
+  const [editThumbnailUrl, setEditThumbnailUrl] = useState<string | null>(artifact.thumbnail_url || null) // Added state to track user's selected thumbnail in edit mode
   
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -124,7 +127,8 @@ export function ArtifactSwipeContent({
     editTitle !== originalState.title ||
     editDescription !== originalState.description ||
     JSON.stringify(editMediaUrls) !== JSON.stringify(originalState.media_urls) ||
-    JSON.stringify(editImageCaptions) !== JSON.stringify(originalState.image_captions)
+    JSON.stringify(editImageCaptions) !== JSON.stringify(originalState.image_captions) ||
+    editThumbnailUrl !== originalState.thumbnail_url // Include thumbnail in change detection
   )
 
   useEffect(() => {
@@ -149,6 +153,7 @@ export function ArtifactSwipeContent({
           description: editDescription,
           media_urls: editMediaUrls,
           image_captions: editImageCaptions,
+          thumbnail_url: editThumbnailUrl, // User's selected thumbnail
         },
         originalState.media_urls
       )
@@ -174,6 +179,11 @@ export function ArtifactSwipeContent({
         delete updated[urlToDelete]
         return updated
       })
+      if (editThumbnailUrl === urlToDelete) {
+        const remainingUrls = editMediaUrls.filter(url => url !== urlToDelete)
+        const newThumbnail = remainingUrls.find(url => isImageUrl(url) || isVideoUrl(url))
+        setEditThumbnailUrl(newThumbnail || null)
+      }
     } else {
       // Immediate delete in view mode (shouldn't happen but kept for safety)
       try {
@@ -212,6 +222,13 @@ export function ArtifactSwipeContent({
       const combinedUrls = [...editMediaUrls, ...newUrls]
       const uniqueUrls = Array.from(new Set(combinedUrls))
       setEditMediaUrls(uniqueUrls)
+      
+      if (!editThumbnailUrl && newUrls.length > 0) {
+        const firstVisual = newUrls.find(url => isImageUrl(url) || isVideoUrl(url))
+        if (firstVisual) {
+          setEditThumbnailUrl(firstVisual)
+        }
+      }
     } else {
       // Immediate save in view mode (shouldn't happen but kept for safety)
       try {
@@ -289,11 +306,16 @@ export function ArtifactSwipeContent({
     }
   }
 
+  const handleSelectThumbnail = (url: string) => {
+    setEditThumbnailUrl(url)
+  }
+
   const handleConfirmCancel = () => {
     setEditTitle(originalState.title)
     setEditDescription(originalState.description)
     setEditMediaUrls(originalState.media_urls)
     setEditImageCaptions(originalState.image_captions)
+    setEditThumbnailUrl(originalState.thumbnail_url) // Reset thumbnail selection
     setCancelDialogOpen(false)
     router.push(`/artifacts/${artifact.slug}`)
   }
@@ -490,19 +512,32 @@ export function ArtifactSwipeContent({
               } else if (isVideoFile(url)) {
                 const caption = imageCaptions[url]
                 const isEditingThisCaption = editingCaption === url
+                const isSelectedThumbnail = isEditMode && editThumbnailUrl === url // Check if this video is the selected thumbnail
                 return (
                   <div key={url} className="space-y-3">
                     {isEditMode && (
                       <div className="flex items-center justify-between px-6 lg:px-8">
                         <h3 className="text-sm font-semibold">Video {videoFiles > 1 ? `${mediaUrls.indexOf(url) + 1}` : ''}</h3>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteMedia(url)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSelectThumbnail(url)}
+                            className={isSelectedThumbnail ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}
+                            title="Set as thumbnail"
+                          >
+                            <Star className={`h-4 w-4 ${isSelectedThumbnail ? "fill-current" : ""}`} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteMedia(url)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     )}
                     <div className="w-full max-w-full overflow-hidden">
@@ -583,19 +618,32 @@ export function ArtifactSwipeContent({
               } else {
                 const caption = imageCaptions[url]
                 const isEditingThisCaption = editingCaption === url
+                const isSelectedThumbnail = isEditMode && editThumbnailUrl === url // Check if this image is the selected thumbnail
                 return (
                   <div key={url} className="space-y-3">
                     {isEditMode && (
                       <div className="flex items-center justify-between px-6 lg:px-8">
                         <h3 className="text-sm font-semibold">Photo {imageFiles > 1 ? `${mediaUrls.indexOf(url) + 1}` : ''}</h3>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteMedia(url)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSelectThumbnail(url)}
+                            className={isSelectedThumbnail ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}
+                            title="Set as thumbnail"
+                          >
+                            <Star className={`h-4 w-4 ${isSelectedThumbnail ? "fill-current" : ""}`} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteMedia(url)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     )}
                     <ArtifactImageWithViewer

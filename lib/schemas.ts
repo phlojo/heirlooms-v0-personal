@@ -1,8 +1,5 @@
 import { z } from "zod"
 
-/**
- * Zod schema for creating a new collection
- */
 export const createCollectionSchema = z.object({
   name: z.string().min(1, "Collection name is required").max(100, "Collection name must be less than 100 characters"),
   description: z.string().max(500, "Description must be less than 500 characters").optional(),
@@ -18,9 +15,6 @@ export const collectionSchema = z.object({
 
 export type CollectionInput = z.infer<typeof collectionSchema>
 
-/**
- * Zod schema for creating a new artifact
- */
 export const createArtifactSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title must be less than 200 characters"),
   description: z.string().max(2000, "Description must be less than 2000 characters").optional(),
@@ -28,13 +22,11 @@ export const createArtifactSchema = z.object({
   year_acquired: z.number().int().min(1000).max(new Date().getFullYear()).optional(),
   origin: z.string().max(200, "Origin must be less than 200 characters").optional(),
   media_urls: z.array(z.string().url("Invalid media URL")).optional(),
+  thumbnail_url: z.string().url("Invalid thumbnail URL").nullable().optional(),
 })
 
 export type CreateArtifactInput = z.infer<typeof createArtifactSchema>
 
-/**
- * Zod schema for updating an artifact
- */
 export const updateArtifactSchema = z.object({
   id: z.string().uuid("Invalid artifact ID"),
   title: z.string().min(1, "Title is required").max(200, "Title must be less than 200 characters"),
@@ -50,6 +42,7 @@ export const updateArtifactSchema = z.object({
   origin: z.string().max(200, "Origin must be less than 200 characters").optional(),
   media_urls: z.array(z.string().url("Invalid media URL")).optional(),
   image_captions: z.record(z.string().url(), z.string()).optional(),
+  thumbnail_url: z.string().url("Invalid thumbnail URL").nullable().optional(),
 })
 
 export type UpdateArtifactInput = z.infer<typeof updateArtifactSchema>
