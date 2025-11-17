@@ -105,13 +105,18 @@ export function ArtifactSwipeContent({
   const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      supabase.auth.getUser(),
-      supabase.from("profiles").select("is_admin").single()
-    ]).then(([{ data: userData }, { data: profileData }]) => {
-      if (userData.user) {
-        setUserId(userData.user.id)
-        setIsAdmin(profileData?.is_admin || false)
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserId(user.id)
+        // Query profile for the specific authenticated user
+        supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", user.id)
+          .single()
+          .then(({ data: profileData }) => {
+            setIsAdmin(profileData?.is_admin || false)
+          })
       }
     })
   }, [supabase])
