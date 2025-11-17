@@ -14,9 +14,16 @@ import { generateSlug, generateUniqueSlug } from "@/lib/utils/slug"
 import { isCurrentUserAdmin } from "@/lib/utils/admin"
 
 export async function createArtifact(input: CreateArtifactInput): Promise<{ error: string; fieldErrors?: any } | never> {
+  console.log("[v0] CREATE ARTIFACT - Received input:", {
+    title: input.title,
+    mediaCount: input.media_urls?.length || 0,
+    collectionId: input.collectionId
+  })
+
   const validatedFields = createArtifactSchema.safeParse(input)
 
   if (!validatedFields.success) {
+    console.error("[v0] CREATE ARTIFACT - Validation failed:", validatedFields.error.flatten())
     return {
       error: "Invalid input",
       fieldErrors: validatedFields.error.flatten().fieldErrors,
@@ -30,10 +37,17 @@ export async function createArtifact(input: CreateArtifactInput): Promise<{ erro
   } = await supabase.auth.getUser()
 
   if (!user) {
+    console.error("[v0] CREATE ARTIFACT - No user found")
     return { error: "Unauthorized" }
   }
 
   const uniqueMediaUrls = Array.from(new Set(validatedFields.data.media_urls || []))
+  
+  console.log("[v0] CREATE ARTIFACT - Media URLs processed:", {
+    original: validatedFields.data.media_urls?.length || 0,
+    unique: uniqueMediaUrls.length,
+    urls: uniqueMediaUrls
+  })
 
   const baseSlug = generateSlug(validatedFields.data.title)
   const slug = await generateUniqueSlug(baseSlug, async (slug) => {
@@ -52,12 +66,23 @@ export async function createArtifact(input: CreateArtifactInput): Promise<{ erro
     slug,
   }
 
+  console.log("[v0] CREATE ARTIFACT - Inserting into DB:", {
+    ...insertData,
+    media_urls: `[${insertData.media_urls.length} URLs]`
+  })
+
   const { data, error } = await supabase.from("artifacts").insert(insertData).select().single()
 
   if (error) {
-    console.error("Artifact creation error:", error)
+    console.error("[v0] CREATE ARTIFACT - Database error:", error)
     return { error: "Failed to create artifact. Please try again." }
   }
+
+  console.log("[v0] CREATE ARTIFACT - Success! Created artifact:", {
+    id: data.id,
+    slug: data.slug,
+    mediaCount: data.media_urls?.length || 0
+  })
 
   revalidatePath("/artifacts")
   revalidatePath("/collections")

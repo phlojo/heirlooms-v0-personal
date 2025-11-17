@@ -49,6 +49,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   useEffect(() => {
     return () => {
       if (!hasNavigatedRef.current && uploadedMediaUrls.length > 0) {
+        console.log("[v0] Cleaning up abandoned media:", uploadedMediaUrls.length, "files")
         uploadedMediaUrls.forEach(async (url) => {
           const publicId = await extractPublicIdFromUrl(url)
           if (publicId) {
@@ -69,11 +70,20 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   const getAudioUrls = (): string[] => getMediaUrls().filter((url) => isAudioUrl(url))
 
   async function onSubmit(data: FormData): Promise<void> {
-    console.log("[v0] Creating artifact with media_urls:", data.media_urls)
+    console.log("[v0] NEW ARTIFACT FORM - Submitting with data:", {
+      title: data.title,
+      mediaCount: data.media_urls?.length || 0,
+      mediaUrls: data.media_urls,
+      collectionId: data.collectionId
+    })
     
     const normalizedUrls = normalizeMediaUrls(data.media_urls || [])
     
-    console.log("[v0] Normalized URLs:", normalizedUrls)
+    console.log("[v0] NEW ARTIFACT FORM - After normalization:", {
+      originalCount: data.media_urls?.length || 0,
+      normalizedCount: normalizedUrls.length,
+      normalizedUrls
+    })
 
     const submitData = {
       ...data,
@@ -84,10 +94,12 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
 
     try {
       hasNavigatedRef.current = true
+      console.log("[v0] NEW ARTIFACT FORM - Calling createArtifact...")
       const result = await createArtifact(submitData)
 
       if (result?.error) {
         hasNavigatedRef.current = false
+        console.error("[v0] NEW ARTIFACT FORM - Error from createArtifact:", result.error)
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, messages]) => {
             if (messages && Array.isArray(messages) && messages.length > 0) {
@@ -105,14 +117,15 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
           setError(result.error)
         }
       } else {
-        console.log("[v0] Artifact created successfully")
+        console.log("[v0] NEW ARTIFACT FORM - Success! Artifact created")
       }
     } catch (error) {
       hasNavigatedRef.current = false
       if (error instanceof Error && error.message === "NEXT_REDIRECT") {
+        console.log("[v0] NEW ARTIFACT FORM - Redirecting...")
         return
       }
-      console.error("[v0] Error creating artifact:", error)
+      console.error("[v0] NEW ARTIFACT FORM - Exception:", error)
       setError(error instanceof Error ? error.message : "An unexpected error occurred")
     }
   }
@@ -251,10 +264,23 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
             artifactId={null}
             userId={userId}
             onMediaAdded={(newUrls) => {
+              console.log("[v0] NEW ARTIFACT FORM - Media added callback:", {
+                newUrlsCount: newUrls.length,
+                newUrls
+              })
               const currentUrls = getMediaUrls()
+              console.log("[v0] NEW ARTIFACT FORM - Current media URLs before merge:", {
+                currentCount: currentUrls.length,
+                currentUrls
+              })
               const combined = normalizeMediaUrls([...currentUrls, ...newUrls])
-              form.setValue("media_urls", combined)
+              console.log("[v0] NEW ARTIFACT FORM - After combining and normalizing:", {
+                combinedCount: combined.length,
+                combined
+              })
+              form.setValue("media_urls", combined, { shouldValidate: true, shouldDirty: true })
               setUploadedMediaUrls(prev => [...prev, ...newUrls])
+              console.log("[v0] NEW ARTIFACT FORM - Form media_urls updated successfully")
             }}
           />
 
