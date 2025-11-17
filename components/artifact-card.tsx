@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { HeirloomsIcon } from "@/components/heirlooms-icon"
 import { Author } from "@/components/author"
 import { getThumbnailUrl } from "@/lib/cloudinary"
-import { getPrimaryVisualMediaUrl } from "@/lib/media"
+import { getPrimaryVisualMediaUrl, getArtifactPlaceholder } from "@/lib/media"
 import MediaImage from "@/components/media-image"
 
 interface ArtifactCardProps {
@@ -42,8 +42,13 @@ export function ArtifactCard({ artifact, showAuthor = false, authorName }: Artif
               objectFit="cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gray-300">
-              <HeirloomsIcon className="h-8 w-8 text-gray-600" />
+            <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
+              <HeirloomsIcon className="h-12 w-12 text-muted-foreground/40 mb-2" />
+              <p className="text-xs text-muted-foreground/60 px-4 text-center">
+                {artifact.media_urls && artifact.media_urls.length > 0 
+                  ? "Audio only" 
+                  : "No media"}
+              </p>
             </div>
           )}
         </div>

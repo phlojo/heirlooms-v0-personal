@@ -60,6 +60,11 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   async function onSubmit(data: FormData): Promise<void> {
     const normalizedUrls = normalizeMediaUrls(data.media_urls || [])
 
+    if (normalizedUrls.length === 0) {
+      setError("Please add at least one media item to your artifact.")
+      return
+    }
+
     const submitData = {
       ...data,
       media_urls: normalizedUrls,

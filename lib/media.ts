@@ -125,3 +125,18 @@ export function formatFileSize(bytes: number): string {
   }
   return `${(bytes / 1024).toFixed(1)}KB`;
 }
+
+/**
+ * Checks if the media array contains at least one visual media item (image or video).
+ * Audio-only artifacts won't have thumbnails.
+ */
+export function hasVisualMedia(urls?: string[] | null): boolean {
+  return getPrimaryVisualMediaUrl(urls) !== null;
+}
+
+/**
+ * Returns a placeholder image URL for artifacts without visual media.
+ */
+export function getArtifactPlaceholder(): string {
+  return '/artifact-placeholder.jpg';
+}
