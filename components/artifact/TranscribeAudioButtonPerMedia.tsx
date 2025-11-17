@@ -9,9 +9,10 @@ import { useRouter } from 'next/navigation'
 interface TranscribeAudioButtonPerMediaProps {
   artifactId: string
   audioUrl: string
+  onTranscriptGenerated?: (transcript: string) => void
 }
 
-export function TranscribeAudioButtonPerMedia({ artifactId, audioUrl }: TranscribeAudioButtonPerMediaProps) {
+export function TranscribeAudioButtonPerMedia({ artifactId, audioUrl, onTranscriptGenerated }: TranscribeAudioButtonPerMediaProps) {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
@@ -32,12 +33,19 @@ export function TranscribeAudioButtonPerMedia({ artifactId, audioUrl }: Transcri
         throw new Error(error.error || "Failed to transcribe audio")
       }
 
+      const data = await response.json()
+      if (onTranscriptGenerated && data.transcript) {
+        onTranscriptGenerated(data.transcript)
+      }
+
       toast({
         title: "Success",
         description: "Audio transcribed successfully",
       })
 
-      router.refresh()
+      if (!onTranscriptGenerated) {
+        router.refresh()
+      }
     } catch (error) {
       toast({
         title: "Error",

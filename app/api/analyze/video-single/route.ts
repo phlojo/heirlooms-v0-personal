@@ -44,6 +44,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid video URL" }, { status: 400 })
     }
 
+    if (artifactId === "temp") {
+      console.log("[v0] Generating video summary for temp artifact (creation flow)")
+      
+      const frameUrl = extractVideoFrame(videoUrl)
+      console.log("[v0] Extracted frame URL:", frameUrl.substring(0, 50) + "...")
+
+      const result = await generateText({
+        model: openai(getVisionModel()),
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                image: frameUrl,
+              },
+              {
+                type: "text",
+                text: "Generate a descriptive summary for this video frame in 7-20 words. Be specific and factual about what you see.",
+              },
+            ],
+          },
+        ],
+        maxTokens: 100,
+      })
+
+      const summary = result.text.trim()
+      console.log("[v0] Generated video summary for temp artifact:", summary)
+
+      return NextResponse.json({ ok: true, summary })
+    }
+
     const supabase = await createClient()
 
     const { data: artifact, error: fetchError } = await supabase

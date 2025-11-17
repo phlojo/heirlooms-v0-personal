@@ -10,7 +10,7 @@ import { fetchJson } from "@/lib/fetchJson"
 interface GenerateVideoSummaryButtonProps {
   artifactId: string
   videoUrl: string
-  onSummaryGenerated?: (url: string, summary: string) => void
+  onSummaryGenerated?: (summary: string) => void
 }
 
 export function GenerateVideoSummaryButton({ artifactId, videoUrl, onSummaryGenerated }: GenerateVideoSummaryButtonProps) {
@@ -31,7 +31,12 @@ export function GenerateVideoSummaryButton({ artifactId, videoUrl, onSummaryGene
       })
 
       if (onSummaryGenerated && data.summary) {
-        onSummaryGenerated(videoUrl, data.summary)
+        // Check if callback expects 2 args (url, summary) or 1 arg (summary)
+        if (onSummaryGenerated.length === 2) {
+          (onSummaryGenerated as (url: string, summary: string) => void)(videoUrl, data.summary)
+        } else {
+          onSummaryGenerated(data.summary)
+        }
       } else {
         router.refresh()
       }

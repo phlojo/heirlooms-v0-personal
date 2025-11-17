@@ -34,6 +34,50 @@ export async function POST(request: Request) {
 
     validateOpenAIKey()
 
+    if (artifactId === "temp") {
+      const audioResponse = await fetch(audioUrl)
+      if (!audioResponse.ok) {
+        throw new Error(`Failed to download audio: ${audioResponse.statusText}`)
+      }
+
+      const audioBlob = await audioResponse.blob()
+
+      const formData = new FormData()
+      formData.append("file", audioBlob, "audio.mp3")
+      formData.append("model", getTranscribeModel())
+
+      const transcriptionResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: formData,
+      })
+
+      if (!transcriptionResponse.ok) {
+        const errorText = await transcriptionResponse.text()
+        throw new Error(`Transcription failed: ${errorText}`)
+      }
+
+      const transcriptionData = await transcriptionResponse.json()
+      let transcript = transcriptionData.text
+
+      if (transcript && transcript.length > 50) {
+        try {
+          const cleanupResult = await generateText({
+            model: openai(getTextModel()),
+            prompt: `Reformat this transcript for readability. Fix obvious typos and add punctuation, but do not add any new information or facts. Keep the original meaning intact.\n\nTranscript:\n${transcript.slice(0, MAX_TRANSCRIPT_LENGTH)}`,
+            maxOutputTokens: 2000,
+          })
+          transcript = cleanupResult.text
+        } catch (cleanupError) {
+          console.error("[v0] Transcript cleanup failed, using raw transcript:", cleanupError)
+        }
+      }
+
+      return NextResponse.json({ ok: true, transcript })
+    }
+
     const supabase = await createClient()
 
     const { data: artifact, error: fetchError } = await supabase

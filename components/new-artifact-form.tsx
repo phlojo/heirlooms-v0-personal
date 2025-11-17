@@ -19,6 +19,9 @@ import { AddMediaModal } from "@/components/add-media-modal"
 import { AudioPlayer } from "@/components/audio-player"
 import { getDetailUrl } from "@/lib/cloudinary"
 import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "@/lib/actions/cloudinary"
+import { GenerateImageCaptionButton } from "@/components/artifact/GenerateImageCaptionButton"
+import { GenerateVideoSummaryButton } from "@/components/artifact/GenerateVideoSummaryButton"
+import { TranscribeAudioButtonPerMedia } from "@/components/artifact/TranscribeAudioButtonPerMedia"
 
 type FormData = z.infer<typeof createArtifactSchema>
 
@@ -33,6 +36,10 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   const [isProvenanceOpen, setIsProvenanceOpen] = useState(false)
   const [isAddMediaOpen, setIsAddMediaOpen] = useState(false)
   const [selectedThumbnailUrl, setSelectedThumbnailUrl] = useState<string | null>(null)
+  
+  const [imageCaptions, setImageCaptions] = useState<Record<string, string>>({})
+  const [videoSummaries, setVideoSummaries] = useState<Record<string, string>>({})
+  const [audioTranscripts, setAudioTranscripts] = useState<Record<string, string>>({})
   
   const [uploadedMediaUrls, setUploadedMediaUrls] = useState<string[]>([])
   const artifactCreatedRef = useRef(false)
@@ -100,6 +107,18 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
 
   const handleSelectThumbnail = (url: string) => {
     setSelectedThumbnailUrl(url)
+  }
+
+  const handleCaptionGenerated = (url: string, caption: string) => {
+    setImageCaptions(prev => ({ ...prev, [url]: caption }))
+  }
+
+  const handleVideoSummaryGenerated = (url: string, summary: string) => {
+    setVideoSummaries(prev => ({ ...prev, [url]: summary }))
+  }
+
+  const handleAudioTranscriptGenerated = (url: string, transcript: string) => {
+    setAudioTranscripts(prev => ({ ...prev, [url]: transcript }))
   }
 
   async function onSubmit(data: FormData): Promise<void> {
@@ -287,6 +306,19 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
                         </Button>
                       </div>
                       <AudioPlayer src={url} title="Audio Recording" />
+                      {audioTranscripts[url] && (
+                        <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                          <p className="font-medium text-muted-foreground mb-1">AI Transcript:</p>
+                          <p className="whitespace-pre-wrap">{audioTranscripts[url]}</p>
+                        </div>
+                      )}
+                      <div className="flex justify-start">
+                        <TranscribeAudioButtonPerMedia
+                          artifactId="temp"
+                          audioUrl={url}
+                          onTranscriptGenerated={(transcript) => handleAudioTranscriptGenerated(url, transcript)}
+                        />
+                      </div>
                     </div>
                   )
                 } else if (isVideoFile(url)) {
@@ -327,6 +359,19 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
                           Your browser does not support the video tag.
                         </video>
                       </div>
+                      {videoSummaries[url] && (
+                        <div className="rounded-lg bg-muted/50 p-3 text-sm mx-6 lg:mx-8">
+                          <p className="font-medium text-muted-foreground mb-1">AI Video Summary:</p>
+                          <p>{videoSummaries[url]}</p>
+                        </div>
+                      )}
+                      <div className="flex justify-start px-6 lg:px-8">
+                        <GenerateVideoSummaryButton
+                          artifactId="temp"
+                          videoUrl={url}
+                          onSummaryGenerated={(summary) => handleVideoSummaryGenerated(url, summary)}
+                        />
+                      </div>
                     </div>
                   )
                 } else {
@@ -363,6 +408,19 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
                           alt={`Photo ${imageFiles.indexOf(url) + 1}`}
                           className="w-full h-auto"
                           crossOrigin="anonymous"
+                        />
+                      </div>
+                      {imageCaptions[url] && (
+                        <div className="rounded-lg bg-muted/50 p-3 text-sm mx-6 lg:mx-8">
+                          <p className="font-medium text-muted-foreground mb-1">AI Caption:</p>
+                          <p>{imageCaptions[url]}</p>
+                        </div>
+                      )}
+                      <div className="flex justify-start px-6 lg:px-8">
+                        <GenerateImageCaptionButton
+                          artifactId="temp"
+                          imageUrl={url}
+                          onCaptionGenerated={handleCaptionGenerated}
                         />
                       </div>
                     </div>
