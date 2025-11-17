@@ -499,17 +499,16 @@ export function ArtifactSwipeContent({
                 return (
                   <div key={url} className="space-y-3 px-6 lg:px-8">
                     {isEditMode && (
-                      <h3 className="text-sm font-semibold mb-3">Audio Recording {audioFiles > 1 ? `${mediaUrls.indexOf(url) + 1}` : ''}</h3>
-                    )}
-                    {isEditMode && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteMedia(url)}
-                        className="absolute top-2 right-2 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteMedia(url)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                     <AudioPlayer src={url} title="Audio Recording" />
                     

@@ -293,8 +293,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
                 if (isAudioFile(url)) {
                   return (
                     <div key={url} className="space-y-3 px-6 lg:px-8">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold">Audio Recording {audioFiles.length > 1 ? `${audioFiles.indexOf(url) + 1}` : ''}</h3>
+                      <div className="flex items-center justify-end">
                         <Button
                           type="button"
                           variant="ghost"
