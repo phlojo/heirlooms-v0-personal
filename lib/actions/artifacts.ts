@@ -12,11 +12,20 @@ import { redirect } from 'next/navigation'
 import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "./cloudinary"
 import { generateSlug, generateUniqueSlug } from "@/lib/utils/slug"
 import { isCurrentUserAdmin } from "@/lib/utils/admin"
+import { hasVisualMedia, getPrimaryVisualMediaUrl } from "@/lib/media"
 
 export async function createArtifact(input: CreateArtifactInput): Promise<{ error: string; fieldErrors?: any } | never> {
+  console.log("[v0] CREATE ARTIFACT - Received input:", {
+    title: input.title,
+    mediaCount: input.media_urls?.length || 0,
+    collectionId: input.collectionId,
+    hasThumbnailUrl: !!input.thumbnail_url // Log if user selected thumbnail
+  })
+
   const validatedFields = createArtifactSchema.safeParse(input)
 
   if (!validatedFields.success) {
+    console.error("[v0] CREATE ARTIFACT - Validation failed:", validatedFields.error.flatten())
     return {
       error: "Invalid input",
       fieldErrors: validatedFields.error.flatten().fieldErrors,
@@ -30,15 +39,50 @@ export async function createArtifact(input: CreateArtifactInput): Promise<{ erro
   } = await supabase.auth.getUser()
 
   if (!user) {
+    console.error("[v0] CREATE ARTIFACT - No user found")
     return { error: "Unauthorized" }
   }
 
   const uniqueMediaUrls = Array.from(new Set(validatedFields.data.media_urls || []))
+  
+  console.log("[v0] CREATE ARTIFACT - Media URLs processed:", {
+    original: validatedFields.data.media_urls?.length || 0,
+    unique: uniqueMediaUrls.length,
+    urls: uniqueMediaUrls
+  })
+
+  if (!hasVisualMedia(uniqueMediaUrls)) {
+    console.warn("[v0] CREATE ARTIFACT - WARNING: No visual media (image/video) found. Artifact will not have a thumbnail.", {
+      title: validatedFields.data.title,
+      mediaCount: uniqueMediaUrls.length
+    })
+  }
+
+  const validMediaUrls = uniqueMediaUrls.filter(url => {
+    if (!url || typeof url !== 'string' || url.trim() === '') {
+      console.warn("[v0] CREATE ARTIFACT - Invalid media URL detected and removed:", url)
+      return false
+    }
+    return true
+  })
+
+  if (validMediaUrls.length !== uniqueMediaUrls.length) {
+    console.warn("[v0] CREATE ARTIFACT - Some invalid media URLs were filtered out", {
+      original: uniqueMediaUrls.length,
+      valid: validMediaUrls.length
+    })
+  }
 
   const baseSlug = generateSlug(validatedFields.data.title)
   const slug = await generateUniqueSlug(baseSlug, async (slug) => {
     const { data } = await supabase.from("artifacts").select("id").eq("slug", slug).maybeSingle()
     return !!data
+  })
+
+  const thumbnailUrl = validatedFields.data.thumbnail_url || getPrimaryVisualMediaUrl(validMediaUrls)
+  console.log("[v0] CREATE ARTIFACT - Thumbnail selection:", {
+    userSelected: !!validatedFields.data.thumbnail_url,
+    thumbnailUrl: thumbnailUrl || "NONE"
   })
 
   const insertData = {
@@ -47,16 +91,35 @@ export async function createArtifact(input: CreateArtifactInput): Promise<{ erro
     collection_id: validatedFields.data.collectionId,
     year_acquired: validatedFields.data.year_acquired,
     origin: validatedFields.data.origin,
-    media_urls: uniqueMediaUrls,
+    media_urls: validMediaUrls,
     user_id: user.id,
     slug,
+    thumbnail_url: thumbnailUrl, // Use user's selection or auto-selected
   }
+
+  console.log("[v0] CREATE ARTIFACT - Inserting into DB:", {
+    ...insertData,
+    media_urls: `[${insertData.media_urls.length} URLs]`,
+    hasVisualMedia: !!thumbnailUrl,
+    thumbnail_url: thumbnailUrl || "NULL"
+  })
 
   const { data, error } = await supabase.from("artifacts").insert(insertData).select().single()
 
   if (error) {
-    console.error("Artifact creation error:", error)
+    console.error("[v0] CREATE ARTIFACT - Database error:", error)
     return { error: "Failed to create artifact. Please try again." }
+  }
+
+  console.log("[v0] CREATE ARTIFACT - Success! Created artifact:", {
+    id: data.id,
+    slug: data.slug,
+    mediaCount: data.media_urls?.length || 0,
+    hasThumbnail: !!data.thumbnail_url
+  })
+
+  if (!data.thumbnail_url) {
+    console.log("[v0] CREATE ARTIFACT - Note: Artifact created without thumbnail (audio-only or no media)")
   }
 
   revalidatePath("/artifacts")
@@ -81,6 +144,7 @@ export async function getArtifactsByCollection(collectionId: string) {
       year_acquired,
       origin,
       media_urls,
+      thumbnail_url,
       user_id,
       collection_id,
       created_at,
@@ -177,7 +241,6 @@ export async function getAllPublicArtifactsPaginated(
     query = query.neq("user_id", excludeUserId)
   }
 
-  // Cursor-based pagination using created_at and id for stable ordering
   if (cursor) {
     query = query.or(`created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`)
   }
@@ -185,7 +248,7 @@ export async function getAllPublicArtifactsPaginated(
   const { data, error } = await query
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
-    .limit(limit + 1) // Fetch one extra to determine if there are more
+    .limit(limit + 1)
 
   if (error) {
     console.error("Error fetching public artifacts:", error)
@@ -226,7 +289,6 @@ export async function getMyArtifactsPaginated(
     `)
     .eq("user_id", userId)
 
-  // Cursor-based pagination
   if (cursor) {
     query = query.or(`created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`)
   }
@@ -254,7 +316,6 @@ export async function getMyArtifactsPaginated(
     hasMore,
   }
 }
-
 
 export async function getAllPublicArtifacts(excludeUserId?: string) {
   const supabase = await createClient()
@@ -350,7 +411,16 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
   }
 
   const newMediaUrls = validatedFields.data.media_urls || []
-  const removedUrls = oldMediaUrls.filter((url) => !newMediaUrls.includes(url))
+  
+  const validNewMediaUrls = newMediaUrls.filter(url => {
+    if (!url || typeof url !== 'string' || url.trim() === '') {
+      console.warn("[v0] UPDATE ARTIFACT - Invalid media URL detected and removed:", url)
+      return false
+    }
+    return true
+  })
+
+  const removedUrls = oldMediaUrls.filter((url) => !validNewMediaUrls.includes(url))
 
   for (const url of removedUrls) {
     const publicId = await extractPublicIdFromUrl(url)
@@ -359,7 +429,27 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     }
   }
 
-  const uniqueMediaUrls = Array.from(new Set(newMediaUrls))
+  const uniqueMediaUrls = Array.from(new Set(validNewMediaUrls))
+
+  const hadVisualMedia = hasVisualMedia(oldMediaUrls)
+  const hasVisualMediaNow = hasVisualMedia(uniqueMediaUrls)
+  
+  if (hadVisualMedia && !hasVisualMediaNow) {
+    console.warn("[v0] UPDATE ARTIFACT - WARNING: Removing all visual media. Artifact will lose its thumbnail.", {
+      artifactId: validatedFields.data.id,
+      oldMediaCount: oldMediaUrls.length,
+      newMediaCount: uniqueMediaUrls.length
+    })
+  }
+
+  const thumbnailUrl = validatedFields.data.thumbnail_url !== undefined 
+    ? validatedFields.data.thumbnail_url 
+    : getPrimaryVisualMediaUrl(uniqueMediaUrls)
+    
+  console.log("[v0] UPDATE ARTIFACT - Thumbnail update:", {
+    userProvided: validatedFields.data.thumbnail_url !== undefined,
+    thumbnailUrl: thumbnailUrl || "NONE"
+  })
 
   let newSlug = existingArtifact.slug
   if (validatedFields.data.title !== existingArtifact.title) {
@@ -378,12 +468,20 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     origin: validatedFields.data.origin,
     media_urls: uniqueMediaUrls,
     slug: newSlug,
+    thumbnail_url: thumbnailUrl, // Use user's selection or auto-recomputed
     updated_at: new Date().toISOString(),
   }
 
   if (validatedFields.data.image_captions !== undefined) {
     updateData.image_captions = validatedFields.data.image_captions
   }
+
+  console.log("[v0] UPDATE ARTIFACT - Updating with validated data:", {
+    artifactId: validatedFields.data.id,
+    mediaCount: uniqueMediaUrls.length,
+    hasThumbnail: !!thumbnailUrl,
+    thumbnail_url: thumbnailUrl || "NULL"
+  })
 
   const { data, error } = await supabase
     .from("artifacts")
@@ -397,13 +495,18 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     return { success: false, error: "Failed to update artifact. Please try again." }
   }
 
+  console.log("[v0] UPDATE ARTIFACT - Success!", {
+    artifactId: data.id,
+    slug: data.slug,
+    mediaCount: data.media_urls?.length || 0,
+    hasThumbnail: !!data.thumbnail_url
+  })
+
   revalidatePath(`/artifacts/${existingArtifact.slug}`)
   revalidatePath(`/artifacts/${data.slug}`)
   revalidatePath("/collections")
   if (existingArtifact.collection?.slug) {
     revalidatePath(`/collections/${existingArtifact.collection.slug}`)
-  } else {
-    revalidatePath(`/collections/${existingArtifact.collection_id}`)
   }
 
   return { success: true, data }
@@ -450,10 +553,13 @@ export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: stri
   const updatedAudioSummaries = { ...(artifact.audio_summaries || {}) }
   delete updatedAudioSummaries[mediaUrl]
 
+  const newThumbnailUrl = getPrimaryVisualMediaUrl(updatedMediaUrls)
+
   const { error: updateError } = await supabase
     .from("artifacts")
     .update({
       media_urls: updatedMediaUrls,
+      thumbnail_url: newThumbnailUrl, // Phase 2: Update thumbnail
       image_captions: updatedImageCaptions,
       video_summaries: updatedVideoSummaries,
       audio_transcripts: updatedAudioTranscripts,

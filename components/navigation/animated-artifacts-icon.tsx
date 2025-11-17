@@ -63,8 +63,9 @@ export function AnimatedArtifactsIcon({
   const IconComponent = getArtifactTypeIcon(currentType)
 
   return (
-    <div className="relative" aria-label="Artifacts icon">
+    <div className="relative">
       <IconComponent
+        aria-label="Artifacts icon"
         className={cn(
           "transition-opacity duration-[400ms] ease-in-out",
           isTransitioning ? "opacity-0" : "opacity-100",

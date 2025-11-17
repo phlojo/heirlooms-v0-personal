@@ -10,15 +10,14 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { useState, useEffect, useRef } from "react"
-import { ChevronDown, Plus } from 'lucide-react'
+import { useState } from "react"
+import { ChevronDown, Plus, Trash2, Star } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { AddMediaModal } from "@/components/add-media-modal"
-import { normalizeMediaUrls, isAudioUrl, isVideoUrl, isImageUrl } from "@/lib/media"
-import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "@/lib/actions/cloudinary"
-import MediaImage from "@/components/media-image"
+import { normalizeMediaUrls, isImageUrl, isVideoUrl } from "@/lib/media"
 import { TranscriptionInput } from "@/components/transcription-input"
-import { useSupabase } from "@/lib/supabase/browser-context"
+import { AddMediaModal } from "@/components/add-media-modal"
+import { AudioPlayer } from "@/components/audio-player"
+import { getDetailUrl } from "@/lib/cloudinary"
 
 type FormData = z.infer<typeof createArtifactSchema>
 
@@ -30,9 +29,9 @@ interface NewArtifactFormProps {
 export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [isAttributesOpen, setIsAttributesOpen] = useState(false)
+  const [isProvenanceOpen, setIsProvenanceOpen] = useState(false)
   const [isAddMediaOpen, setIsAddMediaOpen] = useState(false)
-  const [uploadedMediaUrls, setUploadedMediaUrls] = useState<string[]>([])
-  const hasNavigatedRef = useRef(false)
+  const [selectedThumbnailUrl, setSelectedThumbnailUrl] = useState<string | null>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(createArtifactSchema),
@@ -46,48 +45,56 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
     },
   })
 
-  useEffect(() => {
-    return () => {
-      if (!hasNavigatedRef.current && uploadedMediaUrls.length > 0) {
-        uploadedMediaUrls.forEach(async (url) => {
-          const publicId = await extractPublicIdFromUrl(url)
-          if (publicId) {
-            await deleteCloudinaryMedia(publicId)
-          }
-        })
+  const handleMediaAdded = (newUrls: string[]) => {
+    const currentUrls = form.getValues("media_urls") || []
+    const combinedUrls = [...currentUrls, ...newUrls]
+    const uniqueUrls = Array.from(new Set(combinedUrls))
+    form.setValue("media_urls", normalizeMediaUrls(uniqueUrls))
+    
+    if (!selectedThumbnailUrl && newUrls.length > 0) {
+      const firstVisual = newUrls.find(url => isImageUrl(url) || isVideoUrl(url))
+      if (firstVisual) {
+        setSelectedThumbnailUrl(firstVisual)
       }
     }
-  }, [uploadedMediaUrls])
-
-  const getMediaUrls = (): string[] => {
-    const urls = form.getValues("media_urls")
-    return Array.isArray(urls) ? urls : []
   }
 
-  const getImageUrls = (): string[] => getMediaUrls().filter((url) => isImageUrl(url))
-  const getVideoUrls = (): string[] => getMediaUrls().filter((url) => isVideoUrl(url))
-  const getAudioUrls = (): string[] => getMediaUrls().filter((url) => isAudioUrl(url))
+  const handleDeleteMedia = (urlToDelete: string) => {
+    if (!confirm("Are you sure you want to delete this media item?")) return
+    const currentUrls = form.getValues("media_urls") || []
+    form.setValue("media_urls", normalizeMediaUrls(currentUrls.filter(url => url !== urlToDelete)))
+    
+    if (selectedThumbnailUrl === urlToDelete) {
+      const remainingUrls = currentUrls.filter(url => url !== urlToDelete)
+      const newThumbnail = remainingUrls.find(url => isImageUrl(url) || isVideoUrl(url))
+      setSelectedThumbnailUrl(newThumbnail || null)
+    }
+  }
+
+  const handleSelectThumbnail = (url: string) => {
+    setSelectedThumbnailUrl(url)
+  }
 
   async function onSubmit(data: FormData): Promise<void> {
-    console.log("[v0] Creating artifact with media_urls:", data.media_urls)
-    
     const normalizedUrls = normalizeMediaUrls(data.media_urls || [])
-    
-    console.log("[v0] Normalized URLs:", normalizedUrls)
+
+    if (normalizedUrls.length === 0) {
+      setError("Please add at least one media item to your artifact.")
+      return
+    }
 
     const submitData = {
       ...data,
       media_urls: normalizedUrls,
+      thumbnail_url: selectedThumbnailUrl,
     }
 
     setError(null)
 
     try {
-      hasNavigatedRef.current = true
       const result = await createArtifact(submitData)
 
       if (result?.error) {
-        hasNavigatedRef.current = false
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, messages]) => {
             if (messages && Array.isArray(messages) && messages.length > 0) {
@@ -104,35 +111,30 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
         } else {
           setError(result.error)
         }
-      } else {
-        console.log("[v0] Artifact created successfully")
       }
     } catch (error) {
-      hasNavigatedRef.current = false
       if (error instanceof Error && error.message === "NEXT_REDIRECT") {
         return
       }
-      console.error("[v0] Error creating artifact:", error)
       setError(error instanceof Error ? error.message : "An unexpected error occurred")
     }
   }
 
-  const uploadedImages = getImageUrls()
-  const uploadedVideos = getVideoUrls()
-  const uploadedAudio = getAudioUrls()
-  const totalMediaCount = uploadedImages.length + uploadedVideos.length + uploadedAudio.length
+  const uploadedMedia = form.watch("media_urls") || []
+  const audioFiles = uploadedMedia.filter((url) => isAudioFile(url))
+  const videoFiles = uploadedMedia.filter((url) => isVideoFile(url))
+  const imageFiles = uploadedMedia.filter((url) => !isAudioFile(url) && !isVideoFile(url))
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-0">
-        <div className="px-6 lg:px-8 pb-6 border-b">
-          <h1 className="text-3xl font-bold tracking-tight mb-6">New Artifact</h1>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <section className="space-y-2 px-6 lg:px-8">
           <FormField
             control={form.control}
             name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Title</FormLabel>
+                <FormLabel className="text-lg font-semibold">Title</FormLabel>
                 <FormControl>
                   <TranscriptionInput
                     value={field.value}
@@ -148,15 +150,15 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
               </FormItem>
             )}
           />
-        </div>
+        </section>
 
-        <div className="px-6 lg:px-8 py-6 border-b">
+        <section className="space-y-2 px-6 lg:px-8">
           <FormField
             control={form.control}
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Description</FormLabel>
+                <FormLabel className="text-lg font-semibold">Description</FormLabel>
                 <FormControl>
                   <TranscriptionInput
                     value={field.value}
@@ -176,24 +178,15 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
               </FormItem>
             )}
           />
-        </div>
+        </section>
 
-        <div className="px-6 lg:px-8 py-6 border-b">
+        <section className="space-y-2 px-6 lg:px-8">
           <Collapsible open={isAttributesOpen} onOpenChange={setIsAttributesOpen}>
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between text-left group py-1"
-              >
-                <h2 className="text-xl font-semibold">Attributes</h2>
-                <ChevronDown
-                  className={`h-5 w-5 text-muted-foreground transition-all group-hover:text-foreground ${
-                    isAttributesOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+            <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
+              <h2 className="text-lg font-semibold text-foreground">Attributes</h2>
+              <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isAttributesOpen ? 'rotate-180' : ''}`} />
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-6 pt-6">
+            <CollapsibleContent className="space-y-4 pt-4">
               <FormField
                 control={form.control}
                 name="year_acquired"
@@ -229,126 +222,188 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
               />
             </CollapsibleContent>
           </Collapsible>
-        </div>
+        </section>
 
-        <div className="py-6 border-b">
-          <div className="px-6 lg:px-8 flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold">Media Items</h2>
+        <section className="space-y-6 my-6">
+          <div className="flex items-center justify-between px-6 lg:px-8">
+            <h2 className="text-lg font-semibold text-foreground">Media Items</h2>
             <Button
               type="button"
+              onClick={() => setIsAddMediaOpen(true)}
               className="bg-purple-600 hover:bg-purple-700 text-white"
               size="sm"
-              onClick={() => setIsAddMediaOpen(true)}
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Media
             </Button>
           </div>
-
-          <AddMediaModal
-            open={isAddMediaOpen}
-            onOpenChange={setIsAddMediaOpen}
-            artifactId={null}
-            userId={userId}
-            onMediaAdded={(newUrls) => {
-              const currentUrls = getMediaUrls()
-              const combined = normalizeMediaUrls([...currentUrls, ...newUrls])
-              form.setValue("media_urls", combined)
-              setUploadedMediaUrls(prev => [...prev, ...newUrls])
-            }}
-          />
-
-          {totalMediaCount === 0 ? (
-            <div className="px-6 lg:px-8">
-              <div className="rounded-lg border-2 border-dashed border-muted-foreground/25 p-12 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No media items yet. Click "Add Media" to upload photos, videos, or audio.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {getMediaUrls().map((url) => {
-                const isImage = isImageUrl(url)
-                const isVideo = isVideoUrl(url)
-                const isAudio = isAudioUrl(url)
-
-                return (
-                  <div key={url}>
-                    {isImage && (
-                      <>
-                        <MediaImage
-                          src={url}
-                          alt="Photo"
+          
+          {uploadedMedia.length > 0 ? (
+            <div className="space-y-6">
+              {uploadedMedia.map((url, idx) => {
+                if (isAudioFile(url)) {
+                  return (
+                    <div key={url} className="space-y-3 px-6 lg:px-8">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold">Audio Recording {audioFiles.length > 1 ? `${audioFiles.indexOf(url) + 1}` : ''}</h3>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteMedia(url)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <AudioPlayer src={url} title="Audio Recording" />
+                    </div>
+                  )
+                } else if (isVideoFile(url)) {
+                  const isSelectedThumbnail = selectedThumbnailUrl === url
+                  return (
+                    <div key={url} className="space-y-3">
+                      <div className="flex items-center justify-between px-6 lg:px-8">
+                        <h3 className="text-sm font-semibold">Video {videoFiles.length > 1 ? `${videoFiles.indexOf(url) + 1}` : ''}</h3>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSelectThumbnail(url)}
+                            className={isSelectedThumbnail ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}
+                            title="Set as thumbnail"
+                          >
+                            <Star className={`h-4 w-4 ${isSelectedThumbnail ? "fill-current" : ""}`} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteMedia(url)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="w-full max-w-full overflow-hidden">
+                        <video 
+                          src={url} 
+                          controls 
+                          className="w-full max-w-full h-auto"
+                          style={{ maxHeight: '70vh' }}
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      </div>
+                    </div>
+                  )
+                } else {
+                  const isSelectedThumbnail = selectedThumbnailUrl === url
+                  return (
+                    <div key={url} className="space-y-3">
+                      <div className="flex items-center justify-between px-6 lg:px-8">
+                        <h3 className="text-sm font-semibold">Photo {imageFiles.length > 1 ? `${imageFiles.indexOf(url) + 1}` : ''}</h3>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSelectThumbnail(url)}
+                            className={isSelectedThumbnail ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}
+                            title="Set as thumbnail"
+                          >
+                            <Star className={`h-4 w-4 ${isSelectedThumbnail ? "fill-current" : ""}`} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteMedia(url)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="w-full max-w-full overflow-hidden">
+                        <img
+                          src={getDetailUrl(url) || url}
+                          alt={`Photo ${imageFiles.indexOf(url) + 1}`}
                           className="w-full h-auto"
-                        />
-                        <div className="px-6 lg:px-8 pt-3">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            Photo
-                          </p>
-                        </div>
-                      </>
-                    )}
-                    {isVideo && (
-                      <>
-                        <video
-                          src={url}
-                          controls
-                          className="w-full h-auto bg-black"
-                          crossOrigin="anonymous"
-                        />
-                        <div className="px-6 lg:px-8 pt-3">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            Video
-                          </p>
-                        </div>
-                      </>
-                    )}
-                    {isAudio && (
-                      <div className="px-6 lg:px-8">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                          Audio
-                        </p>
-                        <audio
-                          src={url}
-                          controls
-                          className="w-full"
                           crossOrigin="anonymous"
                         />
                       </div>
-                    )}
-                  </div>
-                )
+                    </div>
+                  )
+                }
               })}
             </div>
+          ) : (
+            <div className="min-h-[200px] rounded-lg border bg-muted/30 flex items-center justify-center mx-6 lg:mx-8">
+              <p className="text-sm text-muted-foreground">No media available. Click "Add Media" to get started.</p>
+            </div>
           )}
-        </div>
+        </section>
 
-        <div className="px-6 lg:px-8 py-6 border-b">
-          <p className="text-sm text-muted-foreground italic">
-            Provenance details will be available after creation
-          </p>
-        </div>
+        <section className="space-y-2 px-6 lg:px-8">
+          <Collapsible open={isProvenanceOpen} onOpenChange={setIsProvenanceOpen}>
+            <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
+              <h2 className="text-lg font-semibold text-foreground">Provenance</h2>
+              <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isProvenanceOpen ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 rounded-lg border bg-card p-4">
+                <p className="text-sm text-muted-foreground italic">
+                  Provenance details will be available after creation
+                </p>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </section>
 
         <input type="hidden" {...form.register("collectionId")} value={collectionId || ""} />
 
-        <div className="px-6 lg:px-8 py-6">
-          {error && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 mb-6">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          <div className="flex gap-3">
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Creating..." : "Create Artifact"}
-            </Button>
-            <Button type="button" variant="outline" asChild>
-              <Link href="/collections">Cancel</Link>
-            </Button>
+        {error && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 mx-6 lg:mx-8">
+            <p className="text-sm text-destructive">{error}</p>
           </div>
+        )}
+
+        <div className="flex gap-3 px-6 lg:px-8 pb-[240px]">
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Creating..." : "Create Artifact"}
+          </Button>
+          <Button type="button" variant="outline" asChild>
+            <Link href="/collections">Cancel</Link>
+          </Button>
         </div>
       </form>
+
+      <AddMediaModal
+        open={isAddMediaOpen}
+        onOpenChange={setIsAddMediaOpen}
+        artifactId={null}
+        userId={userId}
+        onMediaAdded={handleMediaAdded}
+      />
     </Form>
+  )
+}
+
+function isAudioFile(url: string): boolean {
+  return (
+    url.includes("/video/upload/") &&
+    (url.includes(".webm") || url.includes(".mp3") || url.includes(".wav") || url.includes(".m4a"))
+  )
+}
+
+function isVideoFile(url: string): boolean {
+  const lower = url.toLowerCase()
+  return (
+    url.includes("/video/upload/") &&
+    (lower.includes(".mp4") || lower.includes(".mov") || lower.includes(".avi")) &&
+    !isAudioFile(url)
   )
 }

@@ -178,6 +178,7 @@
     height: 100dvh;
     /* Prevent text inflation on iOS */
     -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     /* Optimize tap highlighting */
     -webkit-tap-highlight-color: transparent;
     /* Improve touch scrolling */

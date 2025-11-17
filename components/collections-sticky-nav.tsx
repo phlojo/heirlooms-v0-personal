@@ -27,6 +27,9 @@ interface CollectionsStickyNavProps {
   showBackButton?: boolean
   isPrivate?: boolean
   isUnsorted?: boolean
+  currentUserId?: string
+  isCurrentUserAdmin?: boolean
+  contentOwnerId?: string
 }
 
 export function CollectionsStickyNav({
@@ -44,6 +47,9 @@ export function CollectionsStickyNav({
   showBackButton = true,
   isPrivate = false,
   isUnsorted = false,
+  currentUserId,
+  isCurrentUserAdmin = false,
+  contentOwnerId,
 }: CollectionsStickyNavProps) {
   const router = useRouter()
   const [isFavorited, setIsFavorited] = useState(false)
@@ -74,6 +80,8 @@ export function CollectionsStickyNav({
     setIsFavorited(!isFavorited)
   }
 
+  const showSuperUserBadge = isCurrentUserAdmin && contentOwnerId && currentUserId && contentOwnerId !== currentUserId
+
   return (
     <div className="sticky top-3 lg:top-16 z-50 bg-background/90 border-b border rounded-lg">
       <div className="container max-w-7xl mx-auto lg:px-8 rounded-lg px-1 py-1">
@@ -100,10 +108,21 @@ export function CollectionsStickyNav({
                   <Settings className="h-3 w-3" />
                 </Badge>
               )}
+              {showSuperUserBadge && (
+                <Badge variant="destructive" className="text-xs">
+                  Super User
+                </Badge>
+              )}
             </div>
           </div>
 
-          <Button variant="ghost" size="sm" onClick={toggleFavorite} className="shrink-0 h-9 w-9 p-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={toggleFavorite} 
+            className="shrink-0 h-9 w-9 p-0"
+            aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+          >
             <Heart className={`h-5 w-5 ${isFavorited ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
           </Button>
         </div>
