@@ -11,12 +11,13 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { useState } from "react"
-import { ChevronDown, Upload, X, ImageIcon } from 'lucide-react'
+import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { normalizeMediaUrls, getFileSizeLimit, formatFileSize } from "@/lib/media"
-import MediaImage from "@/components/media-image"
+import { normalizeMediaUrls } from "@/lib/media"
 import { TranscriptionInput } from "@/components/transcription-input"
-import { generateCloudinarySignature } from "@/lib/actions/cloudinary"
+import { AddMediaModal } from "@/components/add-media-modal"
+import { AudioPlayer } from "@/components/audio-player"
+import { getDetailUrl } from "@/lib/cloudinary"
 
 type FormData = z.infer<typeof createArtifactSchema>
 
@@ -28,7 +29,8 @@ interface NewArtifactFormProps {
 export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [isAttributesOpen, setIsAttributesOpen] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
+  const [isProvenanceOpen, setIsProvenanceOpen] = useState(false)
+  const [isAddMediaOpen, setIsAddMediaOpen] = useState(false)
 
   const form = useForm<FormData>({
     resolver: zodResolver(createArtifactSchema),
@@ -42,101 +44,17 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
     },
   })
 
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-
-    const oversizedFiles = Array.from(files).filter((file) => {
-      const limit = getFileSizeLimit(file)
-      return file.size > limit
-    })
-
-    if (oversizedFiles.length > 0) {
-      const fileErrors = oversizedFiles.map((f) => 
-        `${f.name} (${formatFileSize(f.size)}, max: ${formatFileSize(getFileSizeLimit(f))})`
-      ).join(", ")
-      setError(`The following files are too large: ${fileErrors}`)
-      e.target.value = ""
-      return
-    }
-
-    const totalSize = Array.from(files).reduce((sum, file) => sum + file.size, 0)
-    const MAX_TOTAL_SIZE = 1000 * 1024 * 1024
-
-    if (totalSize > MAX_TOTAL_SIZE) {
-      setError("Total file size exceeds 1GB. Please upload fewer or smaller files.")
-      e.target.value = ""
-      return
-    }
-
-    setIsUploading(true)
-    setError(null)
-
-    try {
-      const urls: string[] = []
-
-      for (const file of Array.from(files)) {
-        const signatureResult = await generateCloudinarySignature(userId, file.name)
-
-        if (signatureResult.error || !signatureResult.signature) {
-          throw new Error(signatureResult.error || "Failed to generate upload signature")
-        }
-
-        const formData = new FormData()
-        formData.append("file", file)
-        formData.append("api_key", signatureResult.apiKey!)
-        formData.append("timestamp", signatureResult.timestamp!.toString())
-        formData.append("signature", signatureResult.signature)
-        formData.append("public_id", signatureResult.publicId!)
-
-        if (signatureResult.eager) {
-          formData.append("eager", signatureResult.eager)
-        }
-
-        const uploadUrl = `https://api.cloudinary.com/v1_1/${signatureResult.cloudName}/image/upload`
-
-        const response = await fetch(uploadUrl, {
-          method: "POST",
-          body: formData,
-        })
-
-        if (!response.ok) {
-          const errorText = await response.text()
-
-          let errorData
-          try {
-            errorData = JSON.parse(errorText)
-          } catch {
-            throw new Error(`Upload failed (${response.status}): ${errorText.substring(0, 100)}`)
-          }
-
-          throw new Error(`Failed to upload ${file.name}: ${errorData.error?.message || "Unknown error"}`)
-        }
-
-        const data = await response.json()
-        urls.push(data.secure_url)
-      }
-
-      const currentUrls = form.getValues("media_urls") || []
-      const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
-      form.setValue("media_urls", normalizeMediaUrls([...urlsArray, ...urls]))
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to upload images. Please try with smaller files or fewer images at once.",
-      )
-    } finally {
-      setIsUploading(false)
-      e.target.value = ""
-    }
+  const handleMediaAdded = (newUrls: string[]) => {
+    const currentUrls = form.getValues("media_urls") || []
+    const combinedUrls = [...currentUrls, ...newUrls]
+    const uniqueUrls = Array.from(new Set(combinedUrls))
+    form.setValue("media_urls", normalizeMediaUrls(uniqueUrls))
   }
 
-  function removeImage(index: number): void {
-    const currentUrls = form.getValues("media_urls")
-    const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
-    const newImages = urlsArray.filter((_, i) => i !== index)
-    form.setValue("media_urls", normalizeMediaUrls(newImages))
+  const handleDeleteMedia = (urlToDelete: string) => {
+    if (!confirm("Are you sure you want to delete this media item?")) return
+    const currentUrls = form.getValues("media_urls") || []
+    form.setValue("media_urls", normalizeMediaUrls(currentUrls.filter(url => url !== urlToDelete)))
   }
 
   async function onSubmit(data: FormData): Promise<void> {
@@ -178,19 +96,22 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
     }
   }
 
-  const uploadedImages = form.watch("media_urls") || []
+  const uploadedMedia = form.watch("media_urls") || []
+  const audioFiles = uploadedMedia.filter((url) => isAudioFile(url))
+  const videoFiles = uploadedMedia.filter((url) => isVideoFile(url))
+  const imageFiles = uploadedMedia.filter((url) => !isAudioFile(url) && !isVideoFile(url))
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-0">
-        <div className="px-6 lg:px-8 pb-6 border-b">
-          <h1 className="text-3xl font-bold tracking-tight mb-6">New Artifact</h1>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Title Section */}
+        <section className="space-y-2 px-6 lg:px-8">
           <FormField
             control={form.control}
             name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Title</FormLabel>
+                <FormLabel className="text-lg font-semibold">Title</FormLabel>
                 <FormControl>
                   <TranscriptionInput
                     value={field.value}
@@ -206,15 +127,16 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
               </FormItem>
             )}
           />
-        </div>
+        </section>
 
-        <div className="px-6 lg:px-8 py-6 border-b">
+        {/* Description Section */}
+        <section className="space-y-2 px-6 lg:px-8">
           <FormField
             control={form.control}
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Description</FormLabel>
+                <FormLabel className="text-lg font-semibold">Description</FormLabel>
                 <FormControl>
                   <TranscriptionInput
                     value={field.value}
@@ -234,24 +156,16 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
               </FormItem>
             )}
           />
-        </div>
+        </section>
 
-        <div className="px-6 lg:px-8 py-6 border-b">
+        {/* Attributes Section */}
+        <section className="space-y-2 px-6 lg:px-8">
           <Collapsible open={isAttributesOpen} onOpenChange={setIsAttributesOpen}>
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between text-left group py-1"
-              >
-                <h2 className="text-xl font-semibold">Attributes</h2>
-                <ChevronDown
-                  className={`h-5 w-5 text-muted-foreground transition-all group-hover:text-foreground ${
-                    isAttributesOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+            <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
+              <h2 className="text-lg font-semibold text-foreground">Attributes</h2>
+              <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isAttributesOpen ? 'rotate-180' : ''}`} />
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-6 pt-6">
+            <CollapsibleContent className="space-y-4 pt-4">
               <FormField
                 control={form.control}
                 name="year_acquired"
@@ -287,86 +201,164 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
               />
             </CollapsibleContent>
           </Collapsible>
-        </div>
+        </section>
 
-        <div className="px-6 lg:px-8 py-6 border-b">
-          <div className="space-y-3">
-            <FormLabel>Photos</FormLabel>
-
-            <div className="flex items-center gap-3">
-              <Button type="button" variant="outline" disabled={isUploading} asChild>
-                <label className="cursor-pointer">
-                  <Upload className="mr-2 h-4 w-4" />
-                  {isUploading ? "Uploading..." : "Upload Photos"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    disabled={isUploading}
-                  />
-                </label>
-              </Button>
-              <FormDescription className="!mt-0">Upload photos (max 50MB per file, 1GB total)</FormDescription>
-            </div>
-
-            {uploadedImages.length > 0 && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {uploadedImages.map((url, index) => (
-                  <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
-                    <MediaImage
-                      src={url}
-                      alt={`Upload ${index + 1}`}
-                      className="h-full w-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-md transition-transform hover:scale-110"
-                      aria-label="Remove photo"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {uploadedImages.length === 0 && !isUploading && (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                <ImageIcon className="mb-2 h-8 w-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">No photos uploaded yet</p>
-              </div>
-            )}
+        {/* Media Items Section */}
+        <section className="space-y-6 my-6">
+          <div className="flex items-center justify-between px-6 lg:px-8">
+            <h2 className="text-lg font-semibold text-foreground">Media Items</h2>
+            <Button
+              type="button"
+              onClick={() => setIsAddMediaOpen(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              size="sm"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Media
+            </Button>
           </div>
-        </div>
+          
+          {uploadedMedia.length > 0 ? (
+            <div className="space-y-6">
+              {uploadedMedia.map((url, idx) => {
+                if (isAudioFile(url)) {
+                  return (
+                    <div key={url} className="space-y-3 px-6 lg:px-8">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold">Audio Recording {audioFiles.length > 1 ? `${audioFiles.indexOf(url) + 1}` : ''}</h3>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteMedia(url)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <AudioPlayer src={url} title="Audio Recording" />
+                    </div>
+                  )
+                } else if (isVideoFile(url)) {
+                  return (
+                    <div key={url} className="space-y-3">
+                      <div className="flex items-center justify-between px-6 lg:px-8">
+                        <h3 className="text-sm font-semibold">Video {videoFiles.length > 1 ? `${videoFiles.indexOf(url) + 1}` : ''}</h3>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteMedia(url)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="w-full max-w-full overflow-hidden">
+                        <video 
+                          src={url} 
+                          controls 
+                          className="w-full max-w-full h-auto"
+                          style={{ maxHeight: '70vh' }}
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      </div>
+                    </div>
+                  )
+                } else {
+                  return (
+                    <div key={url} className="space-y-3">
+                      <div className="flex items-center justify-between px-6 lg:px-8">
+                        <h3 className="text-sm font-semibold">Photo {imageFiles.length > 1 ? `${imageFiles.indexOf(url) + 1}` : ''}</h3>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteMedia(url)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="w-full max-w-full overflow-hidden">
+                        <img
+                          src={getDetailUrl(url) || url}
+                          alt={`Photo ${imageFiles.indexOf(url) + 1}`}
+                          className="w-full h-auto"
+                          crossOrigin="anonymous"
+                        />
+                      </div>
+                    </div>
+                  )
+                }
+              })}
+            </div>
+          ) : (
+            <div className="min-h-[200px] rounded-lg border bg-muted/30 flex items-center justify-center mx-6 lg:mx-8">
+              <p className="text-sm text-muted-foreground">No media available. Click "Add Media" to get started.</p>
+            </div>
+          )}
+        </section>
 
-        <div className="px-6 lg:px-8 py-6 border-b">
-          <p className="text-sm text-muted-foreground italic">
-            Provenance details will be available after creation
-          </p>
-        </div>
+        {/* Provenance Section */}
+        <section className="space-y-2 px-6 lg:px-8">
+          <Collapsible open={isProvenanceOpen} onOpenChange={setIsProvenanceOpen}>
+            <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
+              <h2 className="text-lg font-semibold text-foreground">Provenance</h2>
+              <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isProvenanceOpen ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 rounded-lg border bg-card p-4">
+                <p className="text-sm text-muted-foreground italic">
+                  Provenance details will be available after creation
+                </p>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </section>
 
         <input type="hidden" {...form.register("collectionId")} value={collectionId || ""} />
 
-        <div className="px-6 lg:px-8 py-6">
-          {error && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 mb-6">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          <div className="flex gap-3">
-            <Button type="submit" disabled={form.formState.isSubmitting || isUploading}>
-              {form.formState.isSubmitting ? "Creating..." : "Create Artifact"}
-            </Button>
-            <Button type="button" variant="outline" asChild>
-              <Link href="/collections">Cancel</Link>
-            </Button>
+        {error && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 mx-6 lg:mx-8">
+            <p className="text-sm text-destructive">{error}</p>
           </div>
+        )}
+
+        <div className="flex gap-3 px-6 lg:px-8 pb-[240px]">
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Creating..." : "Create Artifact"}
+          </Button>
+          <Button type="button" variant="outline" asChild>
+            <Link href="/collections">Cancel</Link>
+          </Button>
         </div>
       </form>
+
+      <AddMediaModal
+        open={isAddMediaOpen}
+        onOpenChange={setIsAddMediaOpen}
+        artifactId={null}
+        userId={userId}
+        onMediaAdded={handleMediaAdded}
+      />
     </Form>
+  )
+}
+
+function isAudioFile(url: string): boolean {
+  return (
+    url.includes("/video/upload/") &&
+    (url.includes(".webm") || url.includes(".mp3") || url.includes(".wav") || url.includes(".m4a"))
+  )
+}
+
+function isVideoFile(url: string): boolean {
+  const lower = url.toLowerCase()
+  return (
+    url.includes("/video/upload/") &&
+    (lower.includes(".mp4") || lower.includes(".mov") || lower.includes(".avi")) &&
+    !isAudioFile(url)
   )
 }
