@@ -497,12 +497,12 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
 
           {/* Recording UI for Audio */}
           {selectedMode === "record" && selectedType === "audio" && (
-            <div className="space-y-4">
+            <>
               <AudioRecorder onAudioRecorded={handleAudioRecorded} disabled={isUploading} />
               <Button variant="ghost" onClick={handleBack} className="w-full">
                 Back
               </Button>
-            </div>
+            </>
           )}
 
           {/* Error Display */}
