@@ -12,7 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { TranscriptionInput } from "@/components/transcription-input"
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from "react"
-import { X, Upload, ImageIcon, Loader2 } from 'lucide-react'
+import { X, Upload, ImageIcon, Loader2, Star } from 'lucide-react'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2 } from 'lucide-react'
 import {
@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { normalizeMediaUrls, getFileSizeLimit, formatFileSize } from "@/lib/media"
+import { normalizeMediaUrls, getFileSizeLimit, formatFileSize, isImageUrl, isVideoUrl } from "@/lib/media"
 
 type FormData = z.infer<typeof updateArtifactSchema>
 
@@ -37,6 +37,7 @@ interface EditArtifactFormProps {
     year_acquired?: number
     origin?: string
     media_urls?: string[]
+    thumbnail_url?: string | null
   }
   userId: string
 }
@@ -49,6 +50,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
+  const [selectedThumbnailUrl, setSelectedThumbnailUrl] = useState<string | null>(artifact.thumbnail_url || null)
 
   const originalMediaUrlsRef = useRef<string[]>(artifact.media_urls || [])
   const newlyUploadedUrlsRef = useRef<string[]>([])
@@ -63,6 +65,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       year_acquired: artifact.year_acquired,
       origin: artifact.origin || "",
       media_urls: artifact.media_urls || [],
+      thumbnail_url: artifact.thumbnail_url || null,
     },
   })
 
@@ -212,6 +215,13 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       const currentUrls = form.getValues("media_urls") || []
       const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
       form.setValue("media_urls", normalizeMediaUrls([...urlsArray, ...urls]))
+      
+      if (!selectedThumbnailUrl && urls.length > 0) {
+        const firstVisual = urls.find(url => isImageUrl(url) || isVideoUrl(url))
+        if (firstVisual) {
+          setSelectedThumbnailUrl(firstVisual)
+        }
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -227,8 +237,19 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   function removeImage(index: number): void {
     const currentUrls = form.getValues("media_urls")
     const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
+    const urlToRemove = urlsArray[index]
     const newImages = urlsArray.filter((_, i) => i !== index)
     form.setValue("media_urls", normalizeMediaUrls(newImages))
+    
+    if (selectedThumbnailUrl === urlToRemove) {
+      const newThumbnail = newImages.find(url => isImageUrl(url) || isVideoUrl(url))
+      setSelectedThumbnailUrl(newThumbnail || null)
+    }
+  }
+
+  const handleSelectThumbnail = (url: string) => {
+    setSelectedThumbnailUrl(url)
+    setHasUnsavedChanges(true)
   }
 
   async function onSubmit(data: FormData): Promise<void> {
@@ -239,6 +260,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     const submitData = {
       ...data,
       media_urls: normalizedUrls,
+      thumbnail_url: selectedThumbnailUrl,
       year_acquired: data.year_acquired || undefined,
     }
 
@@ -354,23 +376,42 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
 
             {uploadedImages.length > 0 && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {uploadedImages.map((url) => (
-                  <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
-                    <img
-                      src={url || "/placeholder.svg"}
-                      alt={`Upload ${url}`}
-                      className="h-full w-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(uploadedImages.indexOf(url))}
-                      className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-md transition-transform hover:scale-110"
-                      title="Delete this photo"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
+                {uploadedImages.map((url) => {
+                  const canBeThumbnail = isImageUrl(url) || isVideoUrl(url)
+                  const isSelectedThumbnail = selectedThumbnailUrl === url
+                  
+                  return (
+                    <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
+                      <img
+                        src={url || "/placeholder.svg"}
+                        alt={`Upload ${url}`}
+                        className="h-full w-full object-cover"
+                      />
+                      {canBeThumbnail && (
+                        <button
+                          type="button"
+                          onClick={() => handleSelectThumbnail(url)}
+                          className={`absolute left-2 top-2 rounded-full p-1.5 shadow-md transition-all ${
+                            isSelectedThumbnail 
+                              ? "bg-yellow-500 text-white scale-110" 
+                              : "bg-white/90 text-gray-600 hover:bg-yellow-100 hover:text-yellow-600"
+                          }`}
+                          title={isSelectedThumbnail ? "Selected as thumbnail" : "Set as thumbnail"}
+                        >
+                          <Star className={`h-4 w-4 ${isSelectedThumbnail ? "fill-current" : ""}`} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeImage(uploadedImages.indexOf(url))}
+                        className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-md transition-transform hover:scale-110"
+                        title="Delete this photo"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
             )}
 

@@ -56,6 +56,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Image URL is not accessible" }, { status: 400 })
     }
 
+    if (artifactId === "temp") {
+      console.log("[v0] Generating caption for temp artifact (creation flow)")
+      
+      const result = await generateText({
+        model: openai(getVisionModel()),
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                image: imageUrl,
+              },
+              {
+                type: "text",
+                text: "Generate a descriptive caption for this image in 7-20 words. Be specific and factual.",
+              },
+            ],
+          },
+        ],
+        maxTokens: 100,
+      })
+
+      const caption = result.text.trim()
+      console.log("[v0] Generated caption for temp artifact:", caption)
+
+      return NextResponse.json({ ok: true, caption })
+    }
+
     const supabase = await createClient()
 
     const { data: artifact, error: fetchError } = await supabase
