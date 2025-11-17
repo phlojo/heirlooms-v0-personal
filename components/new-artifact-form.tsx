@@ -59,25 +59,31 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   useEffect(() => {
     return () => {
       if (!artifactCreatedRef.current && uploadedMediaUrls.length > 0) {
-        console.log("[v0] Component unmounting with abandoned uploads, cleaning up", uploadedMediaUrls.length, "files")
+        console.log("[v0] NEW ARTIFACT CLEANUP - Starting cleanup for", uploadedMediaUrls.length, "uploads")
+        console.log("[v0] NEW ARTIFACT CLEANUP - URLs to delete:", uploadedMediaUrls)
         
         // Fire-and-forget deletion - don't await in cleanup
         uploadedMediaUrls.forEach((url) => {
+          console.log("[v0] NEW ARTIFACT CLEANUP - Processing URL:", url)
           extractPublicIdFromUrl(url).then((publicId) => {
             if (publicId) {
-              console.log("[v0] Deleting abandoned upload:", publicId)
+              console.log("[v0] NEW ARTIFACT CLEANUP - Extracted publicId:", publicId)
               deleteCloudinaryMedia(publicId).then((result) => {
                 if (result.error) {
-                  console.error("[v0] Failed to delete abandoned upload:", publicId, result.error)
+                  console.error("[v0] NEW ARTIFACT CLEANUP - Failed:", publicId, result.error)
                 } else {
-                  console.log("[v0] Successfully deleted abandoned upload:", publicId)
+                  console.log("[v0] NEW ARTIFACT CLEANUP - Success:", publicId)
                 }
               })
+            } else {
+              console.error("[v0] NEW ARTIFACT CLEANUP - Could not extract publicId from:", url)
             }
           }).catch((err) => {
-            console.error("[v0] Error extracting publicId from URL:", url, err)
+            console.error("[v0] NEW ARTIFACT CLEANUP - Error extracting publicId:", url, err)
           })
         })
+      } else {
+        console.log("[v0] NEW ARTIFACT CLEANUP - Skipped. artifactCreated:", artifactCreatedRef.current, "uploads:", uploadedMediaUrls.length)
       }
     }
   }, [uploadedMediaUrls])

@@ -122,21 +122,62 @@ export async function deleteCloudinaryMedia(publicId: string) {
     formData.append("api_key", apiKey)
     formData.append("timestamp", timestamp.toString())
 
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+    // First try as image
+    let response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
       method: "POST",
       body: formData,
     })
 
-    const result = await response.json()
+    let result = await response.json()
+
+    // If image deletion failed with "not found", try video endpoint
+    if (result.result !== "ok" && result.result !== "not found") {
+      console.log("[v0] Image delete failed, trying video endpoint for:", publicId)
+      
+      const videoFormData = new FormData()
+      videoFormData.append("public_id", publicId)
+      videoFormData.append("signature", signature)
+      videoFormData.append("api_key", apiKey)
+      videoFormData.append("timestamp", timestamp.toString())
+      
+      response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/destroy`, {
+        method: "POST",
+        body: videoFormData,
+      })
+      
+      result = await response.json()
+    }
+
+    // If still failed, try raw endpoint (for audio)
+    if (result.result !== "ok" && result.result !== "not found") {
+      console.log("[v0] Video delete failed, trying raw endpoint for:", publicId)
+      
+      const rawFormData = new FormData()
+      rawFormData.append("public_id", publicId)
+      rawFormData.append("signature", signature)
+      rawFormData.append("api_key", apiKey)
+      rawFormData.append("timestamp", timestamp.toString())
+      
+      response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/raw/destroy`, {
+        method: "POST",
+        body: rawFormData,
+      })
+      
+      result = await response.json()
+    }
 
     if (result.result === "ok") {
+      console.log("[v0] Successfully deleted from Cloudinary:", publicId)
       return { success: true }
+    } else if (result.result === "not found") {
+      console.log("[v0] Asset already deleted or not found:", publicId)
+      return { success: true } // Consider not found as success
     } else {
-      console.error("Cloudinary deletion failed:", result)
+      console.error("[v0] Cloudinary deletion failed:", result)
       return { error: "Failed to delete media from Cloudinary" }
     }
   } catch (error) {
-    console.error("Error deleting from Cloudinary:", error)
+    console.error("[v0] Error deleting from Cloudinary:", error)
     return { error: "Failed to delete media from Cloudinary" }
   }
 }
