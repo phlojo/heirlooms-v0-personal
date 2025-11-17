@@ -44,7 +44,7 @@ export function AppLayout({ children, user, noBottomPadding = false }: AppLayout
       <TopNav onMenuClick={() => handleSidebarToggle(!sidebarOpen)} user={user} />
 
       <div className="flex">
-        {!isMobile && <SideNav isOpen={sidebarOpen} onClose={() => handleSidebarToggle(false)} isMobile={isMobile} />}
+        <SideNav isOpen={sidebarOpen} onClose={() => handleSidebarToggle(false)} isMobile={isMobile} />
 
         <main
           className={`flex-1 p-6 transition-all duration-200 lg:p-8 ${
@@ -58,7 +58,9 @@ export function AppLayout({ children, user, noBottomPadding = false }: AppLayout
         </main>
       </div>
 
-      {isMobile && <BottomNav />}
+      <div className="lg:hidden">
+        <BottomNav />
+      </div>
     </div>
   )
 }
