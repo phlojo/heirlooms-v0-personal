@@ -497,9 +497,10 @@ export function ArtifactSwipeContent({
               if (isAudioFile(url)) {
                 const transcript = audioTranscripts[url]
                 return (
-                  <div key={url} className="space-y-3 px-6 lg:px-8">
-                    {isEditMode && (
-                      <div className="flex justify-end">
+                  <div key={url} className="space-y-3">
+                    <div className="flex items-center justify-between px-6 lg:px-8">
+                      <h3 className="text-sm font-semibold">Audio {audioFiles > 1 ? `${editMediaUrls.filter(isAudioFile).indexOf(url) + 1}` : ''}</h3>
+                      {isEditMode && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -508,24 +509,26 @@ export function ArtifactSwipeContent({
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                      </div>
-                    )}
-                    <AudioPlayer src={url} title="Audio Recording" />
-                    
-                    {isEditMode && (
-                      <div className="mt-3">
-                        <TranscribeAudioButtonPerMedia artifactId={artifact.id} audioUrl={url} />
-                      </div>
-                    )}
-
-                    {transcript && (
-                      <div className="rounded-lg border bg-muted/30 p-4 mt-3">
-                        <h4 className="text-sm font-semibold mb-2">Transcript</h4>
-                        <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                          {transcript}
+                      )}
+                    </div>
+                    <div className="px-6 lg:px-8 space-y-3">
+                      <AudioPlayer src={url} title="Audio Recording" />
+                      
+                      {isEditMode && (
+                        <div className="mt-3">
+                          <TranscribeAudioButtonPerMedia artifactId={artifact.id} audioUrl={url} />
                         </div>
-                      </div>
-                    )}
+                      )}
+
+                      {transcript && (
+                        <div className="rounded-lg border bg-muted/30 p-4 mt-3">
+                          <h4 className="text-sm font-semibold mb-2">Transcript</h4>
+                          <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                            {transcript}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )
               } else if (isVideoFile(url)) {
