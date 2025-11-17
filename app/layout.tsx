@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 
 import "./globals.css"
 
@@ -40,6 +40,16 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'oklch(0.99 0.005 280)' },
+    { media: '(prefers-color-scheme: dark)', color: 'oklch(0.15 0.01 280)' },
+  ],
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,12 +57,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover"
-        />
-      </head>
       <body className={`font-sans antialiased`}>
         <SupabaseProvider>
           <ThemeProvider>
