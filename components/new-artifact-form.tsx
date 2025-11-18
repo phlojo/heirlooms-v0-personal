@@ -2,6 +2,8 @@
 
 import type React from "react"
 import { createArtifact } from "@/lib/actions/artifacts"
+import { generateCloudinarySignature } from "@/lib/actions/cloudinary"
+import { trackPendingUpload, markUploadsAsSaved, cleanupPendingUploads } from "@/lib/actions/pending-uploads"
 import { createArtifactSchema } from "@/lib/schemas"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -10,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { useState, useEffect, useRef } from "react"
+import { useState, useRef } from "react"
 import { ChevronDown, Plus, Trash2, Star } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { normalizeMediaUrls, isImageUrl, isVideoUrl } from "@/lib/media"
@@ -18,10 +20,10 @@ import { TranscriptionInput } from "@/components/transcription-input"
 import { AddMediaModal } from "@/components/add-media-modal"
 import { AudioPlayer } from "@/components/audio-player"
 import { getDetailUrl } from "@/lib/cloudinary"
-import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "@/lib/actions/cloudinary"
 import { GenerateImageCaptionButton } from "@/components/artifact/GenerateImageCaptionButton"
 import { GenerateVideoSummaryButton } from "@/components/artifact/GenerateVideoSummaryButton"
 import { TranscribeAudioButtonPerMedia } from "@/components/artifact/TranscribeAudioButtonPerMedia"
+import { useRouter } from 'next/navigation'
 
 type FormData = z.infer<typeof createArtifactSchema>
 
@@ -31,6 +33,7 @@ interface NewArtifactFormProps {
 }
 
 export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) {
+  const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isAttributesOpen, setIsAttributesOpen] = useState(false)
   const [isProvenanceOpen, setIsProvenanceOpen] = useState(false)
@@ -41,8 +44,6 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   const [videoSummaries, setVideoSummaries] = useState<Record<string, string>>({})
   const [audioTranscripts, setAudioTranscripts] = useState<Record<string, string>>({})
   
-  const [uploadedMediaUrls, setUploadedMediaUrls] = useState<string[]>([])
-  const artifactCreatedRef = useRef(false)
 
   const form = useForm<FormData>({
     resolver: zodResolver(createArtifactSchema),
@@ -56,32 +57,24 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
     },
   })
 
-  useEffect(() => {
-    return () => {
-      if (!artifactCreatedRef.current && uploadedMediaUrls.length > 0) {
-        console.log("[v0] Component unmounting with abandoned uploads, cleaning up", uploadedMediaUrls.length, "files")
-        
-        uploadedMediaUrls.forEach(async (url) => {
-          const publicId = await extractPublicIdFromUrl(url)
-          if (publicId) {
-            console.log("[v0] Deleting abandoned upload:", publicId)
-            await deleteCloudinaryMedia(publicId)
-          }
-        })
-      }
+  const handleCancel = async () => {
+    console.log("[v0] User clicked cancel - cleaning up pending uploads")
+    
+    const result = await cleanupPendingUploads()
+    if (result.error) {
+      console.error("[v0] Cleanup failed:", result.error)
+    } else {
+      console.log(`[v0] Cleanup complete: ${result.deletedCount} files deleted`)
     }
-  }, [uploadedMediaUrls])
+    
+    router.push('/collections')
+  }
 
   const handleMediaAdded = (newUrls: string[]) => {
     const currentUrls = form.getValues("media_urls") || []
     const combinedUrls = [...currentUrls, ...newUrls]
     const uniqueUrls = Array.from(new Set(combinedUrls))
     form.setValue("media_urls", normalizeMediaUrls(uniqueUrls))
-    
-    setUploadedMediaUrls((prev) => {
-      const allUrls = [...prev, ...newUrls]
-      return Array.from(new Set(allUrls))
-    })
     
     if (!selectedThumbnailUrl && newUrls.length > 0) {
       const firstVisual = newUrls.find(url => isImageUrl(url) || isVideoUrl(url))
@@ -95,8 +88,6 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
     if (!confirm("Are you sure you want to delete this media item?")) return
     const currentUrls = form.getValues("media_urls") || []
     form.setValue("media_urls", normalizeMediaUrls(currentUrls.filter(url => url !== urlToDelete)))
-    
-    setUploadedMediaUrls((prev) => prev.filter(url => url !== urlToDelete))
     
     if (selectedThumbnailUrl === urlToDelete) {
       const remainingUrls = currentUrls.filter(url => url !== urlToDelete)
@@ -158,11 +149,13 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
           setError(result.error)
         }
       } else {
-        artifactCreatedRef.current = true
+        console.log('[v0] Marking all uploaded URLs as saved:', normalizedUrls)
+        await markUploadsAsSaved(normalizedUrls)
       }
     } catch (error) {
       if (error instanceof Error && error.message === "NEXT_REDIRECT") {
-        artifactCreatedRef.current = true
+        console.log('[v0] Redirect detected - marking all URLs as saved:', normalizedUrls)
+        await markUploadsAsSaved(normalizedUrls)
         return
       }
       setError(error instanceof Error ? error.message : "An unexpected error occurred")
@@ -465,8 +458,13 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
           <Button type="submit" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Creating..." : "Create Artifact"}
           </Button>
-          <Button type="button" variant="outline" asChild>
-            <Link href="/collections">Cancel</Link>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={handleCancel}
+            disabled={form.formState.isSubmitting}
+          >
+            Cancel
           </Button>
         </div>
       </form>

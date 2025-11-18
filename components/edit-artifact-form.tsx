@@ -2,7 +2,8 @@
 
 import type React from "react"
 import { updateArtifact } from "@/lib/actions/artifacts"
-import { generateCloudinarySignature, deleteCloudinaryMedia, extractPublicIdFromUrl } from "@/lib/actions/cloudinary"
+import { generateCloudinarySignature, extractPublicIdFromUrl } from "@/lib/actions/cloudinary"
+import { trackPendingUpload, markUploadsAsSaved, cleanupPendingUploads } from "@/lib/actions/pending-uploads"
 import { updateArtifactSchema } from "@/lib/schemas"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -51,10 +52,8 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
   const [selectedThumbnailUrl, setSelectedThumbnailUrl] = useState<string | null>(artifact.thumbnail_url || null)
-
-  const originalMediaUrlsRef = useRef<string[]>(artifact.media_urls || [])
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const newlyUploadedUrlsRef = useRef<string[]>([])
-  const changesSavedRef = useRef(false)
 
   const form = useForm<FormData>({
     resolver: zodResolver(updateArtifactSchema),
@@ -85,62 +84,55 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   }, [form.watch("media_urls"), artifact.media_urls])
 
   useEffect(() => {
-    return () => {
-      if (!changesSavedRef.current && newlyUploadedUrlsRef.current.length > 0) {
-        console.log("[v0] EDIT ARTIFACT CLEANUP - Deleting abandoned uploads:", newlyUploadedUrlsRef.current.length)
-        
-        // Background cleanup - fire and forget
-        Promise.all(
-          newlyUploadedUrlsRef.current.map(async (url) => {
-            try {
-              const publicId = await extractPublicIdFromUrl(url)
-              if (publicId) {
-                await deleteCloudinaryMedia(publicId)
-                console.log("[v0] EDIT ARTIFACT CLEANUP - Deleted:", publicId)
-              }
-            } catch (err) {
-              console.error("[v0] EDIT ARTIFACT CLEANUP - Failed to delete:", url, err)
-            }
-          })
-        ).then(() => {
-          console.log("[v0] EDIT ARTIFACT CLEANUP - Completed")
-        })
-      }
-    }
-  }, [])
-
-  useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges && !success) {
         e.preventDefault()
-        e.returnValue = ""
+        e.returnValue = ''
       }
     }
 
-    window.addEventListener("beforeunload", handleBeforeUnload)
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasUnsavedChanges, success])
 
-  const handleNavigation = (path: string): void => {
-    if (hasUnsavedChanges && !success) {
-      setPendingNavigation(path)
+  const handleCancel = async () => {
+    if (hasUnsavedChanges) {
       setShowUnsavedDialog(true)
+      setPendingNavigation('back')
     } else {
-      router.push(path)
+      router.back()
     }
   }
 
-  const confirmNavigation = (): void => {
-    if (pendingNavigation) {
+  const handleConfirmNavigation = async () => {
+    console.log("[v0] User confirmed cancel - cleaning up pending uploads")
+    
+    const result = await cleanupPendingUploads()
+    if (result.error) {
+      console.error("[v0] Cleanup failed:", result.error)
+    } else {
+      console.log(`[v0] Cleanup complete: ${result.deletedCount} files deleted`)
+    }
+    
+    setShowUnsavedDialog(false)
+    if (pendingNavigation === 'back') {
+      router.back()
+    } else if (pendingNavigation) {
       router.push(pendingNavigation)
     }
+    setPendingNavigation(null)
   }
 
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
-    const files = e.target.files
-    if (!files || files.length === 0) return
+  const handleCancelNavigation = () => {
+    setShowUnsavedDialog(false)
+    setPendingNavigation(null)
+  }
 
-    const oversizedFiles = Array.from(files).filter((file) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    const oversizedFiles = files.filter((file) => {
       const limit = getFileSizeLimit(file)
       return file.size > limit
     })
@@ -150,91 +142,113 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
         `${f.name} (${formatFileSize(f.size)}, max: ${formatFileSize(getFileSizeLimit(f))})`
       ).join(", ")
       setError(`The following files are too large: ${fileErrors}`)
-      e.target.value = ""
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
       return
     }
 
-    const totalSize = Array.from(files).reduce((sum, file) => sum + file.size, 0)
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0)
     const MAX_TOTAL_SIZE = 1000 * 1024 * 1024
 
     if (totalSize > MAX_TOTAL_SIZE) {
       setError("Total file size exceeds 1GB. Please upload fewer or smaller files.")
-      e.target.value = ""
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
       return
     }
 
-    setIsUploading(true)
-    setError(null)
-
-    try {
-      const urls: string[] = []
-
-      for (const file of Array.from(files)) {
-        const signatureResult = await generateCloudinarySignature(userId, file.name)
-
-        if (signatureResult.error || !signatureResult.signature) {
-          throw new Error(signatureResult.error || "Failed to generate upload signature")
-        }
-
-        const formData = new FormData()
-        formData.append("file", file)
-        formData.append("api_key", signatureResult.apiKey!)
-        formData.append("timestamp", signatureResult.timestamp!.toString())
-        formData.append("signature", signatureResult.signature)
-        formData.append("public_id", signatureResult.publicId!)
-
-        if (signatureResult.eager) {
-          formData.append("eager", signatureResult.eager)
-        }
-
-        const uploadUrl = `https://api.cloudinary.com/v1_1/${signatureResult.cloudName}/image/upload`
-
-        const response = await fetch(uploadUrl, {
-          method: "POST",
-          body: formData,
-        })
-
-        if (!response.ok) {
-          const errorText = await response.text()
-
-          let errorData
-          try {
-            errorData = JSON.parse(errorText)
-          } catch {
-            throw new Error(`Upload failed (${response.status}): ${errorText.substring(0, 100)}`)
-          }
-
-          throw new Error(`Failed to upload ${file.name}: ${errorData.error?.message || "Unknown error"}`)
-        }
-
-        const data = await response.json()
-        urls.push(data.secure_url)
-        newlyUploadedUrlsRef.current.push(data.secure_url)
-      }
+    const handleMediaUpload = async (files: FileList | null) => {
+      if (!files) return
 
       const currentUrls = form.getValues("media_urls") || []
-      const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
-      form.setValue("media_urls", normalizeMediaUrls([...urlsArray, ...urls]))
-      
-      if (!selectedThumbnailUrl && urls.length > 0) {
-        const firstVisual = urls.find(url => isImageUrl(url) || isVideoUrl(url))
-        if (firstVisual) {
-          setSelectedThumbnailUrl(firstVisual)
+      const newUrls: string[] = []
+
+      try {
+        setIsUploading(true)
+        setError("")
+
+        const uploadPromises = Array.from(files).map(async (file) => {
+          const signatureResult = await generateCloudinarySignature(userId, file.name)
+
+          if (signatureResult.error || !signatureResult.signature) {
+            throw new Error(signatureResult.error || "Failed to generate upload signature")
+          }
+
+          const formData = new FormData()
+          formData.append("file", file)
+          formData.append("api_key", signatureResult.apiKey!)
+          formData.append("timestamp", signatureResult.timestamp!.toString())
+          formData.append("signature", signatureResult.signature)
+          formData.append("public_id", signatureResult.publicId!)
+
+          if (signatureResult.eager) {
+            formData.append("eager", signatureResult.eager)
+          }
+
+          const uploadUrl = `https://api.cloudinary.com/v1_1/${signatureResult.cloudName}/image/upload`
+
+          const response = await fetch(uploadUrl, {
+            method: "POST",
+            body: formData,
+          })
+
+          if (!response.ok) {
+            const errorText = await response.text()
+
+            let errorData
+            try {
+              errorData = JSON.parse(errorText)
+            } catch {
+              throw new Error(`Upload failed (${response.status}): ${errorText.substring(0, 100)}`)
+            }
+
+            throw new Error(`Failed to upload ${file.name}: ${errorData.error?.message || "Unknown error"}`)
+          }
+
+          const data = await response.json()
+          newUrls.push(data.secure_url)
+          
+          console.log('[v0] EDIT FORM: Uploaded file to Cloudinary:', data.secure_url)
+          
+          const resourceType = file.type.startsWith('image/') ? 'image' 
+            : file.type.startsWith('video/') ? 'video' 
+            : 'raw'
+          
+          console.log('[v0] EDIT FORM: Tracking upload with resourceType:', resourceType)
+          const trackResult = await trackPendingUpload(data.secure_url, resourceType)
+          
+          if (trackResult.error) {
+            console.error('[v0] EDIT FORM: Failed to track upload:', trackResult.error)
+          } else {
+            console.log('[v0] EDIT FORM: Successfully tracked upload in pending_uploads table')
+          }
+        })
+
+        await Promise.all(uploadPromises)
+
+        form.setValue("media_urls", [...currentUrls, ...newUrls])
+        newlyUploadedUrlsRef.current.push(...newUrls)
+        setHasUnsavedChanges(true)
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to upload images. Please try with smaller files or fewer images at once.",
+        )
+      } finally {
+        setIsUploading(false)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ""
         }
       }
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to upload images. Please try with smaller files or fewer images at once.",
-      )
-    } finally {
-      setIsUploading(false)
-      e.target.value = ""
     }
+
+    await handleMediaUpload(files)
   }
 
-  function removeImage(index: number): void {
+  const removeImage = (index: number): void => {
     const currentUrls = form.getValues("media_urls")
     const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
     const urlToRemove = urlsArray[index]
@@ -252,41 +266,34 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     setHasUnsavedChanges(true)
   }
 
-  async function onSubmit(data: FormData): Promise<void> {
-    setError(null)
+  const onSubmit = async (values: FormData) => {
+    try {
+      setError(null)
 
-    const normalizedUrls = normalizeMediaUrls(data.media_urls || [])
+      const result = await updateArtifact(values)
 
-    const submitData = {
-      ...data,
-      media_urls: normalizedUrls,
-      thumbnail_url: selectedThumbnailUrl,
-      year_acquired: data.year_acquired || undefined,
-    }
-
-    const result = await updateArtifact(submitData, artifact.media_urls || [])
-
-    if (result?.success) {
-      changesSavedRef.current = true
-      setSuccess(true)
-      setHasUnsavedChanges(false)
-      setTimeout(() => {
-        router.push(`/artifacts/${artifact.id}`)
-        router.refresh()
-      }, 1500)
-    } else if (result?.error) {
-      if (result.fieldErrors) {
-        Object.entries(result.fieldErrors).forEach(([field, messages]) => {
-          if (messages && messages.length > 0) {
-            form.setError(field as keyof FormData, {
-              type: "server",
-              message: messages[0],
-            })
-          }
-        })
-      } else {
+      if (result.error) {
         setError(result.error)
+      } else {
+        const allUrls = values.media_urls || []
+        console.log('[v0] Marking newly uploaded URLs as saved:', newlyUploadedUrlsRef.current)
+        if (newlyUploadedUrlsRef.current.length > 0) {
+          await markUploadsAsSaved(newlyUploadedUrlsRef.current)
+        }
+        
+        setSuccess(true)
+        setHasUnsavedChanges(false)
+        
+        setTimeout(() => {
+          router.push(`/artifacts/${result.slug}`)
+        }, 1500)
       }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update artifact. Please try again later.",
+      )
     }
   }
 
@@ -365,9 +372,10 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
                     type="file"
                     accept="image/*"
                     multiple
-                    onChange={handleImageUpload}
+                    onChange={handleUpload}
                     className="hidden"
                     disabled={isUploading}
+                    ref={fileInputRef}
                   />
                 </label>
               </Button>
@@ -443,8 +451,9 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => handleNavigation(`/artifacts/${artifact.id}`)}
+              onClick={handleCancel}
               disabled={form.formState.isSubmitting || isUploading}
+              className="flex-1"
             >
               Cancel
             </Button>
@@ -461,8 +470,8 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingNavigation(null)}>Stay on Page</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmNavigation}>Leave Without Saving</AlertDialogAction>
+            <AlertDialogCancel onClick={handleCancelNavigation}>Stay on Page</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmNavigation}>Leave Without Saving</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
