@@ -275,7 +275,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
         thumbnail_url: selectedThumbnailUrl,
       }
 
-      const result = await updateArtifact(submitValues)
+      const result = await updateArtifact(submitValues, artifact.media_urls || [])
 
       if (result.error) {
         setError(result.error)
