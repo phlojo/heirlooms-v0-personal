@@ -466,7 +466,7 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
 
   const { data: existingArtifact } = await supabase
     .from("artifacts")
-    .select("user_id, collection_id, slug, title, collection:collections(slug)")
+    .select("user_id, collection_id, slug, title, media_urls, collection:collections(slug)")
     .eq("id", validatedFields.data.id)
     .single()
 
@@ -486,6 +486,16 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
       return false
     }
     return true
+  })
+
+  const originalUrls = existingArtifact.media_urls || []
+  const newlyUploadedUrls = validNewMediaUrls.filter((url) => !originalUrls.includes(url))
+  
+  console.log("[v0] UPDATE ARTIFACT - Media analysis:", {
+    originalCount: originalUrls.length,
+    newCount: validNewMediaUrls.length,
+    newlyUploaded: newlyUploadedUrls.length,
+    newlyUploadedUrls
   })
 
   const removedUrls = oldMediaUrls.filter((url) => !validNewMediaUrls.includes(url))
@@ -578,6 +588,21 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     hasThumbnail: !!data.thumbnail_url
   })
 
+  if (newlyUploadedUrls.length > 0) {
+    console.log("[v0] UPDATE ARTIFACT - Marking newly uploaded media as saved:", newlyUploadedUrls.length, "URLs")
+    const { error: markError } = await supabase
+      .from("pending_uploads")
+      .delete()
+      .in("cloudinary_url", newlyUploadedUrls)
+      .eq("user_id", user.id)
+
+    if (markError) {
+      console.error("[v0] UPDATE ARTIFACT - Failed to mark uploads as saved (non-fatal):", markError)
+    } else {
+      console.log("[v0] UPDATE ARTIFACT - Successfully removed pending uploads from tracking table")
+    }
+  }
+
   revalidatePath(`/artifacts/${existingArtifact.slug}`)
   revalidatePath(`/artifacts/${data.slug}`)
   revalidatePath("/collections")
@@ -585,7 +610,7 @@ export async function updateArtifact(input: UpdateArtifactInput, oldMediaUrls: s
     revalidatePath(`/collections/${existingArtifact.collection.slug}`)
   }
 
-  return { success: true, data }
+  return { success: true, data, slug: data.slug }
 }
 
 export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: string) {
