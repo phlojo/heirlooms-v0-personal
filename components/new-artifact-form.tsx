@@ -45,6 +45,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   const [videoSummaries, setVideoSummaries] = useState<Record<string, string>>({})
   const [audioTranscripts, setAudioTranscripts] = useState<Record<string, string>>({})
   
+  console.log("[v0] NewArtifactForm - Initialized with collectionId:", collectionId, "userId:", userId)
 
   const form = useForm<FormData>({
     resolver: zodResolver(createArtifactSchema),
@@ -462,8 +463,6 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
             </CollapsibleContent>
           </Collapsible>
         </section>
-
-        <input type="hidden" {...form.register("collectionId")} value={collectionId || ""} />
 
         {error && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 mx-6 lg:mx-8">

@@ -27,12 +27,19 @@ export function CollectionSelector({
   const [collections, setCollections] = useState<Array<{ id: string; title: string; slug: string }>>([])
   const [isLoading, setIsLoading] = useState(true)
 
+  console.log("[v0] CollectionSelector - Rendering with props:", { userId, value, disabled })
+
   useEffect(() => {
     const fetchCollections = async () => {
+      console.log("[v0] CollectionSelector - Fetching collections for userId:", userId)
       setIsLoading(true)
       const result = await getMyCollections(userId)
+      console.log("[v0] CollectionSelector - Fetch result:", result)
       if (!result.error) {
         setCollections(result.collections)
+        console.log("[v0] CollectionSelector - Set collections:", result.collections.length)
+      } else {
+        console.error("[v0] CollectionSelector - Error fetching:", result.error)
       }
       setIsLoading(false)
     }
@@ -41,6 +48,7 @@ export function CollectionSelector({
   }, [userId])
 
   if (isLoading) {
+    console.log("[v0] CollectionSelector - Showing loading state")
     return (
       <div className="space-y-2">
         <FormLabel>Collection</FormLabel>
@@ -48,6 +56,8 @@ export function CollectionSelector({
       </div>
     )
   }
+
+  console.log("[v0] CollectionSelector - Rendering selector with", collections.length, "collections")
 
   return (
     <div className="space-y-2">
