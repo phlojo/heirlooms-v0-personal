@@ -14,6 +14,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { AddMediaModal } from "@/components/add-media-modal"
 import { ChevronDown, Plus, Save, X, Trash2, Loader2, Pencil, Share2, BarChart3, MessageSquare, Star } from 'lucide-react'
 import { updateArtifact, deleteMediaFromArtifact, deleteArtifact } from "@/lib/actions/artifacts"
+import { cleanupPendingUploads } from "@/lib/actions/pending-uploads"
 import { useRouter } from 'next/navigation'
 import { isImageUrl, isVideoUrl } from "@/lib/media"
 import { GenerateImageCaptionButton } from "@/components/artifact/GenerateImageCaptionButton"
@@ -323,6 +324,16 @@ export function ArtifactSwipeContent({
   }
 
   const handleConfirmCancel = () => {
+    console.log("[v0] User confirmed discard - cleaning up pending uploads")
+    
+    cleanupPendingUploads().then((result) => {
+      if (result.error) {
+        console.error("[v0] Cleanup failed:", result.error)
+      } else {
+        console.log(`[v0] Cleanup complete: ${result.deletedCount} files deleted from Cloudinary`)
+      }
+    })
+    
     setEditTitle(originalState.title)
     setEditDescription(originalState.description)
     setEditMediaUrls(originalState.media_urls)
