@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
 import { AddMediaModal } from "@/components/add-media-modal"
+import { CollectionSelector } from "@/components/collection-selector"
 import { ChevronDown, Plus, Save, X, Trash2, Loader2, Pencil, Share2, BarChart3, MessageSquare, Star } from 'lucide-react'
 import { updateArtifact, deleteMediaFromArtifact, deleteArtifact } from "@/lib/actions/artifacts"
 import { cleanupPendingUploads } from "@/lib/actions/pending-uploads"
@@ -74,6 +75,7 @@ export function ArtifactSwipeContent({
     video_summaries: artifact.video_summaries || {},
     audio_transcripts: artifact.audio_transcripts || {},
     thumbnail_url: artifact.thumbnail_url || null,
+    collection_id: artifact.collection_id,
   })
   
   const [isImageFullscreen, setIsImageFullscreen] = useState(false)
@@ -96,6 +98,7 @@ export function ArtifactSwipeContent({
   const [editImageCaptions, setEditImageCaptions] = useState<Record<string, string>>(artifact.image_captions || {})
   const [editVideoSummaries, setEditVideoSummaries] = useState<Record<string, string>>(artifact.video_summaries || {})
   const [editThumbnailUrl, setEditThumbnailUrl] = useState<string | null>(artifact.thumbnail_url || null) 
+  const [editCollectionId, setEditCollectionId] = useState<string>(artifact.collection_id)
   
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -142,7 +145,8 @@ export function ArtifactSwipeContent({
     JSON.stringify(editMediaUrls) !== JSON.stringify(originalState.media_urls) ||
     JSON.stringify(editImageCaptions) !== JSON.stringify(originalState.image_captions) ||
     JSON.stringify(editVideoSummaries) !== JSON.stringify(originalState.video_summaries) ||
-    editThumbnailUrl !== originalState.thumbnail_url
+    editThumbnailUrl !== originalState.thumbnail_url ||
+    editCollectionId !== originalState.collection_id
   )
 
   useEffect(() => {
@@ -169,6 +173,7 @@ export function ArtifactSwipeContent({
           image_captions: editImageCaptions,
           video_summaries: editVideoSummaries,
           thumbnail_url: editThumbnailUrl, 
+          collectionId: editCollectionId,
         },
         originalState.media_urls
       )
@@ -340,6 +345,7 @@ export function ArtifactSwipeContent({
     setEditImageCaptions(originalState.image_captions)
     setEditVideoSummaries(originalState.video_summaries)
     setEditThumbnailUrl(originalState.thumbnail_url) 
+    setEditCollectionId(originalState.collection_id)
     setCancelDialogOpen(false)
     router.push(`/artifacts/${artifact.slug}`)
   }
@@ -440,6 +446,18 @@ export function ArtifactSwipeContent({
               placeholder="Enter artifact title"
               className="text-lg font-semibold"
             />
+          </section>
+        )}
+
+        {isEditMode && (
+          <section className="space-y-2">
+            <CollectionSelector
+              userId={userId}
+              value={editCollectionId}
+              onChange={setEditCollectionId}
+              disabled={isSaving}
+            />
+            <p className="text-sm text-muted-foreground">Move this artifact to a different collection</p>
           </section>
         )}
 
