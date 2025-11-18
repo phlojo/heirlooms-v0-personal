@@ -73,11 +73,36 @@ export async function createArtifact(input: CreateArtifactInput): Promise<{ erro
     })
   }
 
-  const baseSlug = generateSlug(validatedFields.data.title)
-  const slug = await generateUniqueSlug(baseSlug, async (slug) => {
-    const { data } = await supabase.from("artifacts").select("id").eq("slug", slug).maybeSingle()
-    return !!data
-  })
+  const timestamp = Date.now()
+  const baseSlug = `${generateSlug(validatedFields.data.title)}-${timestamp}`
+  
+  let slug = baseSlug
+  let attempts = 0
+  const maxAttempts = 5
+  
+  // Retry logic to handle potential race conditions
+  while (attempts < maxAttempts) {
+    const { data: existingSlug } = await supabase
+      .from("artifacts")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle()
+    
+    if (!existingSlug) {
+      // Slug is available, proceed
+      break
+    }
+    
+    // Collision detected, append counter
+    attempts++
+    slug = `${baseSlug}-${attempts}`
+    console.log(`[v0] CREATE ARTIFACT - Slug collision detected, trying: ${slug}`)
+  }
+  
+  if (attempts >= maxAttempts) {
+    console.error("[v0] CREATE ARTIFACT - Failed to generate unique slug after max attempts")
+    return { error: "Unable to create artifact. Please try again." }
+  }
 
   const thumbnailUrl = validatedFields.data.thumbnail_url || getPrimaryVisualMediaUrl(validMediaUrls)
   console.log("[v0] CREATE ARTIFACT - Thumbnail selection:", {
@@ -94,20 +119,27 @@ export async function createArtifact(input: CreateArtifactInput): Promise<{ erro
     media_urls: validMediaUrls,
     user_id: user.id,
     slug,
-    thumbnail_url: thumbnailUrl, // Use user's selection or auto-selected
+    thumbnail_url: thumbnailUrl,
   }
 
   console.log("[v0] CREATE ARTIFACT - Inserting into DB:", {
     ...insertData,
     media_urls: `[${insertData.media_urls.length} URLs]`,
     hasVisualMedia: !!thumbnailUrl,
-    thumbnail_url: thumbnailUrl || "NULL"
+    thumbnail_url: thumbnailUrl || "NULL",
+    slug
   })
 
   const { data, error } = await supabase.from("artifacts").insert(insertData).select().single()
 
   if (error) {
     console.error("[v0] CREATE ARTIFACT - Database error:", error)
+    
+    if (error.code === '23505' && error.message?.includes('artifacts_slug_key')) {
+      console.error("[v0] CREATE ARTIFACT - Slug collision occurred despite checks:", slug)
+      return { error: "Unable to create artifact due to a naming conflict. Please try again." }
+    }
+    
     return { error: "Failed to create artifact. Please try again." }
   }
 
