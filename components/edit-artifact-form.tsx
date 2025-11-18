@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { TranscriptionInput } from "@/components/transcription-input"
 import { useRouter } from 'next/navigation'
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { X, Upload, ImageIcon, Loader2, Star } from 'lucide-react'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2 } from 'lucide-react'
@@ -53,6 +53,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
   const [selectedThumbnailUrl, setSelectedThumbnailUrl] = useState<string | null>(artifact.thumbnail_url || null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const newlyUploadedUrlsRef = useRef<string[]>([])
 
   const form = useForm<FormData>({
     resolver: zodResolver(updateArtifactSchema),
@@ -158,74 +159,93 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       return
     }
 
-    setIsUploading(true)
-    setError(null)
+    const handleMediaUpload = async (files: FileList | null) => {
+      if (!files) return
 
-    try {
       const currentUrls = form.getValues("media_urls") || []
       const newUrls: string[] = []
 
-      for (const file of files) {
-        const signatureResult = await generateCloudinarySignature(userId, file.name)
+      try {
+        setIsUploading(true)
+        setError("")
 
-        if (signatureResult.error || !signatureResult.signature) {
-          throw new Error(signatureResult.error || "Failed to generate upload signature")
-        }
+        const uploadPromises = Array.from(files).map(async (file) => {
+          const signatureResult = await generateCloudinarySignature(userId, file.name)
 
-        const formData = new FormData()
-        formData.append("file", file)
-        formData.append("api_key", signatureResult.apiKey!)
-        formData.append("timestamp", signatureResult.timestamp!.toString())
-        formData.append("signature", signatureResult.signature)
-        formData.append("public_id", signatureResult.publicId!)
-
-        if (signatureResult.eager) {
-          formData.append("eager", signatureResult.eager)
-        }
-
-        const uploadUrl = `https://api.cloudinary.com/v1_1/${signatureResult.cloudName}/image/upload`
-
-        const response = await fetch(uploadUrl, {
-          method: "POST",
-          body: formData,
-        })
-
-        if (!response.ok) {
-          const errorText = await response.text()
-
-          let errorData
-          try {
-            errorData = JSON.parse(errorText)
-          } catch {
-            throw new Error(`Upload failed (${response.status}): ${errorText.substring(0, 100)}`)
+          if (signatureResult.error || !signatureResult.signature) {
+            throw new Error(signatureResult.error || "Failed to generate upload signature")
           }
 
-          throw new Error(`Failed to upload ${file.name}: ${errorData.error?.message || "Unknown error"}`)
+          const formData = new FormData()
+          formData.append("file", file)
+          formData.append("api_key", signatureResult.apiKey!)
+          formData.append("timestamp", signatureResult.timestamp!.toString())
+          formData.append("signature", signatureResult.signature)
+          formData.append("public_id", signatureResult.publicId!)
+
+          if (signatureResult.eager) {
+            formData.append("eager", signatureResult.eager)
+          }
+
+          const uploadUrl = `https://api.cloudinary.com/v1_1/${signatureResult.cloudName}/image/upload`
+
+          const response = await fetch(uploadUrl, {
+            method: "POST",
+            body: formData,
+          })
+
+          if (!response.ok) {
+            const errorText = await response.text()
+
+            let errorData
+            try {
+              errorData = JSON.parse(errorText)
+            } catch {
+              throw new Error(`Upload failed (${response.status}): ${errorText.substring(0, 100)}`)
+            }
+
+            throw new Error(`Failed to upload ${file.name}: ${errorData.error?.message || "Unknown error"}`)
+          }
+
+          const data = await response.json()
+          newUrls.push(data.secure_url)
+          
+          console.log('[v0] EDIT FORM: Uploaded file to Cloudinary:', data.secure_url)
+          
+          const resourceType = file.type.startsWith('image/') ? 'image' 
+            : file.type.startsWith('video/') ? 'video' 
+            : 'raw'
+          
+          console.log('[v0] EDIT FORM: Tracking upload with resourceType:', resourceType)
+          const trackResult = await trackPendingUpload(data.secure_url, resourceType)
+          
+          if (trackResult.error) {
+            console.error('[v0] EDIT FORM: Failed to track upload:', trackResult.error)
+          } else {
+            console.log('[v0] EDIT FORM: Successfully tracked upload in pending_uploads table')
+          }
+        })
+
+        await Promise.all(uploadPromises)
+
+        form.setValue("media_urls", [...currentUrls, ...newUrls])
+        newlyUploadedUrlsRef.current.push(...newUrls)
+        setHasUnsavedChanges(true)
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to upload images. Please try with smaller files or fewer images at once.",
+        )
+      } finally {
+        setIsUploading(false)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ""
         }
-
-        const data = await response.json()
-        newUrls.push(data.secure_url)
-        
-        const resourceType = file.type.startsWith('image/') ? 'image' 
-          : file.type.startsWith('video/') ? 'video' 
-          : 'raw'
-        await trackPendingUpload(data.secure_url, resourceType)
-      }
-
-      form.setValue("media_urls", [...currentUrls, ...newUrls])
-      setHasUnsavedChanges(true)
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to upload images. Please try with smaller files or fewer images at once.",
-      )
-    } finally {
-      setIsUploading(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
       }
     }
+
+    await handleMediaUpload(files)
   }
 
   const removeImage = (index: number): void => {

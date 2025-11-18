@@ -17,17 +17,26 @@ export interface PendingUpload {
  * Track a newly uploaded file so we can clean it up if not saved
  */
 export async function trackPendingUpload(url: string, resourceType: 'image' | 'video' | 'raw') {
+  console.log('[v0] trackPendingUpload called with:', { url, resourceType })
+  
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
+    console.error('[v0] trackPendingUpload: No user found')
     return { error: "Unauthorized" }
   }
 
+  console.log('[v0] trackPendingUpload: User ID:', user.id)
+
   const publicId = await extractPublicIdFromUrl(url)
   if (!publicId) {
+    console.error('[v0] trackPendingUpload: Could not extract public ID from URL:', url)
     return { error: "Could not extract public ID from URL" }
   }
+
+  console.log('[v0] trackPendingUpload: Extracted public ID:', publicId)
+  console.log('[v0] trackPendingUpload: Inserting into pending_uploads table...')
 
   const { error } = await supabase
     .from("pending_uploads")
@@ -39,10 +48,11 @@ export async function trackPendingUpload(url: string, resourceType: 'image' | 'v
     })
 
   if (error) {
-    console.error("[v0] Failed to track pending upload:", error)
+    console.error("[v0] trackPendingUpload: Database insert failed:", error)
     return { error: error.message }
   }
 
+  console.log('[v0] trackPendingUpload: Successfully inserted into database')
   return { success: true }
 }
 
