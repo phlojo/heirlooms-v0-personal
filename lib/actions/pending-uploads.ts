@@ -122,7 +122,7 @@ export async function cleanupPendingUploads() {
 
   // Process each upload individually to ensure transactionality
   for (const upload of uploads) {
-    const result = await deleteCloudinaryMedia(upload.cloudinary_public_id)
+    const result = await deleteCloudinaryMedia(upload.cloudinary_public_id, upload.resource_type as 'image' | 'video' | 'raw')
     
     if (!result.error) {
       successCount++
@@ -182,7 +182,7 @@ export async function cleanupExpiredUploads() {
 
   // Process each upload individually to ensure transactionality
   for (const upload of uploads) {
-    const result = await deleteCloudinaryMedia(upload.cloudinary_public_id)
+    const result = await deleteCloudinaryMedia(upload.cloudinary_public_id, upload.resource_type as 'image' | 'video' | 'raw')
     
     if (!result.error) {
       successCount++
