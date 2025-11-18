@@ -1,7 +1,7 @@
 import { auditPendingUploads } from "@/lib/actions/pending-uploads"
 import { NextResponse } from "next/server"
 
-export const maxDuration = 300 // 5 minutes for large audits
+export const maxDuration = 60 // Maximum allowed for cron jobs
 
 /**
  * Cron job endpoint to audit pending uploads
