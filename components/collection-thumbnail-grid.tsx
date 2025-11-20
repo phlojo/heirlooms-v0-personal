@@ -8,7 +8,7 @@ interface CollectionThumbnailGridProps {
 }
 
 export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGridProps) {
-  const validImages = images.filter(img => img && typeof img === 'string' && img.trim() !== '').slice(0, 4)
+  const validImages = images.filter((img) => img && typeof img === "string" && img.trim() !== "").slice(0, 4)
 
   if (validImages.length === 0) {
     return (
@@ -20,14 +20,7 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
 
   if (validImages.length === 1) {
     const thumbnailUrl = getThumbnailUrl(validImages[0])
-    return (
-      <MediaImage
-        src={thumbnailUrl}
-        alt={title}
-        className="h-full w-full"
-        objectFit="cover"
-      />
-    )
+    return <MediaImage src={thumbnailUrl} alt={title} className="h-full w-full" objectFit="contain" />
   }
 
   if (validImages.length === 2) {
@@ -35,15 +28,7 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
       <div className="grid h-full w-full grid-cols-2 gap-1">
         {validImages.map((img) => {
           const thumbnailUrl = getThumbnailUrl(img)
-          return (
-            <MediaImage
-              key={img}
-              src={thumbnailUrl}
-              alt={`${title}`}
-              className="h-full"
-              objectFit="cover"
-            />
-          )
+          return <MediaImage key={img} src={thumbnailUrl} alt={`${title}`} className="h-full" objectFit="cover" />
         })}
       </div>
     )
@@ -54,15 +39,7 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
       <div className="grid h-full w-full grid-cols-3 gap-1">
         {validImages.map((img) => {
           const thumbnailUrl = getThumbnailUrl(img)
-          return (
-            <MediaImage
-              key={img}
-              src={thumbnailUrl}
-              alt={`${title}`}
-              className="h-full"
-              objectFit="cover"
-            />
-          )
+          return <MediaImage key={img} src={thumbnailUrl} alt={`${title}`} className="h-full" objectFit="cover" />
         })}
       </div>
     )
@@ -72,15 +49,7 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
     <div className="grid h-full w-full grid-cols-4 gap-1">
       {validImages.map((img) => {
         const thumbnailUrl = getThumbnailUrl(img)
-        return (
-          <MediaImage
-            key={img}
-            src={thumbnailUrl}
-            alt={`${title}`}
-            className="h-full"
-            objectFit="cover"
-          />
-        )
+        return <MediaImage key={img} src={thumbnailUrl} alt={`${title}`} className="h-full" objectFit="cover" />
       })}
     </div>
   )

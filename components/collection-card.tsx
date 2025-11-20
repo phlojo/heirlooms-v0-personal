@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Author } from "@/components/author"
 import { CollectionThumbnailGrid } from "@/components/collection-thumbnail-grid"
 import { Badge } from "@/components/ui/badge"
-import { Settings } from 'lucide-react'
+import { Settings } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import MediaImage from "@/components/media-image"
 
@@ -33,7 +33,7 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
   return (
     <Link href={href}>
       <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0">
-        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+        <div className="relative aspect-[4/2] overflow-hidden bg-muted">
           <div className="h-full transition-transform group-hover:scale-105">
             {collection.thumbnailImages && collection.thumbnailImages.length > 0 ? (
               <CollectionThumbnailGrid images={collection.thumbnailImages} title={collection.title} />

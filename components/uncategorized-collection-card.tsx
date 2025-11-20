@@ -1,11 +1,13 @@
 "use client"
 
+import type React from "react"
+
 import Link from "next/link"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Author } from "@/components/author"
 import { CollectionThumbnailGrid } from "@/components/collection-thumbnail-grid"
 import { Badge } from "@/components/ui/badge"
-import { Settings } from 'lucide-react'
+import { Settings } from "lucide-react"
 import { useState, useEffect } from "react"
 import MediaImage from "@/components/media-image"
 
@@ -55,7 +57,7 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
   return (
     <Link href={href}>
       <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0 relative">
-        <div className="relative aspect-[4/1.5] overflow-hidden bg-muted">
+        <div className="relative aspect-[4/1] overflow-hidden bg-muted">
           <div className="h-full transition-transform group-hover:scale-105">
             {collection.thumbnailImages && collection.thumbnailImages.length > 0 ? (
               <CollectionThumbnailGrid images={collection.thumbnailImages} title={collection.title} />
@@ -87,11 +89,7 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
           <div className="flex items-center gap-2 flex-wrap pt-1">
             {collection.is_public === false && <Badge variant="purple">Private</Badge>}
             {collection.isUnsorted && (
-              <button
-                onClick={handleGearClick}
-                className="inline-flex"
-                type="button"
-              >
+              <button onClick={handleGearClick} className="inline-flex" type="button">
                 <Badge variant="blue" className="cursor-pointer">
                   <Settings className="h-3 w-3" />
                 </Badge>
