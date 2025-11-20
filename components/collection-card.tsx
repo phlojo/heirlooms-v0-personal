@@ -50,7 +50,7 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
           </div>
         </div>
 
-        <div className="p-6 pt-4 space-y-4">
+        <div className="p-6 space-y-4 py-4 px-4">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold leading-tight line-clamp-1 text-2xl">{collection.title}</h3>
             {collection.is_public === false && <Badge variant="purple">Private</Badge>}
