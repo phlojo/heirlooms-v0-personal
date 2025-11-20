@@ -100,7 +100,9 @@ export function NewCollectionForm() {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="title">Title</Label>
+        <Label htmlFor="title" className="text-sm font-medium">
+          Title
+        </Label>
         <TranscriptionInput
           value={form.watch("title")}
           onChange={(value) => form.setValue("title", value)}
@@ -116,7 +118,9 @@ export function NewCollectionForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description" className="text-sm font-medium">
+          Description
+        </Label>
         <TranscriptionInput
           value={form.watch("description") || ""}
           onChange={(value) => form.setValue("description", value)}

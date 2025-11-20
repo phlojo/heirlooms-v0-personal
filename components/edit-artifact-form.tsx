@@ -2,8 +2,8 @@
 
 import type React from "react"
 import { updateArtifact } from "@/lib/actions/artifacts"
-import { generateCloudinarySignature, extractPublicIdFromUrl } from "@/lib/actions/cloudinary"
-import { trackPendingUpload, markUploadsAsSaved, cleanupPendingUploads } from "@/lib/actions/pending-uploads"
+import { generateCloudinarySignature } from "@/lib/actions/cloudinary"
+import { trackPendingUpload, cleanupPendingUploads } from "@/lib/actions/pending-uploads"
 import { updateArtifactSchema } from "@/lib/schemas"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -11,11 +11,11 @@ import type { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { TranscriptionInput } from "@/components/transcription-input"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
-import { X, Upload, ImageIcon, Loader2, Star } from 'lucide-react'
+import { X, Upload, ImageIcon, Loader2, Star } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2 } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,8 +27,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { normalizeMediaUrls, getFileSizeLimit, formatFileSize, isImageUrl, isVideoUrl } from "@/lib/media"
+import { CollectionSelector } from "@/components/collection-selector"
 
-type FormData = z.infer<typeof updateArtifactSchema>
+type FormData = z.infer<typeof updateArtifactSchema> & { collectionId?: string }
 
 interface EditArtifactFormProps {
   artifact: {
@@ -39,6 +40,7 @@ interface EditArtifactFormProps {
     origin?: string
     media_urls?: string[]
     thumbnail_url?: string | null
+    collection_id: string
   }
   userId: string
 }
@@ -65,6 +67,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       origin: artifact.origin || "",
       media_urls: artifact.media_urls || [],
       thumbnail_url: artifact.thumbnail_url || null,
+      collectionId: artifact.collection_id,
     },
   })
 
@@ -87,18 +90,18 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges && !success) {
         e.preventDefault()
-        e.returnValue = ''
+        e.returnValue = ""
       }
     }
 
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [hasUnsavedChanges, success])
 
   const handleCancel = async () => {
     if (hasUnsavedChanges) {
       setShowUnsavedDialog(true)
-      setPendingNavigation('back')
+      setPendingNavigation("back")
     } else {
       router.back()
     }
@@ -106,16 +109,16 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
 
   const handleConfirmNavigation = async () => {
     console.log("[v0] User confirmed cancel - cleaning up pending uploads")
-    
+
     const result = await cleanupPendingUploads()
     if (result.error) {
       console.error("[v0] Cleanup failed:", result.error)
     } else {
       console.log(`[v0] Cleanup complete: ${result.deletedCount} files deleted`)
     }
-    
+
     setShowUnsavedDialog(false)
-    if (pendingNavigation === 'back') {
+    if (pendingNavigation === "back") {
       router.back()
     } else if (pendingNavigation) {
       router.push(pendingNavigation)
@@ -138,9 +141,9 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     })
 
     if (oversizedFiles.length > 0) {
-      const fileErrors = oversizedFiles.map((f) => 
-        `${f.name} (${formatFileSize(f.size)}, max: ${formatFileSize(getFileSizeLimit(f))})`
-      ).join(", ")
+      const fileErrors = oversizedFiles
+        .map((f) => `${f.name} (${formatFileSize(f.size)}, max: ${formatFileSize(getFileSizeLimit(f))})`)
+        .join(", ")
       setError(`The following files are too large: ${fileErrors}`)
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
@@ -209,20 +212,22 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
 
           const data = await response.json()
           newUrls.push(data.secure_url)
-          
-          console.log('[v0] EDIT FORM: Uploaded file to Cloudinary:', data.secure_url)
-          
-          const resourceType = file.type.startsWith('image/') ? 'image' 
-            : file.type.startsWith('video/') ? 'video' 
-            : 'raw'
-          
-          console.log('[v0] EDIT FORM: Tracking upload with resourceType:', resourceType)
+
+          console.log("[v0] EDIT FORM: Uploaded file to Cloudinary:", data.secure_url)
+
+          const resourceType = file.type.startsWith("image/")
+            ? "image"
+            : file.type.startsWith("video/")
+              ? "video"
+              : "raw"
+
+          console.log("[v0] EDIT FORM: Tracking upload with resourceType:", resourceType)
           const trackResult = await trackPendingUpload(data.secure_url, resourceType)
-          
+
           if (trackResult.error) {
-            console.error('[v0] EDIT FORM: Failed to track upload:', trackResult.error)
+            console.error("[v0] EDIT FORM: Failed to track upload:", trackResult.error)
           } else {
-            console.log('[v0] EDIT FORM: Successfully tracked upload in pending_uploads table')
+            console.log("[v0] EDIT FORM: Successfully tracked upload in pending_uploads table")
           }
         })
 
@@ -254,9 +259,9 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     const urlToRemove = urlsArray[index]
     const newImages = urlsArray.filter((_, i) => i !== index)
     form.setValue("media_urls", normalizeMediaUrls(newImages))
-    
+
     if (selectedThumbnailUrl === urlToRemove) {
-      const newThumbnail = newImages.find(url => isImageUrl(url) || isVideoUrl(url))
+      const newThumbnail = newImages.find((url) => isImageUrl(url) || isVideoUrl(url))
       setSelectedThumbnailUrl(newThumbnail || null)
     }
   }
@@ -280,21 +285,17 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       if (result.error) {
         setError(result.error)
       } else {
-        console.log('[v0] EDIT FORM: Artifact updated successfully, pending uploads cleaned up server-side')
-        
+        console.log("[v0] EDIT FORM: Artifact updated successfully, pending uploads cleaned up server-side")
+
         setSuccess(true)
         setHasUnsavedChanges(false)
-        
+
         setTimeout(() => {
           router.push(`/artifacts/${result.slug}`)
         }, 1500)
       }
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to update artifact. Please try again later.",
-      )
+      setError(err instanceof Error ? err.message : "Failed to update artifact. Please try again later.")
     }
   }
 
@@ -333,6 +334,23 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
                     entityType="artifact"
                   />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="collectionId"
+            render={({ field }) => (
+              <FormItem>
+                <CollectionSelector
+                  userId={userId}
+                  value={field.value || ""}
+                  onChange={field.onChange}
+                  disabled={form.formState.isSubmitting || isUploading}
+                />
+                <FormDescription>Move this artifact to a different collection</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -388,7 +406,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
                 {uploadedImages.map((url) => {
                   const canBeThumbnail = isImageUrl(url) || isVideoUrl(url)
                   const isSelectedThumbnail = selectedThumbnailUrl === url
-                  
+
                   return (
                     <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
                       <img
@@ -401,8 +419,8 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
                           type="button"
                           onClick={() => handleSelectThumbnail(url)}
                           className={`absolute left-2 top-2 rounded-full p-1.5 shadow-md transition-all ${
-                            isSelectedThumbnail 
-                              ? "bg-yellow-500 text-white scale-110" 
+                            isSelectedThumbnail
+                              ? "bg-yellow-500 text-white scale-110"
                               : "bg-white/90 text-gray-600 hover:bg-yellow-100 hover:text-yellow-600"
                           }`}
                           title={isSelectedThumbnail ? "Selected as thumbnail" : "Set as thumbnail"}
@@ -454,7 +472,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
               variant="outline"
               onClick={handleCancel}
               disabled={form.formState.isSubmitting || isUploading}
-              className="flex-1"
+              className="flex-1 bg-transparent"
             >
               Cancel
             </Button>
