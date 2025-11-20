@@ -31,7 +31,7 @@ export function HomeCard({ title, description, href, backgroundImage }: HomeCard
 
       <div className="relative z-10 pr-10">
         <h2 className={`font-semibold text-2xl ${backgroundImage ? "text-white" : ""}`}>{title}</h2>
-        <p className={`mt-2 text-sm ${backgroundImage ? "text-white/90" : "text-muted-foreground"}`}>{description}</p>
+        <p className={`mt-2 text-sm mr-8 ${backgroundImage ? "text-white/90" : "text-muted-foreground"}`}>{description}</p>
       </div>
 
       <div
