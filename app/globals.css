@@ -182,8 +182,7 @@
     -webkit-tap-highlight-color: transparent;
     /* Improve touch scrolling */
     -webkit-overflow-scrolling: touch;
-    /* Prevent horizontal scroll globally */
-    overflow-x: clip;
+    /* Remove overflow-x: clip from html - it breaks sticky positioning */
   }
 
   body {
@@ -196,7 +195,8 @@
     touch-action: manipulation;
     /* Ensure no horizontal overflow */
     max-width: 100vw;
-    overflow-x: clip;
+    /* Use overflow-x: hidden instead of clip - more compatible with sticky positioning */
+    overflow-x: hidden;
   }
 
   /* Optimize input focusing to prevent zoom */
