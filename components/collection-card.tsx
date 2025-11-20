@@ -51,7 +51,7 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
         </div>
 
         <CardHeader className="pb-0">
-          <div className="flex items-center gap-2 flex-wrap pb-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold leading-tight line-clamp-1 text-2xl pb-0 pt-2">{collection.title}</h3>
             {collection.is_public === false && <Badge variant="purple">Private</Badge>}
             {collection.isUnsorted && (
