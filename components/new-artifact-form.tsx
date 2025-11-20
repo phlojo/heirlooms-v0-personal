@@ -165,7 +165,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
             name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-lg font-semibold">Title</FormLabel>
+                <FormLabel className="text-sm font-medium">Title</FormLabel>
                 <FormControl>
                   <TranscriptionInput
                     value={field.value}
@@ -208,7 +208,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-lg font-semibold">Description</FormLabel>
+                <FormLabel className="text-sm font-medium">Description</FormLabel>
                 <FormControl>
                   <TranscriptionInput
                     value={field.value}
@@ -233,7 +233,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
         <section className="space-y-2 px-6 lg:px-8">
           <Collapsible open={isAttributesOpen} onOpenChange={setIsAttributesOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
-              <h2 className="text-lg font-semibold text-foreground">Attributes</h2>
+              <h2 className="text-sm font-medium text-foreground">Attributes</h2>
               <ChevronDown
                 className={`h-5 w-5 text-muted-foreground transition-transform ${isAttributesOpen ? "rotate-180" : ""}`}
               />
@@ -278,7 +278,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
 
         <section className="space-y-6 my-6">
           <div className="flex items-center justify-between px-6 lg:px-8">
-            <h2 className="text-lg font-semibold text-foreground">Media Items</h2>
+            <h2 className="text-sm font-medium text-foreground">Media Items</h2>
             <Button
               type="button"
               onClick={() => setIsAddMediaOpen(true)}
@@ -454,7 +454,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
         <section className="space-y-2 px-6 lg:px-8">
           <Collapsible open={isProvenanceOpen} onOpenChange={setIsProvenanceOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
-              <h2 className="text-lg font-semibold text-foreground">Provenance</h2>
+              <h2 className="text-sm font-medium text-foreground">Provenance</h2>
               <ChevronDown
                 className={`h-5 w-5 text-muted-foreground transition-transform ${isProvenanceOpen ? "rotate-180" : ""}`}
               />

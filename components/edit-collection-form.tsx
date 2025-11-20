@@ -176,7 +176,9 @@ export function EditCollectionForm({ collection }: EditCollectionFormProps) {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="title">Title</Label>
+          <Label htmlFor="title" className="text-sm font-medium">
+            Title
+          </Label>
           <TranscriptionInput
             value={form.watch("title")}
             onChange={(value) => form.setValue("title", value)}
@@ -192,7 +194,9 @@ export function EditCollectionForm({ collection }: EditCollectionFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
+          <Label htmlFor="description" className="text-sm font-medium">
+            Description
+          </Label>
           <TranscriptionInput
             value={form.watch("description") || ""}
             onChange={(value) => form.setValue("description", value)}
@@ -241,7 +245,7 @@ export function EditCollectionForm({ collection }: EditCollectionFormProps) {
         <div className="border-t pt-6 mt-8">
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
+              <h3 className="text-sm font-medium text-destructive">Danger Zone</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 Permanently delete this collection. This action cannot be undone.
               </p>

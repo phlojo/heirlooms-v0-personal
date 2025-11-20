@@ -460,7 +460,7 @@ export function ArtifactSwipeContent({
 
         {isEditMode && (
           <section className="space-y-2">
-            <label htmlFor="title" className="text-lg font-semibold text-foreground">
+            <label htmlFor="title" className="text-sm font-medium text-foreground">
               Title
             </label>
             <Input
@@ -468,7 +468,6 @@ export function ArtifactSwipeContent({
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
               placeholder="Enter artifact title"
-              className="text-lg font-semibold"
             />
           </section>
         )}
@@ -505,7 +504,7 @@ export function ArtifactSwipeContent({
 
         {/* Description Section */}
         <section className="space-y-4">
-          {isEditMode && <h2 className="text-lg font-semibold text-foreground">Description</h2>}
+          {isEditMode && <h2 className="text-sm font-medium text-foreground">Description</h2>}
           {isEditMode ? (
             <TranscriptionInput
               value={editDescription}
@@ -534,7 +533,7 @@ export function ArtifactSwipeContent({
         <section className="space-y-2">
           <Collapsible open={isAttributesOpen} onOpenChange={setIsAttributesOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
-              <h2 className="text-lg font-semibold text-foreground">Attributes</h2>
+              <h2 className="text-sm font-medium text-foreground">Attributes</h2>
               <ChevronDown
                 className={`h-5 w-5 text-muted-foreground transition-transform ${isAttributesOpen ? "rotate-180" : ""}`}
               />
@@ -555,7 +554,7 @@ export function ArtifactSwipeContent({
       <section className="space-y-6 my-6">
         {isEditMode && (
           <div className="flex items-center justify-between px-6 lg:px-8">
-            <h2 className="text-lg font-semibold text-foreground">Media Items</h2>
+            <h2 className="text-sm font-medium text-foreground">Media Items</h2>
             {canEdit && (
               <Button
                 onClick={() => setIsAddMediaOpen(true)}
@@ -578,7 +577,7 @@ export function ArtifactSwipeContent({
                   <div key={url} className="space-y-3">
                     {isEditMode && (
                       <div className="flex items-center justify-between px-6 lg:px-8">
-                        <h3 className="text-sm font-semibold">
+                        <h3 className="text-sm font-medium">
                           Audio{audioUrlsFiltered.length > 1 ? ` ${audioUrlsFiltered.indexOf(url) + 1}` : ""}
                         </h3>
                         <Button
@@ -619,7 +618,7 @@ export function ArtifactSwipeContent({
                   <div key={url} className="space-y-3">
                     {isEditMode && (
                       <div className="flex items-center justify-between px-6 lg:px-8">
-                        <h3 className="text-sm font-semibold">
+                        <h3 className="text-sm font-medium">
                           Video{videoUrlsFiltered.length > 1 ? ` ${videoUrlsFiltered.indexOf(url) + 1}` : ""}
                         </h3>
                         <div className="flex items-center gap-2">
@@ -733,7 +732,7 @@ export function ArtifactSwipeContent({
                   <div key={url} className="space-y-3">
                     {isEditMode && (
                       <div className="flex items-center justify-between px-6 lg:px-8">
-                        <h3 className="text-sm font-semibold">
+                        <h3 className="text-sm font-medium">
                           Photo{imageUrlsFiltered.length > 1 ? ` ${imageUrlsFiltered.indexOf(url) + 1}` : ""}
                         </h3>
                         <div className="flex items-center gap-2">
@@ -845,7 +844,7 @@ export function ArtifactSwipeContent({
         <section className="pb-8">
           <Collapsible open={isProvenanceOpen} onOpenChange={setIsProvenanceOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
-              <h2 className="text-lg font-semibold text-foreground">Provenance</h2>
+              <h2 className="text-sm font-medium text-foreground">Provenance</h2>
               <ChevronDown
                 className={`h-5 w-5 text-muted-foreground transition-transform ${isProvenanceOpen ? "rotate-180" : ""}`}
               />
@@ -935,7 +934,7 @@ export function ArtifactSwipeContent({
           <section className="border-t pt-6 pb-8">
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
+                <h3 className="text-sm font-medium text-destructive">Danger Zone</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   Permanently delete this artifact. This action cannot be undone and all media will be lost.
                 </p>
