@@ -514,7 +514,7 @@ export function ArtifactSwipeContent({
               fieldType="description"
               userId={userId}
               entityType="artifact"
-              rows={8}
+              rows={4}
             />
           ) : (
             <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">

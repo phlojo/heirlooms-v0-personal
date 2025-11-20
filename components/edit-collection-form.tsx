@@ -205,7 +205,7 @@ export function EditCollectionForm({ collection }: EditCollectionFormProps) {
             fieldType="description"
             userId={userId}
             entityType="collection"
-            rows={6}
+            rows={4}
           />
           {form.formState.errors.description && (
             <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>

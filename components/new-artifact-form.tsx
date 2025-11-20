@@ -218,7 +218,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
                     fieldType="description"
                     userId={userId}
                     entityType="artifact"
-                    rows={8}
+                    rows={4}
                   />
                 </FormControl>
                 <FormDescription>
