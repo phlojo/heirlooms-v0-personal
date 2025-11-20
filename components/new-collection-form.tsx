@@ -125,7 +125,7 @@ export function NewCollectionForm() {
           fieldType="description"
           userId={userId}
           entityType="collection"
-          rows={4}
+          rows={6}
         />
         {form.formState.errors.description && (
           <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>

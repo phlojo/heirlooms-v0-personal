@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,7 @@ import { TranscriptionInput } from "@/components/transcription-input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Loader2, CheckCircle2, Trash2 } from 'lucide-react'
+import { AlertCircle, Loader2, CheckCircle2, Trash2 } from "lucide-react"
 import { updateCollection, deleteCollection } from "@/lib/actions/collections"
 import { collectionSchema, type CollectionInput } from "@/lib/schemas"
 import {
@@ -201,7 +201,7 @@ export function EditCollectionForm({ collection }: EditCollectionFormProps) {
             fieldType="description"
             userId={userId}
             entityType="collection"
-            rows={4}
+            rows={6}
           />
           {form.formState.errors.description && (
             <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>

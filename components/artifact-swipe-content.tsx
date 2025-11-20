@@ -507,11 +507,15 @@ export function ArtifactSwipeContent({
         <section className="space-y-4">
           {isEditMode && <h2 className="text-lg font-semibold text-foreground">Description</h2>}
           {isEditMode ? (
-            <Input
+            <TranscriptionInput
               value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              placeholder="Enter artifact description"
-              className="min-h-[120px] text-sm"
+              onChange={setEditDescription}
+              placeholder="Tell the story of this artifact..."
+              type="textarea"
+              fieldType="description"
+              userId={userId}
+              entityType="artifact"
+              rows={8}
             />
           ) : (
             <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
