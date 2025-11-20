@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from 'next/navigation'
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, FolderOpen, BookOpen, User } from 'lucide-react'
+import { Home, FolderOpen, BookOpen, User } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { AnimatedArtifactsIcon } from "./animated-artifacts-icon"
 
@@ -67,7 +67,7 @@ export default function BottomNav() {
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50",
+        "fixed left-0 right-0 bottom-0 z-50",
         "border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
         "lg:hidden",
       )}
@@ -77,11 +77,15 @@ export default function BottomNav() {
         height: "calc(80px + max(env(safe-area-inset-bottom, 0px), 12px))",
         /* Prevent momentum scroll from affecting nav */
         touchAction: "manipulation",
+        /* Prevent positioning shift during scroll */
+        transform: "translateZ(0)",
+        willChange: "auto",
       }}
     >
       <div className="flex h-20 items-center justify-around px-2">
         {navItems.map((item) => {
-          const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
+          const isActive =
+            item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(item.href + "/")
 
           return (
             <Link

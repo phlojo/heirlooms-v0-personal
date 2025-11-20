@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Author } from "@/components/author"
 import { CollectionThumbnailGrid } from "@/components/collection-thumbnail-grid"
 import { Badge } from "@/components/ui/badge"
@@ -50,9 +50,9 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
           </div>
         </div>
 
-        <CardHeader className="pb-0">
-          <div className="flex items-center gap-2 flex-wrap pb-2">
-            <h3 className="font-semibold leading-tight line-clamp-1 text-2xl pb-0 pt-2">{collection.title}</h3>
+        <div className="p-6 py-4 px-4 space-y-2 opacity-100">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold leading-tight line-clamp-1 text-2xl">{collection.title}</h3>
             {collection.is_public === false && <Badge variant="purple">Private</Badge>}
             {collection.isUnsorted && (
               <TooltipProvider delayDuration={200}>
@@ -84,19 +84,18 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
               </TooltipProvider>
             )}
           </div>
-        </CardHeader>
 
-        <CardContent className="pt-0 pb-4 space-y-4 -mt-2">
           {collection.description && (
             <p className="text-sm text-muted-foreground line-clamp-3">{collection.description}</p>
           )}
-          <div className="flex items-center justify-between">
+
+          <div className="flex items-center justify-between mt-2">
             <p className="text-sm text-muted-foreground">
               {collection.itemCount} {collection.itemCount === 1 ? "artifact" : "artifacts"}
             </p>
             <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />
           </div>
-        </CardContent>
+        </div>
       </Card>
     </Link>
   )
