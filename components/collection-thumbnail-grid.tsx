@@ -20,7 +20,9 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
 
   if (validImages.length === 1) {
     const thumbnailUrl = getThumbnailUrl(validImages[0])
-    return <MediaImage src={thumbnailUrl} alt={title} className="h-full w-full" objectFit="contain" />
+    return (
+      <MediaImage src={thumbnailUrl} alt={title} className="h-full w-full" objectFit="cover" objectPosition="center" />
+    )
   }
 
   if (validImages.length === 2) {
