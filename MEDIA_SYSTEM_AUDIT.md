@@ -36,7 +36,8 @@ Comprehensive audit of the Heirlooms media system completed. All 6 critical cond
 ### Status: FULLY COMPLIANT (FIXED)
 
 **Critical Fixes Applied:**
-1. ✅ **artifact-swipe-content.tsx:105** - Removed `.sort()` from dirty detection
+<!-- Updated file reference from artifact-swipe-content to artifact-detail-view -->
+1. ✅ **artifact-detail-view.tsx:105** - Removed `.sort()` from dirty detection
    - Before: `JSON.stringify(editMediaUrls.sort()) !== JSON.stringify(originalState.media_urls.sort())`
    - After: `JSON.stringify(editMediaUrls) !== JSON.stringify(originalState.media_urls)`
 
@@ -184,7 +185,8 @@ No index-based keys remain in media rendering:
 - ✅ `components/collection-thumbnail-grid.tsx` - Uses `key={url}`
 - ✅ `components/edit-artifact-form.tsx` - Uses `key={url}`
 - ✅ `components/new-artifact-form.tsx` - Uses `key={url}`
-- ✅ `components/artifact-swipe-content.tsx` - Uses `key={url}`
+<!-- Updated file reference from artifact-swipe-content to artifact-detail-view -->
+- ✅ `components/artifact-detail-view.tsx` - Uses `key={url}`
 - ✅ `components/artifact/ArtifactAiPanel.tsx` - Uses `key={url}`
 
 **Exception:** Loading skeletons use `key={i}` (acceptable - static arrays)
@@ -307,7 +309,8 @@ const urlsArray = Array.isArray(currentUrls) ? currentUrls : []
 ## 📊 Code Quality Metrics
 
 ### Files Modified: 5
-- `components/artifact-swipe-content.tsx` - Removed .sort() from dirty check
+<!-- Updated file reference from artifact-swipe-content to artifact-detail-view -->
+- `components/artifact-detail-view.tsx` - Removed .sort() from dirty check
 - `components/edit-artifact-form.tsx` - Removed .sort() from dirty check
 - `lib/media.ts` - Already compliant (no changes needed)
 - `components/new-artifact-form.tsx` - Already compliant (no changes needed)
