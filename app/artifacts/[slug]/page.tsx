@@ -1,8 +1,8 @@
 import { AppLayout } from "@/components/app-layout"
-import { notFound } from 'next/navigation'
+import { notFound } from "next/navigation"
 import { getCurrentUser } from "@/lib/supabase/server"
 import { getArtifactBySlug, getAdjacentArtifacts } from "@/lib/actions/artifacts"
-import { ArtifactSwipeContent } from "@/components/artifact-swipe-content"
+import { ArtifactDetailView } from "@/components/artifact-detail-view"
 import { isCurrentUserAdmin } from "@/lib/utils/admin"
 
 export default async function ArtifactDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -24,7 +24,10 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
     notFound()
   }
 
-  const { previous, next, currentPosition, totalCount } = await getAdjacentArtifacts(artifact.id, artifact.collection_id)
+  const { previous, next, currentPosition, totalCount } = await getAdjacentArtifacts(
+    artifact.id,
+    artifact.collection_id,
+  )
 
   const collectionHref = artifact.collection?.slug
     ? `/collections/${artifact.collection.slug}`
@@ -32,7 +35,7 @@ export default async function ArtifactDetailPage({ params }: { params: Promise<{
 
   return (
     <AppLayout user={user}>
-      <ArtifactSwipeContent
+      <ArtifactDetailView
         artifact={artifact}
         previous={previous}
         next={next}

@@ -49,7 +49,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
-interface ArtifactSwipeContentProps {
+interface ArtifactDetailViewProps {
   artifact: any
   previous: any
   next: any
@@ -62,7 +62,7 @@ interface ArtifactSwipeContentProps {
   nextUrl: string | null
 }
 
-export function ArtifactSwipeContent({
+export function ArtifactDetailView({
   artifact,
   previous,
   next,
@@ -73,7 +73,7 @@ export function ArtifactSwipeContent({
   isEditMode = false,
   previousUrl,
   nextUrl,
-}: ArtifactSwipeContentProps) {
+}: ArtifactDetailViewProps) {
   const [originalState] = useState({
     title: artifact.title,
     description: artifact.description || "",

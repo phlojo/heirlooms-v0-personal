@@ -1,8 +1,8 @@
-import { notFound, redirect } from 'next/navigation'
+import { notFound, redirect } from "next/navigation"
 import { getCurrentUser } from "@/lib/supabase/server"
 import { getArtifactBySlug, getAdjacentArtifacts } from "@/lib/actions/artifacts"
 import { AppLayout } from "@/components/app-layout"
-import { ArtifactSwipeContent } from "@/components/artifact-swipe-content"
+import { ArtifactDetailView } from "@/components/artifact-detail-view"
 import { isCurrentUserAdmin } from "@/lib/utils/admin"
 import { ArtifactStickyNav } from "@/components/artifact-sticky-nav"
 
@@ -26,7 +26,10 @@ export default async function EditArtifactPage({ params }: { params: Promise<{ s
     notFound()
   }
 
-  const { previous, next, currentPosition, totalCount } = await getAdjacentArtifacts(artifact.id, artifact.collection_id)
+  const { previous, next, currentPosition, totalCount } = await getAdjacentArtifacts(
+    artifact.id,
+    artifact.collection_id,
+  )
 
   const collectionHref = artifact.collection?.slug
     ? `/collections/${artifact.collection.slug}`
@@ -52,8 +55,8 @@ export default async function EditArtifactPage({ params }: { params: Promise<{ s
         isCurrentUserAdmin={isAdmin}
         contentOwnerId={artifact.user_id}
       />
-      
-      <ArtifactSwipeContent
+
+      <ArtifactDetailView
         artifact={artifact}
         previous={previous}
         next={next}

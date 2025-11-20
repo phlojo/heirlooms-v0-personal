@@ -54,7 +54,8 @@ useEffect(() => {
 ### Files to Watch
 When modifying these files, ensure no hydration-causing code is introduced:
 - `components/artifact-swipe-wrapper.tsx`
-- `components/artifact-swipe-content.tsx`
+<!-- Updated file reference from artifact-swipe-content to artifact-detail-view -->
+- `components/artifact-detail-view.tsx`
 - `components/artifact-image-with-viewer.tsx`
 - `app/artifacts/[id]/page.tsx`
 
@@ -65,4 +66,3 @@ To verify this bug doesn't return:
 3. Check browser console for React hydration errors (#418)
 4. Verify each image displays correctly (not duplicated)
 5. Check that edit mode shows correct thumbnails
-</markdown>
