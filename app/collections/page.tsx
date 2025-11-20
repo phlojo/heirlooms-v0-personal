@@ -17,8 +17,8 @@ export default async function CollectionsPage() {
   return (
     <AppLayout user={user}>
       <div className="space-y-4">
-        <div>
-          <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
+        <div className="min-w-0">
+          <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight min-w-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-gradient-to-br from-primary to-chart-2 text-primary-foreground shadow-sm rounded-sm">
               <svg
                 width="24"
@@ -45,7 +45,7 @@ export default async function CollectionsPage() {
                 <path d="M66.6001 43.3L66.6001 28.9L54.1001 21.6L54.1001 36.1L66.6001 43.3Z" fill="currentColor" />
               </svg>
             </div>
-            Collections
+            <span className="min-w-0">Collections</span>
             <div className="ml-auto lg:hidden">
               <ThemeToggle />
             </div>

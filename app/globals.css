@@ -48,9 +48,8 @@
   --shadow-opacity: 0.08;
   --shadow-color: #000000;
 
-  /* Bottom nav height for mobile spacing */
-  /* Increased from 80px to 96px to match new bottom nav height (80px + 16px padding) */
-  --bottom-nav-height: 96px; /* Base height (80px) + safe area padding (16px min) */
+  /* Updated bottom nav height to match dynamic calculation */
+  --bottom-nav-height: calc(80px + max(env(safe-area-inset-bottom, 0px), 12px));
 }
 
 .dark {
@@ -183,6 +182,8 @@
     -webkit-tap-highlight-color: transparent;
     /* Improve touch scrolling */
     -webkit-overflow-scrolling: touch;
+    /* Prevent horizontal scroll globally */
+    overflow-x: clip;
   }
 
   body {
@@ -193,6 +194,9 @@
     overscroll-behavior-y: none;
     /* Remove default tap delay on mobile */
     touch-action: manipulation;
+    /* Ensure no horizontal overflow */
+    max-width: 100vw;
+    overflow-x: clip;
   }
 
   /* Optimize input focusing to prevent zoom */
