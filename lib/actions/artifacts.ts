@@ -227,9 +227,11 @@ export async function getArtifactsByCollection(collectionId: string) {
       thumbnail_url,
       user_id,
       collection_id,
+      type_id,
       created_at,
       updated_at,
-      collection:collections(id, title)
+      collection:collections(id, title),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("collection_id", collectionId)
     .order("created_at", { ascending: false })
@@ -313,7 +315,8 @@ export async function getAllPublicArtifactsPaginated(
     .from("artifacts")
     .select(`
       *,
-      collection:collections!inner(id, title, is_public)
+      collection:collections!inner(id, title, is_public),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("collection.is_public", true)
 
@@ -361,7 +364,8 @@ export async function getMyArtifactsPaginated(userId: string, limit = 24, cursor
     .from("artifacts")
     .select(`
       *,
-      collection:collections(id, title, is_public)
+      collection:collections(id, title, is_public),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("user_id", userId)
 
@@ -400,7 +404,8 @@ export async function getAllPublicArtifacts(excludeUserId?: string) {
     .from("artifacts")
     .select(`
       *,
-      collection:collections!inner(id, title, is_public)
+      collection:collections!inner(id, title, is_public),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("collection.is_public", true)
 
@@ -433,7 +438,8 @@ export async function getMyArtifacts(userId: string) {
     .from("artifacts")
     .select(`
       *,
-      collection:collections(id, title, is_public)
+      collection:collections(id, title, is_public),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
@@ -769,7 +775,8 @@ export async function getArtifactBySlug(artifactSlug: string) {
     .from("artifacts")
     .select(`
       *,
-      collection:collections(id, title, is_public, slug)
+      collection:collections(id, title, is_public, slug),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("slug", artifactSlug)
     .single()
