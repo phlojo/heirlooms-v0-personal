@@ -1,11 +1,11 @@
-import { Package, Car, Watch, Camera, Wine, Dices, Type as type, type LucideIcon } from 'lucide-react'
+import { Package, Car, Watch, Wine, Dices, Atom as Toy, type LucideIcon } from "lucide-react"
 
 /**
  * Artifact Type Icon Configuration
- * 
+ *
  * This config maps conceptual artifact/collection types to their corresponding icons.
  * Currently used only for the Artifacts bottom-nav icon animation.
- * 
+ *
  * Future use:
  * - When we add collection_type and artifact_type to the database
  * - For filtering artifacts by type
@@ -13,29 +13,22 @@ import { Package, Car, Watch, Camera, Wine, Dices, Type as type, type LucideIcon
  * - For user profile preferences
  */
 
-export type ArtifactType = "cars" | "watches" | "cameras" | "whiskey" | "toys" | "general"
+export type ArtifactType = "general" | "cars" | "watches" | "whiskey" | "toys" | "games"
 
 export const artifactTypeIcons: Record<ArtifactType, LucideIcon> = {
   general: Package,
   cars: Car,
   watches: Watch,
-  cameras: Camera,
   whiskey: Wine,
-  toys: Dices,
+  toys: Toy,
+  games: Dices,
 }
 
 /**
  * Icon cycle order for the Artifacts bottom-nav animation
  * Adjust this array to change which icons appear and in what order
  */
-export const artifactIconCycle: ArtifactType[] = [
-  "general",
-  "cars",
-  "watches",
-  "cameras",
-  "whiskey",
-  "toys",
-]
+export const artifactIconCycle: ArtifactType[] = ["general", "cars", "watches", "whiskey", "toys", "games"]
 
 /**
  * Get icon component for a given artifact type
