@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 
@@ -29,6 +29,10 @@ export function AudioPlayer({ src, title }: AudioPlayerProps) {
     const handleError = (e: Event) => {
       console.error("[v0] Audio playback error:", e)
       console.error("[v0] Audio src:", src)
+      if (audioRef.current?.error) {
+        console.error("[v0] Audio error code:", audioRef.current.error.code)
+        console.error("[v0] Audio error message:", audioRef.current.error.message)
+      }
       setHasError(true)
     }
 
@@ -127,10 +131,10 @@ export function AudioPlayer({ src, title }: AudioPlayerProps) {
 
         {/* Controls */}
         <div className="flex items-center gap-4">
-          <Button 
-            onClick={togglePlay} 
-            size="icon" 
-            variant="default" 
+          <Button
+            onClick={togglePlay}
+            size="icon"
+            variant="default"
             className="h-10 w-10 shrink-0"
             aria-label={isPlaying ? "Pause audio" : "Play audio"}
           >
@@ -138,10 +142,10 @@ export function AudioPlayer({ src, title }: AudioPlayerProps) {
           </Button>
 
           <div className="flex flex-1 items-center gap-2">
-            <Button 
-              onClick={toggleMute} 
-              size="icon" 
-              variant="ghost" 
+            <Button
+              onClick={toggleMute}
+              size="icon"
+              variant="ghost"
               className="h-8 w-8 shrink-0"
               aria-label={isMuted ? "Unmute audio" : "Mute audio"}
             >

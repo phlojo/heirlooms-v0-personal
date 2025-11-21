@@ -130,7 +130,7 @@ export function CollectionsTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <div className="sticky top-0 lg:top-16 z-10 -mx-6 bg-background px-6 py-4 flex items-center justify-between border-b lg:-mx-8 lg:px-8 opacity-95">
+      <div className="sticky top-0 lg:top-16 z-10 -mx-3.5 lg:-mx-8 bg-background px-3.5 lg:px-8 py-4 flex items-center justify-between border-b opacity-95">
         <div className="flex items-center gap-2">
           <TabsList>
             <TabsTrigger value="all">Community</TabsTrigger>
@@ -164,7 +164,7 @@ export function CollectionsTabs({
         {allCollectionsList.length > 0 ? (
           <>
             <div
-              className={viewType === "gallery" ? "grid gap-2 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-4"}
+              className={viewType === "gallery" ? "grid gap-2 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-2"}
             >
               {allCollectionsList.map((collection) =>
                 viewType === "gallery" ? (
@@ -210,7 +210,7 @@ export function CollectionsTabs({
         ) : myCollectionsList.length > 0 ? (
           <>
             <div
-              className={viewType === "gallery" ? "grid gap-2 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-4"}
+              className={viewType === "gallery" ? "grid gap-2 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-2"}
             >
               {myCollectionsList.map((collection) =>
                 viewType === "gallery" ? (

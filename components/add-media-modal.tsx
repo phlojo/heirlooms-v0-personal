@@ -1,13 +1,15 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useRef } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Camera, Video, Mic, Upload, X } from 'lucide-react'
+import { Camera, Video, Mic, Upload } from "lucide-react"
 import { AudioRecorder } from "@/components/audio-recorder"
 import { generateCloudinarySignature, generateCloudinaryAudioSignature } from "@/lib/actions/cloudinary"
 import { trackPendingUpload } from "@/lib/actions/pending-uploads"
-import { normalizeMediaUrls, getFileSizeLimit, formatFileSize } from "@/lib/media"
+import { getFileSizeLimit, formatFileSize } from "@/lib/media"
 import { Progress } from "@/components/ui/progress"
 
 interface AddMediaModalProps {
@@ -35,7 +37,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
-  
+
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const videoCameraInputRef = useRef<HTMLInputElement>(null)
 
@@ -75,9 +77,9 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
     })
 
     if (oversizedFiles.length > 0) {
-      const fileErrors = oversizedFiles.map((f) => 
-        `${f.name} (${formatFileSize(f.size)}, max: ${formatFileSize(getFileSizeLimit(f))})`
-      ).join(", ")
+      const fileErrors = oversizedFiles
+        .map((f) => `${f.name} (${formatFileSize(f.size)}, max: ${formatFileSize(getFileSizeLimit(f))})`)
+        .join(", ")
       setError(`The following files are too large: ${fileErrors}`)
       e.target.value = ""
       return
@@ -103,7 +105,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
       for (let i = 0; i < filesArray.length; i++) {
         const file = filesArray[i]
         const fileStartTime = Date.now()
-        
+
         setUploadProgress({
           currentFile: i + 1,
           totalFiles: filesArray.length,
@@ -113,7 +115,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
         })
 
         console.log("[v0] Uploading file:", file.name, file.type, formatFileSize(file.size))
-        
+
         let uploadUrl: string
         let signatureResult: any
 
@@ -142,20 +144,26 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
         formData.append("signature", signatureResult.signature)
         formData.append("public_id", signatureResult.publicId!)
 
+        if (selectedType === "audio" || file.type.startsWith("audio/")) {
+          formData.append("resource_type", "video")
+        } else if (selectedType === "video" || file.type.startsWith("video/")) {
+          formData.append("resource_type", "video")
+        }
+
         if (signatureResult.eager) {
           formData.append("eager", signatureResult.eager)
         }
 
         console.log("[v0] Uploading to:", uploadUrl)
         console.log("[v0] FormData keys:", Array.from(formData.keys()))
-        
+
         const uploadPromise = new Promise<string>((resolve, reject) => {
           const xhr = new XMLHttpRequest()
 
           xhr.upload.addEventListener("progress", (event) => {
             if (event.lengthComputable) {
               const percentComplete = (event.loaded / event.total) * 100
-              
+
               // Calculate estimated time remaining based on current file progress
               const elapsed = Date.now() - fileStartTime
               const uploadSpeed = event.loaded / elapsed // bytes per ms
@@ -166,7 +174,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
               const filesRemaining = filesArray.length - (i + 1)
               const avgFileSize = totalSize / filesArray.length
               const avgTimePerFile = elapsed / (event.loaded / file.size)
-              const totalEstimatedMs = estimatedMs + (filesRemaining * avgTimePerFile)
+              const totalEstimatedMs = estimatedMs + filesRemaining * avgTimePerFile
 
               setUploadProgress({
                 currentFile: i + 1,
@@ -189,7 +197,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
                   format: data.format,
                   resource_type: data.resource_type,
                   width: data.width,
-                  height: data.height
+                  height: data.height,
                 })
                 resolve(data.secure_url)
               } catch (err) {
@@ -198,7 +206,11 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
             } else {
               try {
                 const errorData = JSON.parse(xhr.responseText)
-                reject(new Error(`Failed to upload ${file.name}: ${errorData.error?.message || errorData.message || "Unknown error"}`))
+                reject(
+                  new Error(
+                    `Failed to upload ${file.name}: ${errorData.error?.message || errorData.message || "Unknown error"}`,
+                  ),
+                )
               } catch {
                 reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText.substring(0, 200)}`))
               }
@@ -215,10 +227,13 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
 
         const secureUrl = await uploadPromise
         urls.push(secureUrl)
-        
-        const resourceType = selectedType === "audio" || file.type.startsWith("audio/") ? 'raw'
-          : selectedType === "video" || file.type.startsWith("video/") ? 'video'
-          : 'image'
+
+        const resourceType =
+          selectedType === "audio" || file.type.startsWith("audio/")
+            ? "raw"
+            : selectedType === "video" || file.type.startsWith("video/")
+              ? "video"
+              : "image"
         await trackPendingUpload(secureUrl, resourceType)
       }
 
@@ -259,6 +274,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
       formData.append("timestamp", signatureResult.timestamp!.toString())
       formData.append("api_key", signatureResult.apiKey!)
       formData.append("signature", signatureResult.signature)
+      formData.append("resource_type", "video")
 
       const uploadUrl = `https://api.cloudinary.com/v1_1/${signatureResult.cloudName}/video/upload`
 
@@ -295,7 +311,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
                 format: data.format,
                 resource_type: data.resource_type,
                 width: data.width,
-                height: data.height
+                height: data.height,
               })
               resolve(data.secure_url)
             } catch (err) {
@@ -320,9 +336,9 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
       })
 
       const secureUrl = await uploadPromise
-      
-      await trackPendingUpload(secureUrl, 'raw')
-      
+
+      await trackPendingUpload(secureUrl, "raw")
+
       onMediaAdded([secureUrl])
       handleClose()
     } catch (err) {
@@ -378,7 +394,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
             <div className="grid gap-3">
               <Button
                 variant="outline"
-                className="h-auto flex-col gap-2 py-6"
+                className="h-auto flex-col gap-2 py-6 bg-transparent"
                 onClick={() => handleTypeSelect("photo")}
               >
                 <Camera className="h-8 w-8" />
@@ -390,7 +406,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
 
               <Button
                 variant="outline"
-                className="h-auto flex-col gap-2 py-6"
+                className="h-auto flex-col gap-2 py-6 bg-transparent"
                 onClick={() => handleTypeSelect("video")}
               >
                 <Video className="h-8 w-8" />
@@ -402,7 +418,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
 
               <Button
                 variant="outline"
-                className="h-auto flex-col gap-2 py-6"
+                className="h-auto flex-col gap-2 py-6 bg-transparent"
                 onClick={() => handleTypeSelect("audio")}
               >
                 <Mic className="h-8 w-8" />
@@ -417,26 +433,18 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
           {/* Step 2: Choose Upload or Capture/Record */}
           {selectedType && !selectedMode && (
             <div className="grid gap-3">
-              <Button variant="outline" className="h-auto flex-col gap-2 py-6" asChild>
+              <Button variant="outline" className="h-auto flex-col gap-2 py-6 bg-transparent" asChild>
                 <label className="cursor-pointer">
                   <Upload className="h-8 w-8" />
                   <div className="text-center">
                     <div className="font-semibold">
                       Upload {selectedType === "photo" ? "Photos" : selectedType === "video" ? "Videos" : "Audio Files"}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      Choose multiple files from your device
-                    </div>
+                    <div className="text-xs text-muted-foreground">Choose multiple files from your device</div>
                   </div>
                   <input
                     type="file"
-                    accept={
-                      selectedType === "photo"
-                        ? "image/*"
-                        : selectedType === "video"
-                        ? "video/*"
-                        : "audio/*"
-                    }
+                    accept={selectedType === "photo" ? "image/*" : selectedType === "video" ? "video/*" : "audio/*"}
                     multiple
                     onChange={handleMediaUpload}
                     className="hidden"
@@ -449,7 +457,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
                 <>
                   <Button
                     variant="outline"
-                    className="h-auto flex-col gap-2 py-6"
+                    className="h-auto flex-col gap-2 py-6 bg-transparent"
                     onClick={handleCameraCapture}
                     disabled={isUploading}
                   >
@@ -473,7 +481,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
                 <>
                   <Button
                     variant="outline"
-                    className="h-auto flex-col gap-2 py-6"
+                    className="h-auto flex-col gap-2 py-6 bg-transparent"
                     onClick={handleVideoCameraCapture}
                     disabled={isUploading}
                   >
@@ -496,7 +504,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
               ) : (
                 <Button
                   variant="outline"
-                  className="h-auto flex-col gap-2 py-6"
+                  className="h-auto flex-col gap-2 py-6 bg-transparent"
                   onClick={() => setSelectedMode("record")}
                 >
                   <Mic className="h-8 w-8" />
@@ -545,12 +553,8 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium truncate max-w-[200px]">
-                    {uploadProgress.currentFileName}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {uploadProgress.currentFileProgress}%
-                  </span>
+                  <span className="font-medium truncate max-w-[200px]">{uploadProgress.currentFileName}</span>
+                  <span className="text-muted-foreground">{uploadProgress.currentFileProgress}%</span>
                 </div>
                 <Progress value={uploadProgress.currentFileProgress} className="h-2" />
               </div>
