@@ -1,129 +1,100 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { getArtifactTypes } from "@/lib/actions/artifact-types"
+import { useState } from "react"
+import { ChevronDown } from "lucide-react"
+import { artifactTypeIcons } from "@/config/artifact-types"
 import type { ArtifactType } from "@/lib/types/artifact-types"
-import { FormLabel, FormDescription } from "@/components/ui/form"
-import * as LucideIcons from "lucide-react"
-import { Check } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { cn } from "@/lib/utils"
 
 interface ArtifactTypeSelectorProps {
-  value: string | null | undefined
-  onChange: (value: string | null) => void
-  disabled?: boolean
+  types: ArtifactType[]
+  selectedTypeId?: string | null
+  onSelectType: (typeId: string | null) => void
   required?: boolean
-  collectionPrimaryTypeId?: string | null
+  defaultOpen?: boolean
 }
 
-/**
- * ArtifactTypeSelector - Modern visual picker for artifact types
- *
- * Features:
- * - Loads types from database (future-expandable)
- * - Shows icon and label in grid layout
- * - Preselects collection's primary type if available
- * - Allows clearing selection (optional field)
- */
-export function ArtifactTypeSelector({
-  value,
-  onChange,
-  disabled,
+function ArtifactTypeSelector({
+  types,
+  selectedTypeId,
+  onSelectType,
   required = false,
-  collectionPrimaryTypeId,
+  defaultOpen = false,
 }: ArtifactTypeSelectorProps) {
-  const [types, setTypes] = useState<ArtifactType[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isOpen, setIsOpen] = useState(defaultOpen)
 
-  useEffect(() => {
-    const fetchTypes = async () => {
-      setIsLoading(true)
-      const fetchedTypes = await getArtifactTypes()
-      setTypes(fetchedTypes)
-
-      if (!value && collectionPrimaryTypeId && fetchedTypes.length > 0) {
-        const primaryType = fetchedTypes.find((t) => t.id === collectionPrimaryTypeId)
-        if (primaryType) {
-          onChange(primaryType.id)
-        }
-      }
-
-      setIsLoading(false)
-    }
-
-    fetchTypes()
-  }, [collectionPrimaryTypeId, value, onChange])
-
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        <FormLabel>Type {!required && <span className="text-muted-foreground">(optional)</span>}</FormLabel>
-        <div className="grid grid-cols-3 gap-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="aspect-square rounded-2xl border bg-muted/30 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    )
-  }
+  console.log("[v0] ArtifactTypeSelector rendering with types:", types)
+  console.log("[v0] Selected type ID:", selectedTypeId)
 
   return (
-    <div className="space-y-3">
-      <FormLabel>Type {!required && <span className="text-muted-foreground">(optional)</span>}</FormLabel>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-medium text-foreground">
+            Type {required && <span className="text-destructive">*</span>}
+          </h2>
+          {selectedTypeId && (
+            <span className="text-xs text-muted-foreground">({types.find((t) => t.id === selectedTypeId)?.name})</span>
+          )}
+        </div>
+        <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+      </CollapsibleTrigger>
 
-      <div className="grid grid-cols-3 gap-3">
-        {types.map((type) => {
-          const IconComponent = (LucideIcons as any)[type.icon_name] || LucideIcons.Package
-          const isSelected = value === type.id
+      <CollapsibleContent>
+        <div className="mt-2 rounded-lg border bg-card p-4">
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+            {types.map((type) => {
+              const Icon = artifactTypeIcons[type.icon_name as keyof typeof artifactTypeIcons]
+              const isSelected = selectedTypeId === type.id
 
-          return (
-            <button
-              key={type.id}
-              type="button"
-              disabled={disabled}
-              onClick={() => {
-                if (isSelected && !required) {
-                  onChange(null)
-                } else {
-                  onChange(type.id)
-                }
-              }}
-              className={cn(
-                "relative flex flex-col items-center justify-center gap-2 rounded-2xl border-2 p-4 transition-all",
-                "hover:border-primary/50 hover:bg-accent/50",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background",
-              )}
-            >
-              {/* Selected indicator */}
-              {isSelected && (
-                <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                  <Check className="h-3 w-3 text-primary-foreground" />
-                </div>
-              )}
+              console.log("[v0] Rendering type:", type.name, "Icon:", Icon?.name, "Selected:", isSelected)
 
-              {/* Icon */}
-              <IconComponent
-                className={cn("h-8 w-8 transition-colors", isSelected ? "text-primary" : "text-muted-foreground")}
-              />
+              return (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => {
+                    console.log("[v0] Type clicked:", type.name, type.id)
+                    // Toggle selection: if already selected and not required, deselect
+                    if (isSelected && !required) {
+                      onSelectType(null)
+                    } else {
+                      onSelectType(type.id)
+                    }
+                  }}
+                  className={cn(
+                    "relative flex flex-col items-center justify-center gap-1.5 rounded-lg p-3 transition-all",
+                    "border-2 hover:bg-accent/50 active:scale-95",
+                    isSelected
+                      ? "border-primary bg-accent font-medium text-foreground"
+                      : "border-transparent bg-muted/30 text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {Icon ? (
+                    <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                  ) : (
+                    <div className="h-5 w-5 sm:h-6 sm:w-6 rounded bg-muted" />
+                  )}
 
-              {/* Label */}
-              <span
-                className={cn(
-                  "text-xs font-medium text-center leading-tight",
-                  isSelected ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {type.name}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+                  <span className="text-[10px] sm:text-[11px] leading-tight text-center break-words">{type.name}</span>
 
-      <FormDescription className="text-xs">
-        {required ? "Select a type for this artifact" : "Tap again to deselect"}
-      </FormDescription>
-    </div>
+                  {isSelected && (
+                    <div className="absolute bottom-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-t-full bg-primary" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {!required && selectedTypeId && (
+            <p className="mt-3 text-xs text-muted-foreground text-center">Tap again to deselect</p>
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
+
+export { ArtifactTypeSelector }
+export default ArtifactTypeSelector
