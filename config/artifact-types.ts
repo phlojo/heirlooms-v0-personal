@@ -1,45 +1,26 @@
-import { Package, Car, Watch, Camera, Wine, Dices, Type as type, type LucideIcon } from 'lucide-react'
+import { getDynamicLucideIcon } from "@/lib/utils/dynamic-icon"
 
 /**
  * Artifact Type Icon Configuration
- * 
- * This config maps conceptual artifact/collection types to their corresponding icons.
- * Currently used only for the Artifacts bottom-nav icon animation.
- * 
- * Future use:
- * - When we add collection_type and artifact_type to the database
- * - For filtering artifacts by type
- * - For type-specific UI and routing
- * - For user profile preferences
+ *
+ * This file provides a dynamic icon resolver that works with any Lucide icon.
+ * Icons are now fully maintained in the Supabase database - no code changes needed.
+ *
+ * To add or change icons:
+ * 1. Go to your Supabase dashboard
+ * 2. Open the artifact_types table
+ * 3. Update the icon_name column with any valid Lucide icon name
+ * 4. Changes will reflect immediately in the app
+ *
+ * Valid icon names: https://lucide.dev/icons/
+ * Examples: "Package", "Car", "Watch", "Wine", "Atom", "Dices", "Sparkles", "Heart", etc.
  */
-
-export type ArtifactType = "cars" | "watches" | "cameras" | "whiskey" | "toys" | "general"
-
-export const artifactTypeIcons: Record<ArtifactType, LucideIcon> = {
-  general: Package,
-  cars: Car,
-  watches: Watch,
-  cameras: Camera,
-  whiskey: Wine,
-  toys: Dices,
-}
 
 /**
- * Icon cycle order for the Artifacts bottom-nav animation
- * Adjust this array to change which icons appear and in what order
+ * Get icon component for a given icon name from the database
+ * Dynamically resolves any Lucide icon - no hardcoded mapping needed
+ * Falls back to Package icon if icon name not found
  */
-export const artifactIconCycle: ArtifactType[] = [
-  "general",
-  "cars",
-  "watches",
-  "cameras",
-  "whiskey",
-  "toys",
-]
-
-/**
- * Get icon component for a given artifact type
- */
-export function getArtifactTypeIcon(type: ArtifactType): LucideIcon {
-  return artifactTypeIcons[type] || artifactTypeIcons.general
+export function getArtifactTypeIcon(iconName: string) {
+  return getDynamicLucideIcon(iconName)
 }

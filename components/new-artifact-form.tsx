@@ -8,7 +8,7 @@ import type { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronDown, Plus, Trash2, Star } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { normalizeMediaUrls, isImageUrl, isVideoUrl, isAudioUrl } from "@/lib/media"
@@ -21,6 +21,9 @@ import { GenerateVideoSummaryButton } from "@/components/artifact/GenerateVideoS
 import { TranscribeAudioButtonPerMedia } from "@/components/artifact/TranscribeAudioButtonPerMedia"
 import { useRouter } from "next/navigation"
 import { CollectionSelector } from "@/components/collection-selector"
+import ArtifactTypeSelector from "@/components/artifact-type-selector"
+import { getCollection } from "@/lib/actions/collections"
+import { getArtifactTypes } from "@/lib/actions/artifact-types"
 
 type FormData = z.infer<typeof createArtifactSchema>
 
@@ -29,13 +32,18 @@ interface NewArtifactFormProps {
   userId: string
 }
 
-export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) {
+export { NewArtifactForm }
+export default function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isAttributesOpen, setIsAttributesOpen] = useState(false)
   const [isProvenanceOpen, setIsProvenanceOpen] = useState(false)
   const [isAddMediaOpen, setIsAddMediaOpen] = useState(false)
   const [selectedThumbnailUrl, setSelectedThumbnailUrl] = useState<string | null>(null)
+  const [collectionPrimaryTypeId, setCollectionPrimaryTypeId] = useState<string | null>(null)
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null)
+  const [artifactTypes, setArtifactTypes] = useState<any[]>([])
+  const [isTypesOpen, setIsTypesOpen] = useState(false)
 
   const [imageCaptions, setImageCaptions] = useState<Record<string, string>>({})
   const [videoSummaries, setVideoSummaries] = useState<Record<string, string>>({})
@@ -52,8 +60,34 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
       year_acquired: undefined,
       origin: "",
       media_urls: [],
+      type_id: undefined,
     },
   })
+
+  useEffect(() => {
+    const fetchCollectionType = async () => {
+      const selectedCollectionId = form.watch("collectionId")
+      if (selectedCollectionId) {
+        const collection = await getCollection(selectedCollectionId)
+        if (collection?.primary_type_id) {
+          setCollectionPrimaryTypeId(collection.primary_type_id)
+        } else {
+          setCollectionPrimaryTypeId(null)
+        }
+      }
+    }
+
+    fetchCollectionType()
+  }, [form.watch("collectionId")])
+
+  useEffect(() => {
+    async function loadTypes() {
+      const types = await getArtifactTypes()
+      console.log("[v0] Loaded artifact types:", types)
+      setArtifactTypes(types)
+    }
+    loadTypes()
+  }, [])
 
   const handleCancel = async () => {
     console.log("[v0] User clicked cancel - cleaning up pending uploads")
@@ -125,6 +159,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
       image_captions: Object.keys(imageCaptions).length > 0 ? imageCaptions : undefined,
       video_summaries: Object.keys(videoSummaries).length > 0 ? videoSummaries : undefined,
       audio_transcripts: Object.keys(audioTranscripts).length > 0 ? audioTranscripts : undefined,
+      type_id: selectedTypeId,
     }
 
     setError(null)
@@ -159,6 +194,12 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {error && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
         <section className="space-y-2">
           <FormField
             control={form.control}
@@ -202,33 +243,15 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
           />
         </section>
 
-        <section className="space-y-2">
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-medium">Description</FormLabel>
-                <FormControl>
-                  <TranscriptionInput
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder="Tell the story of this artifact..."
-                    type="textarea"
-                    fieldType="description"
-                    userId={userId}
-                    entityType="artifact"
-                    rows={4}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Write a personal description of this artifact and what it means to you
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
+        {artifactTypes.length > 0 && (
+          <ArtifactTypeSelector
+            types={artifactTypes}
+            selectedTypeId={selectedTypeId}
+            onSelectType={setSelectedTypeId}
+            required={false}
+            defaultOpen={false}
           />
-        </section>
+        )}
 
         <section className="space-y-2">
           <Collapsible open={isAttributesOpen} onOpenChange={setIsAttributesOpen}>
@@ -477,12 +500,6 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
             </CollapsibleContent>
           </Collapsible>
         </section>
-
-        {error && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        )}
 
         <div className="flex gap-3 pb-[240px]">
           <Button type="submit" disabled={form.formState.isSubmitting}>

@@ -21,6 +21,7 @@ export async function createArtifact(
     title: input.title,
     mediaCount: input.media_urls?.length || 0,
     collectionId: input.collectionId,
+    typeId: input.type_id,
     hasThumbnailUrl: !!input.thumbnail_url,
     hasImageCaptions: !!input.image_captions && Object.keys(input.image_captions).length > 0,
     hasVideoSummaries: !!input.video_summaries && Object.keys(input.video_summaries).length > 0,
@@ -124,6 +125,7 @@ export async function createArtifact(
     user_id: user.id,
     slug,
     thumbnail_url: thumbnailUrl,
+    type_id: validatedFields.data.type_id,
   }
 
   if (validatedFields.data.image_captions && Object.keys(validatedFields.data.image_captions).length > 0) {
@@ -225,9 +227,11 @@ export async function getArtifactsByCollection(collectionId: string) {
       thumbnail_url,
       user_id,
       collection_id,
+      type_id,
       created_at,
       updated_at,
-      collection:collections(id, title)
+      collection:collections(id, title),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("collection_id", collectionId)
     .order("created_at", { ascending: false })
@@ -311,7 +315,8 @@ export async function getAllPublicArtifactsPaginated(
     .from("artifacts")
     .select(`
       *,
-      collection:collections!inner(id, title, is_public)
+      collection:collections!inner(id, title, is_public),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("collection.is_public", true)
 
@@ -359,7 +364,8 @@ export async function getMyArtifactsPaginated(userId: string, limit = 24, cursor
     .from("artifacts")
     .select(`
       *,
-      collection:collections(id, title, is_public)
+      collection:collections(id, title, is_public),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("user_id", userId)
 
@@ -398,7 +404,8 @@ export async function getAllPublicArtifacts(excludeUserId?: string) {
     .from("artifacts")
     .select(`
       *,
-      collection:collections!inner(id, title, is_public)
+      collection:collections!inner(id, title, is_public),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("collection.is_public", true)
 
@@ -431,7 +438,8 @@ export async function getMyArtifacts(userId: string) {
     .from("artifacts")
     .select(`
       *,
-      collection:collections(id, title, is_public)
+      collection:collections(id, title, is_public),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
@@ -612,6 +620,7 @@ export async function updateArtifact(
     video_summaries: updatedVideoSummaries,
     audio_transcripts: updatedAudioTranscripts,
     audio_summaries: updatedAudioSummaries,
+    type_id: validatedFields.data.type_id,
   }
 
   if (collectionChanged) {
@@ -628,23 +637,23 @@ export async function updateArtifact(
     cleanedAiData: removedUrls.length > 0,
   })
 
-  const { data, error } = await supabase
+  const { data: updatedArtifact, error: updateError } = await supabase
     .from("artifacts")
     .update(updateData)
     .eq("id", validatedFields.data.id)
     .select()
     .single()
 
-  if (error) {
-    console.error("Artifact update error:", error)
+  if (updateError) {
+    console.error("Artifact update error:", updateError)
     return { success: false, error: "Failed to update artifact. Please try again." }
   }
 
   console.log("[v0] UPDATE ARTIFACT - Success!", {
-    artifactId: data.id,
-    slug: data.slug,
-    mediaCount: data.media_urls?.length || 0,
-    hasThumbnail: !!data.thumbnail_url,
+    artifactId: updatedArtifact.id,
+    slug: updatedArtifact.slug,
+    mediaCount: updatedArtifact.media_urls?.length || 0,
+    hasThumbnail: !!updatedArtifact.thumbnail_url,
   })
 
   if (newlyUploadedUrls.length > 0) {
@@ -663,7 +672,7 @@ export async function updateArtifact(
   }
 
   revalidatePath(`/artifacts/${existingArtifact.slug}`)
-  revalidatePath(`/artifacts/${data.slug}`)
+  revalidatePath(`/artifacts/${updatedArtifact.slug}`)
   revalidatePath("/collections")
 
   if (existingArtifact.collection?.slug) {
@@ -679,7 +688,7 @@ export async function updateArtifact(
     }
   }
 
-  return { success: true, data, slug: data.slug }
+  return { success: true, data: updatedArtifact, slug: updatedArtifact.slug }
 }
 
 export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: string) {
@@ -767,7 +776,8 @@ export async function getArtifactBySlug(artifactSlug: string) {
     .from("artifacts")
     .select(`
       *,
-      collection:collections(id, title, is_public, slug)
+      collection:collections(id, title, is_public, slug),
+      artifact_type:artifact_types(id, name, icon_name)
     `)
     .eq("slug", artifactSlug)
     .single()
