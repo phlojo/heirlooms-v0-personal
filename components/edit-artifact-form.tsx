@@ -392,17 +392,19 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
                 </FormItem>
               )}
             />
+          </section>
 
-            {artifactTypes.length > 0 && (
-              <ArtifactTypeSelector
-                types={artifactTypes}
-                selectedTypeId={selectedTypeId}
-                onSelectType={handleTypeChange}
-                required={false}
-                defaultOpen={false}
-              />
-            )}
+          {artifactTypes.length > 0 && (
+            <ArtifactTypeSelector
+              types={artifactTypes}
+              selectedTypeId={selectedTypeId}
+              onSelectType={handleTypeChange}
+              required={false}
+              defaultOpen={!!artifact.type_id}
+            />
+          )}
 
+          <section className="space-y-3">
             <FormField
               control={form.control}
               name="description"
