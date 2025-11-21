@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Package } from "lucide-react"
-import { getArtifactTypeIcon } from "@/config/artifact-types"
+import { getDynamicLucideIcon } from "@/lib/utils/dynamic-icon"
 import { cn } from "@/lib/utils"
 import type { ArtifactType } from "@/lib/types/artifact-types"
 import { getArtifactTypes } from "@/lib/actions/artifact-types"
@@ -74,7 +74,7 @@ export function AnimatedArtifactsIcon({ className }: AnimatedArtifactsIconProps)
   }, [artifactTypes])
 
   const currentType = artifactTypes[currentIndex]
-  const IconComponent = currentType ? getArtifactTypeIcon(currentType.icon_name) : Package
+  const IconComponent = currentType ? getDynamicLucideIcon(currentType.icon_name) : Package
 
   return (
     <div className="relative">

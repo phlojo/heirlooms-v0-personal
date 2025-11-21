@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { ChevronDown } from "lucide-react"
-import { artifactTypeIcons } from "@/config/artifact-types"
+import { getDynamicLucideIcon } from "@/lib/utils/dynamic-icon"
 import type { ArtifactType } from "@/lib/types/artifact-types"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { cn } from "@/lib/utils"
@@ -45,7 +45,7 @@ function ArtifactTypeSelector({
         <div className="mt-2 rounded-lg border bg-card p-4">
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
             {types.map((type) => {
-              const Icon = artifactTypeIcons[type.icon_name as keyof typeof artifactTypeIcons]
+              const Icon = getDynamicLucideIcon(type.icon_name)
               const isSelected = selectedTypeId === type.id
 
               console.log("[v0] Rendering type:", type.name, "Icon:", Icon?.name, "Selected:", isSelected)
