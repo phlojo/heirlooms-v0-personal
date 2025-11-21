@@ -65,7 +65,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
       console.log(`[v0] Cleanup complete: ${result.deletedCount} files deleted`)
     }
 
-    router.push("/collections")
+    router.back()
   }
 
   const handleMediaAdded = (newUrls: string[]) => {
@@ -159,7 +159,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <section className="space-y-2 px-6 lg:px-8">
+        <section className="space-y-2">
           <FormField
             control={form.control}
             name="title"
@@ -183,7 +183,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
           />
         </section>
 
-        <section className="space-y-2 px-6 lg:px-8">
+        <section className="space-y-2">
           <FormField
             control={form.control}
             name="collectionId"
@@ -202,7 +202,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
           />
         </section>
 
-        <section className="space-y-2 px-6 lg:px-8">
+        <section className="space-y-2">
           <FormField
             control={form.control}
             name="description"
@@ -230,7 +230,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
           />
         </section>
 
-        <section className="space-y-2 px-6 lg:px-8">
+        <section className="space-y-2">
           <Collapsible open={isAttributesOpen} onOpenChange={setIsAttributesOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
               <h2 className="text-sm font-medium text-foreground">Attributes</h2>
@@ -238,46 +238,51 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
                 className={`h-5 w-5 text-muted-foreground transition-transform ${isAttributesOpen ? "rotate-180" : ""}`}
               />
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-4 pt-4">
-              <FormField
-                control={form.control}
-                name="year_acquired"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Year Acquired</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="e.g., 1950"
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <CollapsibleContent>
+              <div className="mt-2 space-y-3 rounded-lg border bg-card p-4">
+                <FormField
+                  control={form.control}
+                  name="year_acquired"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Year Acquired</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="2020"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            field.onChange(val === "" ? undefined : Number(val))
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="origin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Origin</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Paris, France" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="origin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Origin</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Where did this come from?" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CollapsibleContent>
           </Collapsible>
         </section>
 
-        <section className="space-y-6 my-6">
-          <div className="flex items-center justify-between px-6 lg:px-8">
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium text-foreground">Media Items</h2>
             <Button
               type="button"
@@ -296,7 +301,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
                 if (isAudioUrl(url)) {
                   return (
                     <div key={url} className="space-y-3">
-                      <div className="flex items-center justify-between px-6 lg:px-8">
+                      <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold">
                           Audio {audioFiles.length > 1 ? `${audioFiles.indexOf(url) + 1}` : ""}
                         </h3>
@@ -310,7 +315,7 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="px-6 lg:px-8 space-y-3">
+                      <div className="space-y-3">
                         <AudioPlayer src={url} title="Audio Recording" />
                         {audioTranscripts[url] && (
                           <div className="rounded-lg border bg-muted/30 p-4">
@@ -320,138 +325,142 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
                             </div>
                           </div>
                         )}
-                        <div className="flex justify-start">
-                          <TranscribeAudioButtonPerMedia
-                            artifactId="temp"
-                            audioUrl={url}
-                            onTranscriptGenerated={(transcript) => handleAudioTranscriptGenerated(url, transcript)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )
-                } else if (isVideoUrl(url)) {
-                  const isSelectedThumbnail = selectedThumbnailUrl === url
-                  return (
-                    <div key={url} className="space-y-3">
-                      <div className="flex items-center justify-between px-6 lg:px-8">
-                        <h3 className="text-sm font-semibold">
-                          Video {videoFiles.length > 1 ? `${videoFiles.indexOf(url) + 1}` : ""}
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSelectThumbnail(url)}
-                            className={
-                              isSelectedThumbnail ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"
-                            }
-                            title="Set as thumbnail"
-                          >
-                            <Star className={`h-4 w-4 ${isSelectedThumbnail ? "fill-current" : ""}`} />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteMedia(url)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="w-full max-w-full overflow-hidden">
-                        <video src={url} controls className="w-full max-w-full h-auto" style={{ maxHeight: "70vh" }}>
-                          Your browser does not support the video tag.
-                        </video>
-                      </div>
-                      <div className="px-6 lg:px-8 space-y-3">
-                        {videoSummaries[url] && (
-                          <div className="rounded-lg border bg-muted/30 p-3">
-                            <h4 className="text-xs font-semibold text-purple-600 mb-1">AI Video Summary</h4>
-                            <p className="text-sm text-foreground leading-relaxed italic">{videoSummaries[url]}</p>
-                          </div>
-                        )}
-                        <div className="flex justify-start">
-                          <GenerateVideoSummaryButton
-                            artifactId="temp"
-                            videoUrl={url}
-                            onSummaryGenerated={(summary) => handleVideoSummaryGenerated(url, summary)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )
-                } else {
-                  const isSelectedThumbnail = selectedThumbnailUrl === url
-                  return (
-                    <div key={url} className="space-y-3">
-                      <div className="flex items-center justify-between px-6 lg:px-8">
-                        <h3 className="text-sm font-semibold">
-                          Photo {imageFiles.length > 1 ? `${imageFiles.indexOf(url) + 1}` : ""}
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSelectThumbnail(url)}
-                            className={
-                              isSelectedThumbnail ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"
-                            }
-                            title="Set as thumbnail"
-                          >
-                            <Star className={`h-4 w-4 ${isSelectedThumbnail ? "fill-current" : ""}`} />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteMedia(url)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="w-full max-w-full overflow-hidden">
-                        <img
-                          src={getDetailUrl(url) || url}
-                          alt={`Photo ${imageFiles.indexOf(url) + 1}`}
-                          className="w-full h-auto"
-                          crossOrigin="anonymous"
+                        <TranscribeAudioButtonPerMedia
+                          audioUrl={url}
+                          onTranscriptGenerated={handleAudioTranscriptGenerated}
+                          currentTranscript={audioTranscripts[url]}
                         />
-                      </div>
-                      <div className="px-6 lg:px-8 space-y-3">
-                        {imageCaptions[url] && (
-                          <div className="rounded-lg border bg-muted/30 p-3">
-                            <h4 className="text-xs font-semibold text-purple-600 mb-1">AI Caption</h4>
-                            <p className="text-sm text-foreground leading-relaxed italic">{imageCaptions[url]}</p>
-                          </div>
-                        )}
-                        <div className="flex justify-start">
-                          <GenerateImageCaptionButton
-                            artifactId="temp"
-                            imageUrl={url}
-                            onCaptionGenerated={handleCaptionGenerated}
-                          />
-                        </div>
                       </div>
                     </div>
                   )
                 }
+
+                if (isVideoUrl(url)) {
+                  return (
+                    <div key={url} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold">
+                          Video {videoFiles.length > 1 ? `${videoFiles.indexOf(url) + 1}` : ""}
+                        </h3>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSelectThumbnail(url)}
+                            className={
+                              selectedThumbnailUrl === url
+                                ? "text-yellow-500"
+                                : "text-muted-foreground hover:text-foreground"
+                            }
+                            title="Set as thumbnail"
+                          >
+                            <Star className={`h-4 w-4 ${selectedThumbnailUrl === url ? "fill-current" : ""}`} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteMedia(url)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <video
+                          src={url}
+                          controls
+                          className="w-full rounded-lg shadow-md"
+                          preload="metadata"
+                          playsInline
+                        />
+                        {videoSummaries[url] && (
+                          <div className="rounded-lg border bg-muted/30 p-4">
+                            <h4 className="text-sm font-semibold mb-2">AI Summary</h4>
+                            <p className="text-sm text-foreground leading-relaxed">{videoSummaries[url]}</p>
+                          </div>
+                        )}
+                        <GenerateVideoSummaryButton
+                          videoUrl={url}
+                          onSummaryGenerated={handleVideoSummaryGenerated}
+                          currentSummary={videoSummaries[url]}
+                        />
+                      </div>
+                    </div>
+                  )
+                }
+
+                if (isImageUrl(url)) {
+                  return (
+                    <div key={url} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold">
+                          Image {imageFiles.length > 1 ? `${imageFiles.indexOf(url) + 1}` : ""}
+                        </h3>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSelectThumbnail(url)}
+                            className={
+                              selectedThumbnailUrl === url
+                                ? "text-yellow-500"
+                                : "text-muted-foreground hover:text-foreground"
+                            }
+                            title="Set as thumbnail"
+                          >
+                            <Star className={`h-4 w-4 ${selectedThumbnailUrl === url ? "fill-current" : ""}`} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteMedia(url)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <img
+                          src={getDetailUrl(url) || "/placeholder.svg"}
+                          alt={`Artifact media ${idx + 1}`}
+                          className="w-full rounded-lg shadow-md"
+                        />
+                        {imageCaptions[url] && (
+                          <div className="rounded-lg border bg-muted/30 p-4">
+                            <h4 className="text-sm font-semibold mb-2">AI Caption</h4>
+                            <p className="text-sm text-foreground leading-relaxed">{imageCaptions[url]}</p>
+                          </div>
+                        )}
+                        <GenerateImageCaptionButton
+                          imageUrl={url}
+                          onCaptionGenerated={handleCaptionGenerated}
+                          currentCaption={imageCaptions[url]}
+                        />
+                      </div>
+                    </div>
+                  )
+                }
+
+                return null
               })}
             </div>
           ) : (
-            <div className="min-h-[200px] rounded-lg border bg-muted/30 flex items-center justify-center mx-6 lg:mx-8">
-              <p className="text-sm text-muted-foreground">No media available. Click "Add Media" to get started.</p>
+            <div className="flex items-center justify-center rounded-lg border border-dashed p-12">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">No media added yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Click "Add Media" to get started</p>
+              </div>
             </div>
           )}
         </section>
 
-        <section className="space-y-2 px-6 lg:px-8">
+        <section className="space-y-2">
           <Collapsible open={isProvenanceOpen} onOpenChange={setIsProvenanceOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">
               <h2 className="text-sm font-medium text-foreground">Provenance</h2>
@@ -470,12 +479,12 @@ export function NewArtifactForm({ collectionId, userId }: NewArtifactFormProps) 
         </section>
 
         {error && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 mx-6 lg:mx-8">
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
 
-        <div className="flex gap-3 px-6 lg:px-8 pb-[240px]">
+        <div className="flex gap-3 pb-[240px]">
           <Button type="submit" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Creating..." : "Create Artifact"}
           </Button>

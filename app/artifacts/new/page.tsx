@@ -35,14 +35,17 @@ export default async function NewArtifactPage({
 
   return (
     <AppLayout user={user}>
-      <div className="space-y-6">
-        <div className="px-6 lg:px-8">
-          <Button variant="ghost" size="sm" asChild className="mb-4">
-            <Link href="/collections">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Link>
-          </Button>
+      <div className="mx-auto max-w-2xl space-y-4">
+        <Button variant="ghost" size="sm" asChild className="pl-0">
+          <Link href="/artifacts">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Link>
+        </Button>
+
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Create Artifact</h1>
+          <p className="mt-1 text-muted-foreground">Add a new artifact with photos, videos, or audio</p>
         </div>
 
         <NewArtifactForm collectionId={effectiveCollectionId} userId={user.id} />
