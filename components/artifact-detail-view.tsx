@@ -226,6 +226,7 @@ export function ArtifactDetailView({
         artifact.slug,
       )
       toast.success("Artifact updated successfully")
+      router.refresh()
       window.location.href = `/artifacts/${artifact.slug}`
     } catch (error) {
       console.error("[v0] Error saving artifact:", error)
