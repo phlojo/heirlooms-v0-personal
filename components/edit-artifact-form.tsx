@@ -30,6 +30,8 @@ import { normalizeMediaUrls, getFileSizeLimit, formatFileSize, isImageUrl, isVid
 import { CollectionSelector } from "@/components/collection-selector"
 import { TranscribeAudioButtonPerMedia } from "@/components/artifact/TranscribeAudioButtonPerMedia"
 import { AudioPlayer } from "@/components/audio-player"
+import ArtifactTypeSelector from "@/components/artifact-type-selector"
+import { getArtifactTypes } from "@/lib/actions/artifact-types"
 
 type FormData = z.infer<typeof updateArtifactSchema> & { collectionId?: string }
 
@@ -44,6 +46,7 @@ interface EditArtifactFormProps {
     thumbnail_url?: string | null
     collection_id: string
     audio_transcripts?: Record<string, string>
+    type_id?: string | null
   }
   userId: string
 }
@@ -60,6 +63,8 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const newlyUploadedUrlsRef = useRef<string[]>([])
   const [audioTranscripts, setAudioTranscripts] = useState<Record<string, string>>(artifact.audio_transcripts || {})
+  const [artifactTypes, setArtifactTypes] = useState<any[]>([])
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(artifact.type_id || null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(updateArtifactSchema),
@@ -72,8 +77,18 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
       media_urls: artifact.media_urls || [],
       thumbnail_url: artifact.thumbnail_url || null,
       collectionId: artifact.collection_id,
+      type_id: artifact.type_id || null,
     },
   })
+
+  useEffect(() => {
+    const loadTypes = async () => {
+      const types = await getArtifactTypes()
+      console.log("[v0] Loaded artifact types:", types)
+      setArtifactTypes(types)
+    }
+    loadTypes()
+  }, [])
 
   useEffect(() => {
     const subscription = form.watch(() => {
@@ -285,6 +300,11 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
     setHasUnsavedChanges(true)
   }
 
+  const handleTypeChange = (typeId: string | null) => {
+    setSelectedTypeId(typeId)
+    setHasUnsavedChanges(true)
+  }
+
   const onSubmit = async (values: FormData) => {
     try {
       setError(null)
@@ -293,6 +313,7 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
         ...values,
         thumbnail_url: selectedThumbnailUrl,
         audio_transcripts: Object.keys(audioTranscripts).length > 0 ? audioTranscripts : undefined,
+        type_id: selectedTypeId,
       }
 
       const result = await updateArtifact(submitValues, artifact.media_urls || [])
@@ -370,6 +391,16 @@ export function EditArtifactForm({ artifact, userId }: EditArtifactFormProps) {
               </FormItem>
             )}
           />
+
+          {artifactTypes.length > 0 && (
+            <ArtifactTypeSelector
+              types={artifactTypes}
+              selectedTypeId={selectedTypeId}
+              onSelectType={handleTypeChange}
+              required={false}
+              defaultOpen={false}
+            />
+          )}
 
           <FormField
             control={form.control}

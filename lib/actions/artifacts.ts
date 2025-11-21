@@ -620,6 +620,7 @@ export async function updateArtifact(
     video_summaries: updatedVideoSummaries,
     audio_transcripts: updatedAudioTranscripts,
     audio_summaries: updatedAudioSummaries,
+    type_id: validatedFields.data.type_id,
   }
 
   if (collectionChanged) {
@@ -636,23 +637,23 @@ export async function updateArtifact(
     cleanedAiData: removedUrls.length > 0,
   })
 
-  const { data, error } = await supabase
+  const { data: updatedArtifact, error: updateError } = await supabase
     .from("artifacts")
     .update(updateData)
     .eq("id", validatedFields.data.id)
     .select()
     .single()
 
-  if (error) {
-    console.error("Artifact update error:", error)
+  if (updateError) {
+    console.error("Artifact update error:", updateError)
     return { success: false, error: "Failed to update artifact. Please try again." }
   }
 
   console.log("[v0] UPDATE ARTIFACT - Success!", {
-    artifactId: data.id,
-    slug: data.slug,
-    mediaCount: data.media_urls?.length || 0,
-    hasThumbnail: !!data.thumbnail_url,
+    artifactId: updatedArtifact.id,
+    slug: updatedArtifact.slug,
+    mediaCount: updatedArtifact.media_urls?.length || 0,
+    hasThumbnail: !!updatedArtifact.thumbnail_url,
   })
 
   if (newlyUploadedUrls.length > 0) {
@@ -671,7 +672,7 @@ export async function updateArtifact(
   }
 
   revalidatePath(`/artifacts/${existingArtifact.slug}`)
-  revalidatePath(`/artifacts/${data.slug}`)
+  revalidatePath(`/artifacts/${updatedArtifact.slug}`)
   revalidatePath("/collections")
 
   if (existingArtifact.collection?.slug) {
@@ -687,7 +688,7 @@ export async function updateArtifact(
     }
   }
 
-  return { success: true, data, slug: data.slug }
+  return { success: true, data: updatedArtifact, slug: updatedArtifact.slug }
 }
 
 export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: string) {
