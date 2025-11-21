@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { Package } from "lucide-react"
 import { getArtifactTypeIcon } from "@/config/artifact-types"
 import { cn } from "@/lib/utils"
 import type { ArtifactType } from "@/lib/types/artifact-types"
@@ -51,34 +52,29 @@ export function AnimatedArtifactsIcon({ className }: AnimatedArtifactsIconProps)
   }, [])
 
   useEffect(() => {
-    // Don't animate if no types loaded
     if (artifactTypes.length === 0) return
 
-    // Respect user's motion preferences
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
     if (prefersReducedMotion) {
-      // If reduced motion is preferred, just show the first icon
       setCurrentIndex(0)
       return
     }
 
-    // Change icon every 4 seconds
     const interval = setInterval(() => {
       setIsTransitioning(true)
 
-      // After fade out, change icon
       setTimeout(() => {
         setCurrentIndex((prev) => (prev + 1) % artifactTypes.length)
         setIsTransitioning(false)
-      }, 200) // Half of transition duration
+      }, 200)
     }, 4000)
 
     return () => clearInterval(interval)
   }, [artifactTypes])
 
   const currentType = artifactTypes[currentIndex]
-  const IconComponent = currentType ? getArtifactTypeIcon(currentType.icon_name) : getArtifactTypeIcon("Package") // Fallback icon
+  const IconComponent = currentType ? getArtifactTypeIcon(currentType.icon_name) : Package
 
   return (
     <div className="relative">
