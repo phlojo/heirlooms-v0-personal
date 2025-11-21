@@ -3,7 +3,7 @@
 import type React from "react"
 
 import Link from "next/link"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Author } from "@/components/author"
 import { CollectionThumbnailGrid } from "@/components/collection-thumbnail-grid"
 import { Badge } from "@/components/ui/badge"
@@ -84,8 +84,8 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
           )}
         </div>
 
-        <CardHeader className="pb-0">
-          <div className="flex items-center gap-2 flex-wrap pb-2 pt-2">
+        <div className="p-6 py-4 px-4 space-y-2 opacity-100">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold leading-tight text-2xl">{collection.title}</h3>
             {collection.is_public === false && <Badge variant="purple">Private</Badge>}
             {collection.isUnsorted && (
@@ -96,16 +96,14 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
               </button>
             )}
           </div>
-        </CardHeader>
 
-        <CardContent className="pt-0 pb-4 space-y-4 -mt-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mt-2">
             <p className="text-sm text-muted-foreground">
               {collection.itemCount} {collection.itemCount === 1 ? "artifact" : "artifacts"}
             </p>
             <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />
           </div>
-        </CardContent>
+        </div>
       </Card>
     </Link>
   )
