@@ -85,8 +85,8 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
         </div>
 
         <CardHeader className="pb-0">
-          <h3 className="font-semibold leading-tight text-2xl pb-2 pt-2">{collection.title}</h3>
-          <div className="flex items-center gap-2 flex-wrap pt-1">
+          <div className="flex items-center gap-2 flex-wrap pb-2 pt-2">
+            <h3 className="font-semibold leading-tight text-2xl">{collection.title}</h3>
             {collection.is_public === false && <Badge variant="purple">Private</Badge>}
             {collection.isUnsorted && (
               <button onClick={handleGearClick} className="inline-flex" type="button">
