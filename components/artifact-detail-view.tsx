@@ -478,11 +478,14 @@ export function ArtifactDetailView({
             <label htmlFor="title" className="text-sm font-medium text-foreground">
               Title
             </label>
-            <Input
-              id="title"
+            <TranscriptionInput
               value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
+              onChange={setEditTitle}
               placeholder="Enter artifact title"
+              type="text"
+              fieldType="title"
+              userId={userId}
+              entityType="artifact"
             />
           </section>
         )}
