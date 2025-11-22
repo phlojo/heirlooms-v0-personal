@@ -47,7 +47,11 @@ export function AppLayout({ children, user, noBottomPadding = false }: AppLayout
         <SideNav isOpen={sidebarOpen} onClose={() => handleSidebarToggle(false)} isMobile={isMobile} />
 
         <main
-          className={`flex-1 transition-all duration-200 p-6 lg:p-8 px-3.5 max-w-full pl-2 pt-[] pr-4px]px]p]6]]       </div>
+          className={`flex-1 transition-all duration-200 px-4 pt-4 max-w-full ${
+            noBottomPadding ? "pb-0" : "pb-6 lg:pb-8"
+          }`}
+        >
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
 
