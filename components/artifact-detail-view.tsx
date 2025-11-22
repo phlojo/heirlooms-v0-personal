@@ -228,7 +228,7 @@ export function ArtifactDetailView({
           image_captions: editImageCaptions,
           video_summaries: editVideoSummaries,
           thumbnail_url: editThumbnailUrl || null,
-          collection_id: editCollectionId,
+          collectionId: editCollectionId,
           type_id: selectedTypeId,
         },
         originalState.media_urls,

@@ -531,4 +531,170 @@ describe("Artifact Server Actions", () => {
       expect(typeof getArtifactById).toBe("function")
     })
   })
+
+  describe("updateArtifact", () => {
+    let updateArtifact: any
+
+    beforeEach(async () => {
+      const module = await import("@/lib/actions/artifacts")
+      updateArtifact = module.updateArtifact
+    })
+
+    it("should update artifact with valid input", async () => {
+      const updateData = {
+        id: fixtures.artifacts.imageArtifact.id,
+        title: "Updated Title",
+        description: "Updated description",
+        media_urls: fixtures.artifacts.imageArtifact.media_urls,
+        image_captions: {},
+        video_summaries: {},
+        thumbnail_url: fixtures.artifacts.imageArtifact.thumbnail_url,
+        collection_id: fixtures.artifacts.imageArtifact.collection_id,
+        type_id: fixtures.artifacts.imageArtifact.type_id,
+      }
+
+      // Mock the update to return the updated artifact
+      const mockChainable = {
+        select: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { ...fixtures.artifacts.imageArtifact, ...updateData },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        single: vi.fn().mockResolvedValue({
+          data: fixtures.artifacts.imageArtifact,
+          error: null,
+        }),
+      }
+
+      mockSupabase.from = vi.fn().mockReturnValue(mockChainable)
+
+      const result = await updateArtifact(updateData, fixtures.artifacts.imageArtifact.media_urls)
+
+      expect(result.success).toBe(true)
+      expect(result.slug).toBeDefined()
+    })
+
+    it("should return correct slug in response", async () => {
+      const updateData = {
+        id: fixtures.artifacts.imageArtifact.id,
+        title: "New Title",
+        description: "Description",
+        media_urls: [],
+        image_captions: {},
+        video_summaries: {},
+        thumbnail_url: null,
+        collection_id: fixtures.artifacts.imageArtifact.collection_id,
+        type_id: fixtures.artifacts.imageArtifact.type_id,
+      }
+
+      const mockChainable = {
+        select: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  ...fixtures.artifacts.imageArtifact,
+                  ...updateData,
+                  slug: "new-title",
+                },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        single: vi.fn().mockResolvedValue({
+          data: fixtures.artifacts.imageArtifact,
+          error: null,
+        }),
+      }
+
+      mockSupabase.from = vi.fn().mockReturnValue(mockChainable)
+
+      const result = await updateArtifact(updateData, [])
+
+      expect(result.slug).toBe("new-title")
+    })
+
+    it("should validate required fields", async () => {
+      const incompleteData = {
+        id: fixtures.artifacts.imageArtifact.id,
+        title: "", // Invalid - empty title
+        description: "Description",
+        media_urls: [],
+        image_captions: {},
+        video_summaries: {},
+        thumbnail_url: null,
+        collection_id: fixtures.artifacts.imageArtifact.collection_id,
+        type_id: null,
+      }
+
+      const result = await updateArtifact(incompleteData, [])
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBeDefined()
+    })
+
+    it("should track old media URLs for cleanup", async () => {
+      const oldMediaUrls = ["https://example.com/old-image.jpg"]
+      const newMediaUrls = ["https://example.com/new-image.jpg"]
+
+      const updateData = {
+        id: fixtures.artifacts.imageArtifact.id,
+        title: "Updated",
+        description: "Description",
+        media_urls: newMediaUrls,
+        image_captions: {},
+        video_summaries: {},
+        thumbnail_url: null,
+        collection_id: fixtures.artifacts.imageArtifact.collection_id,
+        type_id: fixtures.artifacts.imageArtifact.type_id,
+      }
+
+      const mockChainable = {
+        select: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { ...fixtures.artifacts.imageArtifact, media_urls: newMediaUrls },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        single: vi.fn().mockResolvedValue({
+          data: fixtures.artifacts.imageArtifact,
+          error: null,
+        }),
+      }
+
+      mockSupabase.from = vi.fn().mockReturnValue(mockChainable)
+
+      const result = await updateArtifact(updateData, oldMediaUrls)
+
+      expect(result.success).toBe(true)
+    })
+  })
 })

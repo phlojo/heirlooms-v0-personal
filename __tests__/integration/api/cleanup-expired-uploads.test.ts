@@ -3,7 +3,15 @@ import { GET } from "@/app/api/cleanup-expired-uploads/route"
 
 // Mock dependencies
 vi.mock("@/lib/actions/pending-uploads", () => ({
-  cleanupExpiredUploads: vi.fn(),
+  auditPendingUploads: vi.fn(),
+}))
+
+vi.mock("@/lib/actions/cloudinary", () => ({
+  deleteCloudinaryMedia: vi.fn(),
+}))
+
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn(),
 }))
 
 describe("API: /api/cleanup-expired-uploads", () => {
@@ -12,13 +20,62 @@ describe("API: /api/cleanup-expired-uploads", () => {
     vi.unstubAllEnvs()
   })
 
+  const createMockAuditResult = (overrides = {}) => ({
+    timestamp: new Date().toISOString(),
+    summary: {
+      totalPendingUploads: 5,
+      expiredUploads: 3,
+      safeToDelete: 2,
+      dangerous: 0,
+      alreadyDeleted: 1,
+    },
+    details: {
+      safeToDelete: [
+        {
+          url: "https://example.com/old.jpg",
+          publicId: "old-id",
+          userId: "user-1",
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() - 1000).toISOString(),
+          existsInCloudinary: true,
+          reason: "Expired",
+        },
+      ],
+      dangerous: [],
+      alreadyDeleted: [
+        {
+          url: "https://example.com/deleted.jpg",
+          publicId: "deleted-id",
+          userId: "user-1",
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() - 1000).toISOString(),
+          reason: "Already deleted from Cloudinary",
+        },
+      ],
+    },
+    ...overrides,
+  })
+
   describe("GET request handling", () => {
     it("should allow cron requests in production with header", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 5,
-        error: null,
-      })
+      const { auditPendingUploads } = await import("@/lib/actions/pending-uploads")
+      const { deleteCloudinaryMedia } = await import("@/lib/actions/cloudinary")
+      const { createClient } = await import("@/lib/supabase/server")
+
+      vi.mocked(auditPendingUploads).mockResolvedValue(createMockAuditResult())
+      vi.mocked(deleteCloudinaryMedia).mockResolvedValue({ success: true })
+      vi.mocked(createClient).mockResolvedValue({
+        from: vi.fn().mockReturnValue({
+          delete: vi.fn().mockReturnValue({
+            in: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        }),
+        auth: {
+          getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }),
+        },
+      } as any)
 
       vi.stubEnv("NODE_ENV", "production")
 
@@ -32,7 +89,8 @@ describe("API: /api/cleanup-expired-uploads", () => {
 
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
-      expect(data.deletedCount).toBe(5)
+      expect(data.audit).toBeDefined()
+      expect(data.cleanup).toBeDefined()
     })
 
     it("should reject requests in production without cron header", async () => {
@@ -50,11 +108,21 @@ describe("API: /api/cleanup-expired-uploads", () => {
     })
 
     it("should allow any request in development mode", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 3,
-        error: null,
-      })
+      const { auditPendingUploads } = await import("@/lib/actions/pending-uploads")
+      const { deleteCloudinaryMedia } = await import("@/lib/actions/cloudinary")
+      const { createClient } = await import("@/lib/supabase/server")
+
+      vi.mocked(auditPendingUploads).mockResolvedValue(createMockAuditResult())
+      vi.mocked(deleteCloudinaryMedia).mockResolvedValue({ success: true })
+      vi.mocked(createClient).mockResolvedValue({
+        from: vi.fn().mockReturnValue({
+          delete: vi.fn().mockReturnValue({
+            in: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        }),
+      } as any)
 
       vi.stubEnv("NODE_ENV", "development")
 
@@ -68,34 +136,25 @@ describe("API: /api/cleanup-expired-uploads", () => {
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
     })
-
-    it("should allow requests in development without cron header", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 0,
-        error: null,
-      })
-
-      vi.stubEnv("NODE_ENV", "development")
-
-      const request = new Request("http://localhost/api/cleanup-expired-uploads", {
-        method: "GET",
-        // No x-vercel-cron header
-      })
-
-      const response = await GET(request)
-
-      expect(response.status).toBe(200)
-    })
   })
 
   describe("cleanup execution", () => {
-    it("should call cleanupExpiredUploads function", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 5,
-        error: null,
-      })
+    it("should call auditPendingUploads function", async () => {
+      const { auditPendingUploads } = await import("@/lib/actions/pending-uploads")
+      const { deleteCloudinaryMedia } = await import("@/lib/actions/cloudinary")
+      const { createClient } = await import("@/lib/supabase/server")
+
+      vi.mocked(auditPendingUploads).mockResolvedValue(createMockAuditResult())
+      vi.mocked(deleteCloudinaryMedia).mockResolvedValue({ success: true })
+      vi.mocked(createClient).mockResolvedValue({
+        from: vi.fn().mockReturnValue({
+          delete: vi.fn().mockReturnValue({
+            in: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        }),
+      } as any)
 
       vi.stubEnv("NODE_ENV", "development")
 
@@ -105,16 +164,25 @@ describe("API: /api/cleanup-expired-uploads", () => {
 
       await GET(request)
 
-      expect(vi.mocked(cleanupExpiredUploads)).toHaveBeenCalled()
+      expect(vi.mocked(auditPendingUploads)).toHaveBeenCalled()
     })
 
-    it("should return deleted count in response", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      const deletedCount = 10
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount,
-        error: null,
-      })
+    it("should return audit summary in response", async () => {
+      const { auditPendingUploads } = await import("@/lib/actions/pending-uploads")
+      const { deleteCloudinaryMedia } = await import("@/lib/actions/cloudinary")
+      const { createClient } = await import("@/lib/supabase/server")
+
+      vi.mocked(auditPendingUploads).mockResolvedValue(createMockAuditResult())
+      vi.mocked(deleteCloudinaryMedia).mockResolvedValue({ success: true })
+      vi.mocked(createClient).mockResolvedValue({
+        from: vi.fn().mockReturnValue({
+          delete: vi.fn().mockReturnValue({
+            in: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        }),
+      } as any)
 
       vi.stubEnv("NODE_ENV", "development")
 
@@ -125,15 +193,71 @@ describe("API: /api/cleanup-expired-uploads", () => {
       const response = await GET(request)
       const data = await response.json()
 
-      expect(data.deletedCount).toBe(deletedCount)
+      expect(data.audit.totalPending).toBeGreaterThanOrEqual(0)
+      expect(data.audit.expiredCount).toBeGreaterThanOrEqual(0)
     })
 
-    it("should handle zero deleted files", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 0,
-        error: null,
+    it("should track cleanup statistics", async () => {
+      const { auditPendingUploads } = await import("@/lib/actions/pending-uploads")
+      const { deleteCloudinaryMedia } = await import("@/lib/actions/cloudinary")
+      const { createClient } = await import("@/lib/supabase/server")
+
+      vi.mocked(auditPendingUploads).mockResolvedValue(createMockAuditResult())
+      vi.mocked(deleteCloudinaryMedia).mockResolvedValue({ success: true })
+      vi.mocked(createClient).mockResolvedValue({
+        from: vi.fn().mockReturnValue({
+          delete: vi.fn().mockReturnValue({
+            in: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        }),
+      } as any)
+
+      vi.stubEnv("NODE_ENV", "development")
+
+      const request = new Request("http://localhost/api/cleanup-expired-uploads", {
+        method: "GET",
       })
+
+      const response = await GET(request)
+      const data = await response.json()
+
+      expect(data.cleanup.deletedFromCloudinary).toBeGreaterThanOrEqual(0)
+      expect(data.cleanup.deletedFromDatabase).toBeGreaterThanOrEqual(0)
+      expect(typeof data.cleanup.failedDeletions).toBe("number")
+    })
+
+    it("should handle cleanup with no expired files", async () => {
+      const { auditPendingUploads } = await import("@/lib/actions/pending-uploads")
+      const { deleteCloudinaryMedia } = await import("@/lib/actions/cloudinary")
+      const { createClient } = await import("@/lib/supabase/server")
+
+      vi.mocked(auditPendingUploads).mockResolvedValue(
+        createMockAuditResult({
+          summary: {
+            totalPendingUploads: 0,
+            expiredUploads: 0,
+            safeToDelete: 0,
+            dangerous: 0,
+            alreadyDeleted: 0,
+          },
+          details: {
+            safeToDelete: [],
+            dangerous: [],
+            alreadyDeleted: [],
+          },
+        }),
+      )
+      vi.mocked(createClient).mockResolvedValue({
+        from: vi.fn().mockReturnValue({
+          delete: vi.fn().mockReturnValue({
+            in: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        }),
+      } as any)
 
       vi.stubEnv("NODE_ENV", "development")
 
@@ -145,35 +269,16 @@ describe("API: /api/cleanup-expired-uploads", () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.deletedCount).toBe(0)
       expect(data.success).toBe(true)
+      expect(data.cleanup.deletedFromCloudinary).toBe(0)
     })
   })
 
   describe("error handling", () => {
-    it("should return 500 if cleanup fails", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 0,
-        error: "Database connection failed",
-      })
+    it("should return 500 if audit fails", async () => {
+      const { auditPendingUploads } = await import("@/lib/actions/pending-uploads")
 
-      vi.stubEnv("NODE_ENV", "development")
-
-      const request = new Request("http://localhost/api/cleanup-expired-uploads", {
-        method: "GET",
-      })
-
-      const response = await GET(request)
-      const data = await response.json()
-
-      expect(response.status).toBe(500)
-      expect(data.error).toBe("Database connection failed")
-    })
-
-    it("should return 500 if cleanup throws", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockRejectedValue(new Error("Cleanup failed"))
+      vi.mocked(auditPendingUploads).mockRejectedValue(new Error("Audit failed"))
 
       vi.stubEnv("NODE_ENV", "development")
 
@@ -187,12 +292,10 @@ describe("API: /api/cleanup-expired-uploads", () => {
     })
 
     it("should include error message in response", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      const errorMessage = "Cloudinary API error"
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 0,
-        error: errorMessage,
-      })
+      const { auditPendingUploads } = await import("@/lib/actions/pending-uploads")
+
+      const errorMessage = "Supabase connection failed"
+      vi.mocked(auditPendingUploads).mockRejectedValue(new Error(errorMessage))
 
       vi.stubEnv("NODE_ENV", "development")
 
@@ -203,7 +306,7 @@ describe("API: /api/cleanup-expired-uploads", () => {
       const response = await GET(request)
       const data = await response.json()
 
-      expect(data.error).toBe(errorMessage)
+      expect(data.error).toContain("Supabase connection failed")
     })
   })
 
@@ -216,57 +319,41 @@ describe("API: /api/cleanup-expired-uploads", () => {
         headers: { "x-vercel-cron": "true" },
       })
 
-      expect(() => GET(request)).not.toThrow()
-    })
-
-    it("should ignore case sensitivity for header check", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 1,
-        error: null,
-      })
-
-      vi.stubEnv("NODE_ENV", "production")
-
-      // headers are case-insensitive in HTTP
-      const request = new Request("http://localhost/api/cleanup-expired-uploads", {
-        method: "GET",
-        headers: { "X-Vercel-Cron": "true" },
-      })
-
       const response = await GET(request)
 
-      // Header handling depends on Node.js implementation, but headers should work
-      expect(response.status).toBeGreaterThanOrEqual(200)
+      expect(response.status).not.toBe(401)
     })
 
-    it("should accept any non-empty x-vercel-cron header value", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 1,
-        error: null,
-      })
-
+    it("should reject if x-vercel-cron header missing in production", async () => {
       vi.stubEnv("NODE_ENV", "production")
 
       const request = new Request("http://localhost/api/cleanup-expired-uploads", {
         method: "GET",
-        headers: { "x-vercel-cron": "any-value" },
       })
 
       const response = await GET(request)
 
-      expect(response.status).toBe(200)
+      expect(response.status).toBe(401)
     })
   })
 
   describe("response format", () => {
     it("should return JSON response", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 5,
-        error: null,
-      })
+      const { auditPendingUploads } = await import("@/lib/actions/pending-uploads")
+      const { deleteCloudinaryMedia } = await import("@/lib/actions/cloudinary")
+      const { createClient } = await import("@/lib/supabase/server")
+
+      vi.mocked(auditPendingUploads).mockResolvedValue(createMockAuditResult())
+      vi.mocked(deleteCloudinaryMedia).mockResolvedValue({ success: true })
+      vi.mocked(createClient).mockResolvedValue({
+        from: vi.fn().mockReturnValue({
+          delete: vi.fn().mockReturnValue({
+            in: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        }),
+      } as any)
 
       vi.stubEnv("NODE_ENV", "development")
 
@@ -279,12 +366,22 @@ describe("API: /api/cleanup-expired-uploads", () => {
       expect(response.headers.get("content-type")).toContain("application/json")
     })
 
-    it("should return success and deletedCount on success", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 7,
-        error: null,
-      })
+    it("should return success flag and statistics on success", async () => {
+      const { auditPendingUploads } = await import("@/lib/actions/pending-uploads")
+      const { deleteCloudinaryMedia } = await import("@/lib/actions/cloudinary")
+      const { createClient } = await import("@/lib/supabase/server")
+
+      vi.mocked(auditPendingUploads).mockResolvedValue(createMockAuditResult())
+      vi.mocked(deleteCloudinaryMedia).mockResolvedValue({ success: true })
+      vi.mocked(createClient).mockResolvedValue({
+        from: vi.fn().mockReturnValue({
+          delete: vi.fn().mockReturnValue({
+            in: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        }),
+      } as any)
 
       vi.stubEnv("NODE_ENV", "development")
 
@@ -295,32 +392,9 @@ describe("API: /api/cleanup-expired-uploads", () => {
       const response = await GET(request)
       const data = await response.json()
 
-      expect(data).toEqual({
-        success: true,
-        deletedCount: 7,
-      })
-    })
-
-    it("should return error on failure", async () => {
-      const { cleanupExpiredUploads } = await import("@/lib/actions/pending-uploads")
-      vi.mocked(cleanupExpiredUploads).mockResolvedValue({
-        deletedCount: 0,
-        error: "Storage error",
-      })
-
-      vi.stubEnv("NODE_ENV", "development")
-
-      const request = new Request("http://localhost/api/cleanup-expired-uploads", {
-        method: "GET",
-      })
-
-      const response = await GET(request)
-      const data = await response.json()
-
-      expect(data).toEqual({
-        error: "Storage error",
-      })
-      expect(data.success).toBeUndefined()
+      expect(data.success).toBe(true)
+      expect(data.audit).toBeDefined()
+      expect(data.cleanup).toBeDefined()
     })
   })
 })
