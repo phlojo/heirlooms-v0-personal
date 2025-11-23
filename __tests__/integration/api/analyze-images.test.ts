@@ -53,7 +53,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
         headers: { "x-forwarded-for": "192.168.1.1" },
       })
 
@@ -78,7 +78,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "non-existent-id" }),
+        body: JSON.stringify({ artifactId: "a9999999-9999-4999-a999-999999999999" }),
       })
 
       const response = await POST(request)
@@ -118,7 +118,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
       })
 
       const response = await POST(request)
@@ -159,7 +159,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
       })
 
       await POST(request)
@@ -201,7 +201,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
       })
 
       await POST(request)
@@ -241,7 +241,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
       })
 
       await POST(request)
@@ -284,7 +284,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
       })
 
       const response = await POST(request)
@@ -329,7 +329,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
       })
 
       await POST(request)
@@ -376,7 +376,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
       })
 
       const response = await POST(request)
@@ -423,7 +423,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
       })
 
       await POST(request)
@@ -466,7 +466,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
       })
 
       const response = await POST(request)
@@ -491,7 +491,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
       })
 
       const response = await POST(request)
@@ -532,7 +532,7 @@ describe("API: /api/analyze/images", () => {
 
       const request = new Request("http://localhost/api/analyze/images", {
         method: "POST",
-        body: JSON.stringify({ artifactId: "test-id" }),
+        body: JSON.stringify({ artifactId: fixtures.artifacts.imageArtifact.id }),
       })
 
       await POST(request)
