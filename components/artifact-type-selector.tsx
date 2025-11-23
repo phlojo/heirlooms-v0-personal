@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronDown } from "lucide-react"
 import { getDynamicLucideIcon } from "@/lib/utils/dynamic-icon"
 import type { ArtifactType } from "@/lib/types/artifact-types"
@@ -13,6 +13,7 @@ interface ArtifactTypeSelectorProps {
   onSelectType: (typeId: string | null) => void
   required?: boolean
   defaultOpen?: boolean
+  storageKey?: string
 }
 
 function ArtifactTypeSelector({
@@ -21,8 +22,21 @@ function ArtifactTypeSelector({
   onSelectType,
   required = false,
   defaultOpen = false,
+  storageKey,
 }: ArtifactTypeSelectorProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
+  const [isOpen, setIsOpen] = useState(() => {
+    if (!storageKey || typeof window === "undefined") {
+      return defaultOpen
+    }
+    const stored = localStorage.getItem(storageKey)
+    return stored !== null ? stored === "true" : defaultOpen
+  })
+
+  useEffect(() => {
+    if (storageKey && typeof window !== "undefined") {
+      localStorage.setItem(storageKey, String(isOpen))
+    }
+  }, [isOpen, storageKey])
 
   console.log("[v0] ArtifactTypeSelector rendering with types:", types)
   console.log("[v0] Selected type ID:", selectedTypeId)
