@@ -421,12 +421,12 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
                         <video
                           src={url}
                           controls
-                          className="w-full rounded-lg shadow-md"
+                          className="w-full rounded shadow-md"
                           preload="metadata"
                           playsInline
                         />
                         <div className="space-y-2">
-                          <label className="text-xs font-medium text-muted-foreground">Summary</label>
+                          <label className="text-sm font-medium text-purple-600">Caption</label>
                           <TranscriptionInput
                             value={videoSummaries[url] || ""}
                             onChange={(value) => {
@@ -435,12 +435,13 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
                                 [url]: value,
                               }))
                             }}
-                            placeholder="Add summary..."
+                            placeholder="Add caption..."
                             type="textarea"
                             fieldType="description"
                             userId={userId}
                             entityType="artifact"
                             rows={2}
+                            className="text-sm italic"
                           />
                         </div>
                         <GenerateVideoSummaryButton
@@ -490,10 +491,10 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
                         <img
                           src={getDetailUrl(url) || "/placeholder.svg"}
                           alt={`Artifact media ${idx + 1}`}
-                          className="w-full rounded-lg shadow-md"
+                          className="w-full rounded shadow-md"
                         />
                         <div className="space-y-2">
-                          <label className="text-xs font-medium text-muted-foreground">Caption</label>
+                          <label className="text-sm font-medium text-purple-600">Caption</label>
                           <TranscriptionInput
                             value={imageCaptions[url] || ""}
                             onChange={(value) => {
@@ -508,6 +509,7 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
                             userId={userId}
                             entityType="artifact"
                             rows={2}
+                            className="text-sm italic"
                           />
                         </div>
                         <GenerateImageCaptionButton

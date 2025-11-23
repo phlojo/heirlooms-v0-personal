@@ -60,7 +60,7 @@ export function GenerateImageCaptionButton({
       variant="outline"
       size="sm"
       onClick={handleGenerate}
-      disabled={isGenerating || !!currentCaption}
+      disabled={isGenerating}
       className="gap-2 bg-transparent"
     >
       {isGenerating ? (
@@ -68,15 +68,10 @@ export function GenerateImageCaptionButton({
           <Loader2 className="h-4 w-4 animate-spin" />
           Generating...
         </>
-      ) : currentCaption ? (
-        <>
-          <Sparkles className="h-4 w-4" />
-          Caption Generated
-        </>
       ) : (
         <>
           <Sparkles className="h-4 w-4" />
-          Generate AI Caption
+          {currentCaption ? "Regenerate AI Caption" : "Generate AI Caption"}
         </>
       )}
     </Button>

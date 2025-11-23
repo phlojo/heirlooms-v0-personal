@@ -406,7 +406,7 @@ export function ArtifactDetailView({
         />
       )}
 
-      <div className={`space-y-6 px-6 lg:px-8 ${isEditMode ? "pt-4" : "pt-2"}`}>
+      <div className={`space-y-6 px-6 lg:px-8 overflow-x-hidden ${isEditMode ? "pt-4" : "pt-2"}`}>
         {!isEditMode && canEdit && (
           <div className="flex items-center justify-between gap-3">
             <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
@@ -542,7 +542,7 @@ export function ArtifactDetailView({
       </div>
 
       {/* Media Items Section */}
-      <section className="space-y-6 my-6">
+      <section className="space-y-6 my-6 overflow-x-hidden">
         {isEditMode && (
           <div className="flex items-center justify-between px-6 lg:px-8">
             <h2 className="text-sm font-medium text-foreground">Media Items</h2>
@@ -635,8 +635,8 @@ export function ArtifactDetailView({
                         </div>
                       </div>
                     )}
-                    <div className="w-full max-w-full overflow-hidden">
-                      <video src={url} controls className="w-full max-w-full h-auto rounded-lg shadow-md" style={{ maxHeight: "70vh" }}>
+                    <div className="w-full max-w-full overflow-hidden overflow-x-hidden">
+                      <video src={url} controls className="w-full max-w-full h-auto rounded shadow-md" style={{ maxHeight: "70vh" }}>
                         Your browser does not support the video tag.
                       </video>
                     </div>
@@ -644,7 +644,7 @@ export function ArtifactDetailView({
                       {isEditMode ? (
                         <>
                           <div className="space-y-2">
-                            <label className="text-sm font-medium text-foreground">Caption</label>
+                            <label className="text-sm font-medium text-purple-600">Caption</label>
                             <TranscriptionInput
                               value={summary || ""}
                               onChange={(newSummary) => {
@@ -659,6 +659,7 @@ export function ArtifactDetailView({
                               userId={userId}
                               entityType="artifact"
                               rows={3}
+                              className="text-sm italic"
                             />
                           </div>
                           <GenerateVideoSummaryButton
@@ -671,7 +672,6 @@ export function ArtifactDetailView({
                       ) : (
                         summary && (
                           <div className="rounded-lg border bg-muted/30 p-3">
-                            <h4 className="text-xs font-semibold text-purple-600 mb-1">Caption</h4>
                             <p className="text-sm text-foreground leading-relaxed italic">{summary}</p>
                           </div>
                         )
@@ -722,7 +722,7 @@ export function ArtifactDetailView({
                       {isEditMode ? (
                         <>
                           <div className="space-y-2">
-                            <label className="text-sm font-medium text-foreground">Caption</label>
+                            <label className="text-sm font-medium text-purple-600">Caption</label>
                             <TranscriptionInput
                               value={caption || ""}
                               onChange={(newCaption) => {
@@ -737,6 +737,7 @@ export function ArtifactDetailView({
                               userId={userId}
                               entityType="artifact"
                               rows={3}
+                              className="text-sm italic"
                             />
                           </div>
                           <GenerateImageCaptionButton
@@ -749,7 +750,6 @@ export function ArtifactDetailView({
                       ) : (
                         caption && (
                           <div className="rounded-lg border bg-muted/30 p-3">
-                            <h4 className="text-xs font-semibold text-purple-600 mb-1">Caption</h4>
                             <p className="text-sm text-foreground leading-relaxed italic">{caption}</p>
                           </div>
                         )
@@ -768,7 +768,7 @@ export function ArtifactDetailView({
       </section>
 
       {/* Provenance Section */}
-      <div className="px-6 lg:px-8 pb-[240px]">
+      <div className="px-6 lg:px-8 pb-[240px] overflow-x-hidden">
         <section className="pb-8">
           <Collapsible open={isProvenanceOpen} onOpenChange={setIsProvenanceOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between hover:opacity-80 transition-opacity">

@@ -18,6 +18,7 @@ interface TranscriptionInputProps {
   disabled?: boolean
   rows?: number
   entityType?: "artifact" | "collection"
+  className?: string
 }
 
 export function TranscriptionInput({
@@ -30,6 +31,7 @@ export function TranscriptionInput({
   disabled = false,
   rows = 4,
   entityType = "artifact",
+  className = "",
 }: TranscriptionInputProps) {
   const [isRecording, setIsRecording] = useState(false)
   const [isTranscribing, setIsTranscribing] = useState(false)
@@ -283,7 +285,7 @@ export function TranscriptionInput({
           placeholder={placeholder}
           disabled={disabled || isRecording || isTranscribing}
           rows={type === "textarea" ? rows : undefined}
-          className="pr-10"
+          className={`pr-10 ${className}`}
         />
         <Button
           type="button"
