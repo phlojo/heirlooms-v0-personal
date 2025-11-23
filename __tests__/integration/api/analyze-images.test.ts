@@ -27,10 +27,14 @@ vi.mock("@/lib/utils/rate-limit", () => ({
 }))
 
 describe("API: /api/analyze/images", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     setupSupabaseMocks()
     setupOpenAIMocks()
+
+    // Reset rate limit mock to allow requests by default
+    const { rateLimit } = await import("@/lib/utils/rate-limit")
+    vi.mocked(rateLimit).mockReturnValue({ ok: true })
   })
 
   describe("POST request handling", () => {
