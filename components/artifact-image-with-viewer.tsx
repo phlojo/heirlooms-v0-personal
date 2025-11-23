@@ -57,7 +57,7 @@ export function ArtifactImageWithViewer({ src, alt, setIsImageFullscreen }: Arti
 
   return (
     <>
-      <div ref={imageRef} className="overflow-hidden bg-muted -mx-6 lg:-mx-8 cursor-pointer" onClick={handleImageClick}>
+      <div ref={imageRef} className="overflow-hidden bg-muted -mx-6 lg:-mx-8 cursor-pointer rounded-lg shadow-md" onClick={handleImageClick}>
         <MediaImage
           src={src}
           alt={alt}

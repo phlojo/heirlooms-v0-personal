@@ -227,6 +227,31 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
         <section className="space-y-2">
           <FormField
             control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium">Description</FormLabel>
+                <FormControl>
+                  <TranscriptionInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Tell the story of this artifact..."
+                    type="textarea"
+                    fieldType="description"
+                    userId={userId}
+                    entityType="artifact"
+                    rows={4}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </section>
+
+        <section className="space-y-2">
+          <FormField
+            control={form.control}
             name="collectionId"
             render={({ field }) => (
               <FormItem>
@@ -249,7 +274,8 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
             selectedTypeId={selectedTypeId}
             onSelectType={setSelectedTypeId}
             required={false}
-            defaultOpen={false}
+            defaultOpen={true}
+            storageKey="artifactTypeSelector_new_open"
           />
         )}
 
@@ -399,12 +425,24 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
                           preload="metadata"
                           playsInline
                         />
-                        {videoSummaries[url] && (
-                          <div className="rounded-lg border bg-muted/30 p-4">
-                            <h4 className="text-sm font-semibold mb-2">AI Summary</h4>
-                            <p className="text-sm text-foreground leading-relaxed">{videoSummaries[url]}</p>
-                          </div>
-                        )}
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-muted-foreground">Summary</label>
+                          <TranscriptionInput
+                            value={videoSummaries[url] || ""}
+                            onChange={(value) => {
+                              setVideoSummaries((prev) => ({
+                                ...prev,
+                                [url]: value,
+                              }))
+                            }}
+                            placeholder="Add summary..."
+                            type="textarea"
+                            fieldType="description"
+                            userId={userId}
+                            entityType="artifact"
+                            rows={2}
+                          />
+                        </div>
                         <GenerateVideoSummaryButton
                           videoUrl={url}
                           onSummaryGenerated={handleVideoSummaryGenerated}
@@ -454,12 +492,24 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
                           alt={`Artifact media ${idx + 1}`}
                           className="w-full rounded-lg shadow-md"
                         />
-                        {imageCaptions[url] && (
-                          <div className="rounded-lg border bg-muted/30 p-4">
-                            <h4 className="text-sm font-semibold mb-2">AI Caption</h4>
-                            <p className="text-sm text-foreground leading-relaxed">{imageCaptions[url]}</p>
-                          </div>
-                        )}
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-muted-foreground">Caption</label>
+                          <TranscriptionInput
+                            value={imageCaptions[url] || ""}
+                            onChange={(value) => {
+                              setImageCaptions((prev) => ({
+                                ...prev,
+                                [url]: value,
+                              }))
+                            }}
+                            placeholder="Add caption..."
+                            type="textarea"
+                            fieldType="description"
+                            userId={userId}
+                            entityType="artifact"
+                            rows={2}
+                          />
+                        </div>
                         <GenerateImageCaptionButton
                           imageUrl={url}
                           onCaptionGenerated={handleCaptionGenerated}

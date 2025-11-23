@@ -101,10 +101,6 @@ export function ArtifactDetailView({
 
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
 
-  const [editingCaption, setEditingCaption] = useState<string | null>(null)
-  const [editCaptionText, setEditCaptionText] = useState<string>("")
-  const [isSavingCaption, setIsSavingCaption] = useState(false)
-
   const [originalState] = useState({
     title: artifact.title,
     description: artifact.description || "",
@@ -337,48 +333,12 @@ export function ArtifactDetailView({
     setComingSoonOpen(true)
   }
 
-  const handleStartEditCaption = (url: string, currentCaption: string) => {
-    setEditingCaption(url)
-    setEditCaptionText(currentCaption)
-  }
-
-  const handleSaveCaption = async (url: string) => {
-    if (isEditMode) {
-      setEditImageCaptions((prev) => ({
-        ...prev,
-        [url]: editCaptionText,
-      }))
-      setEditingCaption(null)
-      setEditCaptionText("")
-    } else {
-      setIsSavingCaption(true)
-      try {
-        const { updateMediaCaption } = await import("@/lib/actions/artifacts")
-        const result = await updateMediaCaption(artifact.id, url, editCaptionText)
-        if (result.success) {
-          setEditingCaption(null)
-          router.refresh()
-        } else {
-          alert(result.error || "Failed to update caption")
-        }
-      } catch (error) {
-        console.error("[v0] Failed to update caption:", error)
-        alert("Failed to update caption. Please try again.")
-      } finally {
-        setIsSavingCaption(false)
-      }
-    }
-  }
-
-  const handleCancelEditCaption = () => {
-    setEditingCaption(null)
-    setEditCaptionText("")
-  }
-
   const handleCancel = () => {
     if (hasUnsavedChanges) {
       setCancelDialogOpen(true)
     } else {
+      // Disable beforeunload warning before redirecting
+      shouldWarnOnUnloadRef.current = false
       window.location.href = `/artifacts/${artifact.slug}`
     }
   }
@@ -390,6 +350,8 @@ export function ArtifactDetailView({
   const confirmCancel = () => {
     setCancelDialogOpen(false)
     setSelectedTypeId(originalState.type_id)
+    // Disable beforeunload warning before redirecting
+    shouldWarnOnUnloadRef.current = false
     window.location.href = `/artifacts/${artifact.slug}`
   }
 
@@ -490,10 +452,37 @@ export function ArtifactDetailView({
           </section>
         )}
 
+        {/* Description Section */}
+        <section className="space-y-4">
+          {isEditMode && <h2 className="text-sm font-medium text-foreground">Description</h2>}
+          {isEditMode ? (
+            <TranscriptionInput
+              value={editDescription}
+              onChange={setEditDescription}
+              placeholder="Tell the story of this artifact..."
+              type="textarea"
+              fieldType="description"
+              userId={userId}
+              entityType="artifact"
+              rows={4}
+            />
+          ) : (
+            <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
+              <ReactMarkdown>{artifact.description || "No description provided"}</ReactMarkdown>
+              {artifact.ai_description && (
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-xs font-semibold text-purple-600 mb-2">AI-Enhanced Description</p>
+                  <ReactMarkdown>{artifact.ai_description}</ReactMarkdown>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
         {isEditMode && (
           <section className="space-y-2">
             <label htmlFor="collection" className="text-sm font-medium text-foreground">
-              Choose Collection
+              Collection
             </label>
             <Select
               value={editCollectionId}
@@ -526,36 +515,10 @@ export function ArtifactDetailView({
             selectedTypeId={selectedTypeId}
             onSelectType={handleTypeChange}
             required={false}
-            defaultOpen={!!artifact.type_id}
+            defaultOpen={false}
+            storageKey="artifactTypeSelector_edit_open"
           />
         )}
-
-        {/* Description Section */}
-        <section className="space-y-4">
-          {isEditMode && <h2 className="text-sm font-medium text-foreground">Description</h2>}
-          {isEditMode ? (
-            <TranscriptionInput
-              value={editDescription}
-              onChange={setEditDescription}
-              placeholder="Tell the story of this artifact..."
-              type="textarea"
-              fieldType="description"
-              userId={userId}
-              entityType="artifact"
-              rows={4}
-            />
-          ) : (
-            <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown>{artifact.description || "No description provided"}</ReactMarkdown>
-              {artifact.ai_description && (
-                <div className="mt-4 pt-4 border-t">
-                  <p className="text-xs font-semibold text-purple-600 mb-2">AI-Enhanced Description</p>
-                  <ReactMarkdown>{artifact.ai_description}</ReactMarkdown>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
 
         {/* Attributes Section */}
         <section className="space-y-2">
@@ -640,7 +603,6 @@ export function ArtifactDetailView({
                 )
               } else if (isVideoUrl(url)) {
                 const summary = videoSummaries[url]
-                const isEditingThisCaption = editingCaption === url
                 const isSelectedThumbnail = isEditMode && editThumbnailUrl === url
                 return (
                   <div key={url} className="space-y-3">
@@ -674,87 +636,51 @@ export function ArtifactDetailView({
                       </div>
                     )}
                     <div className="w-full max-w-full overflow-hidden">
-                      <video src={url} controls className="w-full max-w-full h-auto" style={{ maxHeight: "70vh" }}>
+                      <video src={url} controls className="w-full max-w-full h-auto rounded-lg shadow-md" style={{ maxHeight: "70vh" }}>
                         Your browser does not support the video tag.
                       </video>
                     </div>
                     <div className="px-6 lg:px-8 space-y-3">
-                      {summary && (
-                        <div className="rounded-lg border bg-muted/30 p-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className="text-xs font-semibold text-purple-600">AI Video Summary</h4>
-                            {isEditMode && !isEditingThisCaption && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={() => handleStartEditCaption(url, summary)}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                            )}
+                      {isEditMode ? (
+                        <>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Caption</label>
+                            <TranscriptionInput
+                              value={summary || ""}
+                              onChange={(newSummary) => {
+                                setEditVideoSummaries((prev) => ({
+                                  ...prev,
+                                  [url]: newSummary,
+                                }))
+                              }}
+                              placeholder="Add a caption for this video..."
+                              type="textarea"
+                              fieldType="description"
+                              userId={userId}
+                              entityType="artifact"
+                              rows={3}
+                            />
                           </div>
-                          {isEditingThisCaption ? (
-                            <div className="space-y-2">
-                              <TranscriptionInput
-                                value={editCaptionText}
-                                onChange={setEditCaptionText}
-                                placeholder="Add summary..."
-                                type="textarea"
-                                fieldType="description"
-                                userId={userId}
-                                entityType="artifact"
-                                rows={3}
-                              />
-                              <div className="flex gap-2">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="default"
-                                  onClick={() => {
-                                    if (isEditMode) {
-                                      setEditVideoSummaries((prev) => ({
-                                        ...prev,
-                                        [url]: editCaptionText,
-                                      }))
-                                      setEditingCaption(null)
-                                      setEditCaptionText("")
-                                    }
-                                  }}
-                                  disabled={isSavingCaption}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  {isSavingCaption ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={handleCancelEditCaption}
-                                  disabled={isSavingCaption}
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
+                          <GenerateVideoSummaryButton
+                            artifactId={artifact.id}
+                            videoUrl={url}
+                            onSummaryGenerated={handleSummaryGenerated}
+                            currentSummary={summary}
+                          />
+                        </>
+                      ) : (
+                        summary && (
+                          <div className="rounded-lg border bg-muted/30 p-3">
+                            <h4 className="text-xs font-semibold text-purple-600 mb-1">Caption</h4>
                             <p className="text-sm text-foreground leading-relaxed italic">{summary}</p>
-                          )}
-                        </div>
-                      )}
-                      {isEditMode && (
-                        <GenerateVideoSummaryButton
-                          artifactId={artifact.id}
-                          videoUrl={url}
-                          onSummaryGenerated={handleSummaryGenerated}
-                        />
+                          </div>
+                        )
                       )}
                     </div>
                   </div>
                 )
               } else {
                 const caption = imageCaptions[url]
-                const isEditingThisCaption = editingCaption === url
                 const isSelectedThumbnail = isEditMode && editThumbnailUrl === url
                 return (
                   <div key={url} className="space-y-3">
@@ -793,66 +719,40 @@ export function ArtifactDetailView({
                       setIsImageFullscreen={setIsImageFullscreen}
                     />
                     <div className="px-6 lg:px-8 space-y-3">
-                      {caption && (
-                        <div className="rounded-lg border bg-muted/30 p-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className="text-xs font-semibold text-purple-600">AI Caption</h4>
-                            {isEditMode && !isEditingThisCaption && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={() => handleStartEditCaption(url, caption)}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                            )}
+                      {isEditMode ? (
+                        <>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Caption</label>
+                            <TranscriptionInput
+                              value={caption || ""}
+                              onChange={(newCaption) => {
+                                setEditImageCaptions((prev) => ({
+                                  ...prev,
+                                  [url]: newCaption,
+                                }))
+                              }}
+                              placeholder="Add a caption for this image..."
+                              type="textarea"
+                              fieldType="description"
+                              userId={userId}
+                              entityType="artifact"
+                              rows={3}
+                            />
                           </div>
-                          {isEditingThisCaption ? (
-                            <div className="space-y-2">
-                              <TranscriptionInput
-                                value={editCaptionText}
-                                onChange={setEditCaptionText}
-                                placeholder="Add caption..."
-                                type="textarea"
-                                fieldType="description"
-                                userId={userId}
-                                entityType="artifact"
-                                rows={3}
-                              />
-                              <div className="flex gap-2">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="default"
-                                  onClick={() => handleSaveCaption(url)}
-                                  disabled={isSavingCaption}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  {isSavingCaption ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={handleCancelEditCaption}
-                                  disabled={isSavingCaption}
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
+                          <GenerateImageCaptionButton
+                            artifactId={artifact.id}
+                            imageUrl={url}
+                            onCaptionGenerated={handleCaptionGenerated}
+                            currentCaption={caption}
+                          />
+                        </>
+                      ) : (
+                        caption && (
+                          <div className="rounded-lg border bg-muted/30 p-3">
+                            <h4 className="text-xs font-semibold text-purple-600 mb-1">Caption</h4>
                             <p className="text-sm text-foreground leading-relaxed italic">{caption}</p>
-                          )}
-                        </div>
-                      )}
-                      {isEditMode && (
-                        <GenerateImageCaptionButton
-                          artifactId={artifact.id}
-                          imageUrl={url}
-                          onCaptionGenerated={handleCaptionGenerated}
-                        />
+                          </div>
+                        )
                       )}
                     </div>
                   </div>
