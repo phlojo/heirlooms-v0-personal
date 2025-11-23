@@ -5,7 +5,7 @@
 export const fixtures = {
   users: {
     validUser: {
-      id: "test-user-id-001",
+      id: "11111111-1111-4111-a111-111111111111",
       email: "testuser@example.com",
       displayName: "Test User",
       theme: "light",
@@ -13,7 +13,7 @@ export const fixtures = {
       updatedAt: new Date("2024-01-01"),
     },
     anotherUser: {
-      id: "test-user-id-002",
+      id: "22222222-2222-4222-a222-222222222222",
       email: "anotheruser@example.com",
       displayName: "Another User",
       theme: "dark",
@@ -24,10 +24,10 @@ export const fixtures = {
 
   collections: {
     publicCollection: {
-      id: "test-collection-001",
+      id: "c1111111-1111-4111-a111-111111111111",
       title: "My Public Collection",
       description: "A publicly visible collection",
-      userId: "test-user-id-001",
+      userId: "11111111-1111-4111-a111-111111111111",
       coverImage: null,
       isPublic: true,
       slug: "my-public-collection-1704067200",
@@ -36,10 +36,10 @@ export const fixtures = {
       updatedAt: new Date("2024-01-01"),
     },
     privateCollection: {
-      id: "test-collection-002",
+      id: "c2222222-2222-4222-a222-222222222222",
       title: "My Private Collection",
       description: "A private collection",
-      userId: "test-user-id-001",
+      userId: "11111111-1111-4111-a111-111111111111",
       coverImage: null,
       isPublic: false,
       slug: "my-private-collection-1704067200",
@@ -48,14 +48,14 @@ export const fixtures = {
       updatedAt: new Date("2024-01-01"),
     },
     withPrimaryType: {
-      id: "test-collection-003",
+      id: "c3333333-3333-4333-a333-333333333333",
       title: "Car Collection",
       description: "Collection of cars",
-      userId: "test-user-id-001",
+      userId: "11111111-1111-4111-a111-111111111111",
       coverImage: "https://example.com/car-cover.jpg",
       isPublic: true,
       slug: "car-collection-1704067200",
-      primaryTypeId: "type-car",
+      primaryTypeId: "t1111111-1111-4111-a111-111111111111",
       createdAt: new Date("2024-01-01"),
       updatedAt: new Date("2024-01-01"),
     },
@@ -63,11 +63,11 @@ export const fixtures = {
 
   artifacts: {
     imageArtifact: {
-      id: "test-artifact-001",
+      id: "a1111111-1111-4111-a111-111111111111",
       title: "Old Family Photo",
       description: "A photo from the 1980s",
-      collectionId: "test-collection-001",
-      userId: "test-user-id-001",
+      collectionId: "c1111111-1111-4111-a111-111111111111",
+      userId: "11111111-1111-4111-a111-111111111111",
       mediaUrls: ["https://example.com/photo.jpg"],
       thumbnailUrl: "https://example.com/photo.jpg",
       slug: "old-family-photo-1704067200",
