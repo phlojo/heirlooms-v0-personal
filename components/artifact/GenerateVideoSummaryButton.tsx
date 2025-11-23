@@ -60,7 +60,7 @@ export function GenerateVideoSummaryButton({
       variant="outline"
       size="sm"
       onClick={handleGenerate}
-      disabled={isGenerating || !!currentSummary}
+      disabled={isGenerating}
       className="gap-2 bg-transparent"
     >
       {isGenerating ? (
@@ -68,15 +68,10 @@ export function GenerateVideoSummaryButton({
           <Loader2 className="h-4 w-4 animate-spin" />
           Generating...
         </>
-      ) : currentSummary ? (
-        <>
-          <Sparkles className="h-4 w-4" />
-          Summary Generated
-        </>
       ) : (
         <>
           <Sparkles className="h-4 w-4" />
-          Generate AI Summary
+          {currentSummary ? "Regenerate AI Summary" : "Generate AI Summary"}
         </>
       )}
     </Button>
