@@ -51,8 +51,8 @@ export function CollectionsTabs({
   const [viewType, setViewType] = useState<ViewType>(initialViewPreference)
   const pathname = usePathname()
 
-  const [allCollectionsList, setAllCollectionsList] = useState<Collection[]>(allCollections)
-  const [myCollectionsList, setMyCollectionsList] = useState<Collection[]>(myCollections)
+  const [allCollectionsList, setAllCollectionsList] = useState<Collection[]>(allCollections || [])
+  const [myCollectionsList, setMyCollectionsList] = useState<Collection[]>(myCollections || [])
   const [allHasMore, setAllHasMore] = useState(initialAllHasMore)
   const [myHasMore, setMyHasMore] = useState(initialMyHasMore)
   const [isLoadingAll, setIsLoadingAll] = useState(false)
