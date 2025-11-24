@@ -37,4 +37,3 @@ test-results/
 .env.local
 .env.*.local
 .env.e2e
-
