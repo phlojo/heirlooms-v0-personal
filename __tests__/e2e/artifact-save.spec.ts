@@ -1,12 +1,11 @@
 import { test, expect } from "./global.setup"
-import { createTestArtifact } from "./helpers/test-data"
+import { getFirstArtifactSlug } from "./helpers/test-data"
 
 test.describe("Artifact Save Flow", () => {
   let testSlug: string
 
   test.beforeEach(async ({ page }) => {
-    // Create a fresh test artifact before each test
-    testSlug = await createTestArtifact(page, `Test Artifact ${Date.now()}`)
+    testSlug = await getFirstArtifactSlug(page)
   })
 
   test("should save artifact changes without beforeunload warning", async ({ page }) => {

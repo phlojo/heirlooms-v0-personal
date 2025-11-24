@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "./global.setup"
-import { createTestArtifact } from "./helpers/test-data"
+import { getFirstArtifactSlug } from "./helpers/test-data"
 
 // Mock data for AI responses
 const mockTranscript =
@@ -120,8 +120,7 @@ test.describe("AI Analysis Flow", () => {
     // Setup API mocks before each test
     await setupApiMocks(page)
 
-    // Create a fresh test artifact for each test
-    testSlug = await createTestArtifact(page, `AI Test Artifact ${Date.now()}`)
+    testSlug = await getFirstArtifactSlug(page)
   })
 
   test("should transcribe audio file successfully", async ({ page }) => {

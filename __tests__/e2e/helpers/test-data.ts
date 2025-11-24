@@ -1,9 +1,47 @@
 import type { Page } from "@playwright/test"
-import { expect } from "@playwright/test"
+
+/**
+ * Gets the slug of the first artifact from the artifacts list.
+ * This is more reliable than creating a new artifact for E2E tests.
+ *
+ * @param page - Playwright Page object
+ * @returns The slug of the first artifact
+ */
+export async function getFirstArtifactSlug(page: Page): Promise<string> {
+  console.log("[v0] Getting first artifact from list")
+
+  // Navigate to artifacts page
+  await page.goto("/artifacts")
+
+  // Wait for artifacts to load
+  await page.waitForSelector("[data-testid='artifact-link']", { timeout: 10000 })
+
+  // Get the first artifact link
+  const firstArtifactLink = page.locator("[data-testid='artifact-link']").first()
+  const href = await firstArtifactLink.getAttribute("href")
+
+  if (!href) {
+    throw new Error("No artifact link found")
+  }
+
+  // Extract slug from href
+  const matches = href.match(/\/artifacts\/([^/]+)$/)
+  if (!matches || !matches[1]) {
+    throw new Error(`Failed to extract slug from href: ${href}`)
+  }
+
+  const slug = matches[1]
+  console.log("[v0] Found artifact slug:", slug)
+
+  return slug
+}
 
 /**
  * Creates a test artifact with the given title and optional media.
  * Returns the slug of the created artifact.
+ *
+ * Note: This function requires media upload which is complex in E2E tests.
+ * Consider using getFirstArtifactSlug() instead for simpler E2E workflows.
  *
  * @param page - Playwright Page object
  * @param title - Title for the artifact
@@ -23,44 +61,18 @@ export async function createTestArtifact(page: Page, title: string): Promise<str
 
   await page.waitForTimeout(500)
 
-  // Select an artifact type (e.g., "Document")
-  const typeSelect = page.locator("button:has-text('Select type')").first()
-  if (await typeSelect.isVisible({ timeout: 2000 })) {
-    await typeSelect.click()
-    await page.waitForTimeout(300)
-    // Select the first option
-    await page.locator("[role='option']").first().click()
-    await page.waitForTimeout(300)
-  }
+  // Open the Add Media modal
+  const addMediaButton = page.getByRole("button", { name: /add media/i })
+  await addMediaButton.click()
+  await page.waitForTimeout(1000)
 
-  // Submit the form
-  const createButton = page.getByRole("button", { name: /create artifact/i })
-  await createButton.click()
+  // Note: At this point, we'd need to interact with the Cloudinary upload widget,
+  // which is a complex iframe interaction. For E2E tests, it's better to use
+  // existing artifacts. This function is kept as a placeholder for future improvements.
 
-  // Wait for redirect to the artifact detail page
-  await page.waitForURL(/\/artifacts\/[^/]+$/, { timeout: 15000 })
-
-  // Extract and return the slug from the URL
-  const url = page.url()
-  console.log("[v0] Created artifact, URL:", url)
-
-  const matches = url.match(/\/artifacts\/([^/]+)$/)
-  if (!matches || !matches[1]) {
-    throw new Error(`Failed to extract slug from URL: ${url}`)
-  }
-
-  const slug = matches[1]
-
-  // Verify the slug is valid (not empty, not "undefined", etc.)
-  if (!slug || slug === "undefined" || slug === "null") {
-    throw new Error(`Invalid slug extracted: "${slug}" from URL: ${url}`)
-  }
-
-  console.log("[v0] Artifact created successfully, slug:", slug)
-
-  await expect(page.locator("h1")).toBeVisible({ timeout: 5000 })
-
-  return slug
+  throw new Error(
+    "createTestArtifact requires media upload which is not yet implemented in E2E tests. Use getFirstArtifactSlug() instead.",
+  )
 }
 
 /**
