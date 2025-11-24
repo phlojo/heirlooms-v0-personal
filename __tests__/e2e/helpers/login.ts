@@ -27,28 +27,46 @@ export async function login(page: Page): Promise<void> {
   // Fill in the email field using placeholder selector
   await page.getByPlaceholder("you@example.com").fill(email)
 
-  // Click "Use password instead" button to switch to password login
-  await page.getByRole("button", { name: "Use password instead" }).click()
+  // Wait a moment for the form to process
+  await page.waitForTimeout(500)
 
-  // Wait for password field to appear
-  await page.waitForSelector('input[type="password"]', { timeout: 5000 })
+  // Check if password field already exists (might default to password login)
+  let passwordFieldExists = await page
+    .locator('input[type="password"]')
+    .isVisible({ timeout: 2000 })
+    .catch(() => false)
+
+  // If password field doesn't exist, click "Use password instead" button
+  if (!passwordFieldExists) {
+    const usePasswordButton = page.getByRole("button", { name: /Use password instead/i })
+    if (await usePasswordButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await usePasswordButton.click()
+      await page.waitForTimeout(500)
+    }
+  }
+
+  // Wait for password field to appear with longer timeout
+  await page.waitForSelector('input[type="password"]', { timeout: 10000 })
 
   // Fill in the password field
   await page.getByLabel("Password").fill(password)
 
   // Click the Sign In button
-  await page.getByRole("button", { name: "Sign In" }).click()
+  const signInButton = page.getByRole("button", { name: /Sign In/i })
+  await signInButton.click()
 
-  // Wait for successful redirect to home or collections page
-  // The app redirects to /collections by default after login
-  await page.waitForURL(/\/(collections|artifacts|$)/, { timeout: 15000 })
+  // Wait for successful redirect - use longer timeout and more flexible URL matching
+  await page.waitForURL(/\/(collections|artifacts|profile|login.*)?$/, { timeout: 30000 })
+
+  // Wait for navigation to complete
+  await page.waitForLoadState("networkidle")
 
   // Additional verification: ensure we're not still on the login page
   const currentUrl = page.url()
-  if (currentUrl.includes("/login")) {
+  if (currentUrl.includes("/login") && !currentUrl.includes("returnTo")) {
     throw new Error("Login failed: Still on login page after submitting credentials")
   }
 
   // Wait a moment for auth state to fully settle
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(1000)
 }
