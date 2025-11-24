@@ -47,12 +47,25 @@ export function CollectionsTabs({
   allHasMore: initialAllHasMore,
   initialViewPreference = "gallery",
 }: CollectionsTabsProps) {
+  console.log("[v0] CollectionsTabs props:", {
+    myCollections,
+    allCollections,
+    myCollectionsType: typeof myCollections,
+    allCollectionsType: typeof allCollections,
+    myCollectionsIsArray: Array.isArray(myCollections),
+    allCollectionsIsArray: Array.isArray(allCollections),
+  })
+
   const [activeTab, setActiveTab] = useState<string>("all")
   const [viewType, setViewType] = useState<ViewType>(initialViewPreference)
   const pathname = usePathname()
 
-  const [allCollectionsList, setAllCollectionsList] = useState<Collection[]>(allCollections)
-  const [myCollectionsList, setMyCollectionsList] = useState<Collection[]>(myCollections)
+  const [allCollectionsList, setAllCollectionsList] = useState<Collection[]>(
+    Array.isArray(allCollections) ? allCollections : [],
+  )
+  const [myCollectionsList, setMyCollectionsList] = useState<Collection[]>(
+    Array.isArray(myCollections) ? myCollections : [],
+  )
   const [allHasMore, setAllHasMore] = useState(initialAllHasMore)
   const [myHasMore, setMyHasMore] = useState(initialMyHasMore)
   const [isLoadingAll, setIsLoadingAll] = useState(false)
@@ -161,18 +174,20 @@ export function CollectionsTabs({
       </div>
 
       <TabsContent value="all" className={`mt-6 transition-opacity ${isPending ? "opacity-50" : "opacity-100"}`}>
-        {allCollectionsList.length > 0 ? (
+        {allCollectionsList && allCollectionsList.length > 0 ? (
           <>
             <div
               className={viewType === "gallery" ? "grid gap-2 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-2"}
             >
-              {allCollectionsList.map((collection) =>
-                viewType === "gallery" ? (
-                  <CollectionCard key={collection.id} collection={collection} mode="all" />
-                ) : (
-                  <CollectionCardHorizontal key={collection.id} collection={collection} mode="all" />
-                ),
-              )}
+              {allCollectionsList &&
+                Array.isArray(allCollectionsList) &&
+                allCollectionsList.map((collection) =>
+                  viewType === "gallery" ? (
+                    <CollectionCard key={collection.id} collection={collection} mode="all" />
+                  ) : (
+                    <CollectionCardHorizontal key={collection.id} collection={collection} mode="all" />
+                  ),
+                )}
             </div>
             {allHasMore ? (
               <div className="mt-8 pb-12 flex justify-center">
@@ -209,22 +224,24 @@ export function CollectionsTabs({
           <div className="mx-auto max-w-md">
             <LoginModule returnTo={pathname} title="Access Your Collections" showBackButton={false} />
           </div>
-        ) : myCollectionsList.length > 0 ? (
+        ) : myCollectionsList && myCollectionsList.length > 0 ? (
           <>
             <div
               className={viewType === "gallery" ? "grid gap-2 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-2"}
             >
-              {myCollectionsList.map((collection) =>
-                viewType === "gallery" ? (
-                  collection.isUnsorted ? (
-                    <UncategorizedCollectionCard key={collection.id} collection={collection} mode="mine" />
+              {myCollectionsList &&
+                Array.isArray(myCollectionsList) &&
+                myCollectionsList.map((collection) =>
+                  viewType === "gallery" ? (
+                    collection.isUnsorted ? (
+                      <UncategorizedCollectionCard key={collection.id} collection={collection} mode="mine" />
+                    ) : (
+                      <CollectionCard key={collection.id} collection={collection} mode="mine" />
+                    )
                   ) : (
-                    <CollectionCard key={collection.id} collection={collection} mode="mine" />
-                  )
-                ) : (
-                  <CollectionCardHorizontal key={collection.id} collection={collection} mode="mine" />
-                ),
-              )}
+                    <CollectionCardHorizontal key={collection.id} collection={collection} mode="mine" />
+                  ),
+                )}
             </div>
             {myHasMore ? (
               <div className="mt-8 pb-12 flex justify-center">

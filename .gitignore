@@ -28,3 +28,12 @@ yarn-error.log*
 next-env.d.ts
 .claude/settings.local.json
 package-lock.json
+
+# Playwright
+playwright-report/
+test-results/
+# Env files
+.env
+.env.local
+.env.*.local
+.env.e2e

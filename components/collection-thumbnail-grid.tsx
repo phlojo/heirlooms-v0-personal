@@ -8,7 +8,8 @@ interface CollectionThumbnailGridProps {
 }
 
 export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGridProps) {
-  const validImages = images.filter((img) => img && typeof img === "string" && img.trim() !== "").slice(0, 4)
+  const safeImages = Array.isArray(images) ? images : []
+  const validImages = safeImages.filter((img) => img && typeof img === "string" && img.trim() !== "").slice(0, 4)
 
   if (validImages.length === 0) {
     return (
@@ -30,7 +31,15 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
       <div className="grid h-full w-full grid-cols-2 gap-1">
         {validImages.map((img, idx) => {
           const thumbnailUrl = getThumbnailUrl(img)
-          return <MediaImage key={`${idx}-${img}`} src={thumbnailUrl} alt={`${title}`} className="h-full" objectFit="cover" />
+          return (
+            <MediaImage
+              key={`${idx}-${img}`}
+              src={thumbnailUrl}
+              alt={`${title}`}
+              className="h-full"
+              objectFit="cover"
+            />
+          )
         })}
       </div>
     )
@@ -41,7 +50,15 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
       <div className="grid h-full w-full grid-cols-3 gap-1">
         {validImages.map((img, idx) => {
           const thumbnailUrl = getThumbnailUrl(img)
-          return <MediaImage key={`${idx}-${img}`} src={thumbnailUrl} alt={`${title}`} className="h-full" objectFit="cover" />
+          return (
+            <MediaImage
+              key={`${idx}-${img}`}
+              src={thumbnailUrl}
+              alt={`${title}`}
+              className="h-full"
+              objectFit="cover"
+            />
+          )
         })}
       </div>
     )
@@ -51,7 +68,9 @@ export function CollectionThumbnailGrid({ images, title }: CollectionThumbnailGr
     <div className="grid h-full w-full grid-cols-4 gap-1">
       {validImages.map((img, idx) => {
         const thumbnailUrl = getThumbnailUrl(img)
-        return <MediaImage key={`${idx}-${img}`} src={thumbnailUrl} alt={`${title}`} className="h-full" objectFit="cover" />
+        return (
+          <MediaImage key={`${idx}-${img}`} src={thumbnailUrl} alt={`${title}`} className="h-full" objectFit="cover" />
+        )
       })}
     </div>
   )

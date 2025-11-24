@@ -30,14 +30,16 @@ export function CollectionCardHorizontal({ collection, mode }: CollectionCardHor
   const baseHref = collection.slug ? `/collections/${collection.slug}` : `/collections/${collection.id}`
   const href = mode ? `${baseHref}?mode=${mode}` : baseHref
 
+  const safeThumbnailImages = Array.isArray(collection.thumbnailImages) ? collection.thumbnailImages : []
+
   return (
     <Link href={href}>
       <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0 flex flex-row h-28 min-h-28">
         {/* Thumbnail - 1/3 of card width */}
         <div className="relative w-1/3 overflow-hidden bg-muted shrink-0">
           <div className="h-full w-full transition-transform group-hover:scale-105">
-            {collection.thumbnailImages && collection.thumbnailImages.length > 0 ? (
-              <CollectionThumbnailGrid images={collection.thumbnailImages} title={collection.title} />
+            {safeThumbnailImages.length > 0 ? (
+              <CollectionThumbnailGrid images={safeThumbnailImages} title={collection.title} />
             ) : collection.cover_image ? (
               <MediaImage
                 src={collection.cover_image || "/placeholder.svg"}
