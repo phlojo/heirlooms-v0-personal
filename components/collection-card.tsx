@@ -34,7 +34,7 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
 
   return (
     <Link href={href}>
-      <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0">
+      <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0 animate-fade-in">
         <div className="relative aspect-[4/2] overflow-hidden bg-muted">
           <div className="h-full transition-transform group-hover:scale-105">
             {safeThumbnailImages.length > 0 ? (

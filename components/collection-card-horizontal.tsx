@@ -34,7 +34,7 @@ export function CollectionCardHorizontal({ collection, mode }: CollectionCardHor
 
   return (
     <Link href={href}>
-      <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0 flex flex-row h-28 min-h-28">
+      <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0 flex flex-row h-28 min-h-28 animate-fade-in">
         {/* Thumbnail - 1/3 of card width */}
         <div className="relative w-1/3 overflow-hidden bg-muted shrink-0">
           <div className="h-full w-full transition-transform group-hover:scale-105">
