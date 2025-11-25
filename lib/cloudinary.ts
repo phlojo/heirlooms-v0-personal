@@ -8,7 +8,7 @@
  * - Aligns with MEDIA-ARCHITECTURE.md Phase 1 goals
  */
 
-import type { MediaDerivatives } from "./actions/media-derivatives"
+import type { MediaDerivatives } from "./utils/media-derivatives"
 
 /**
  * Transforms a Cloudinary URL with specified parameters

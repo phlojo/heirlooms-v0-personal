@@ -13,7 +13,7 @@ import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "./cloudinary"
 import { generateSlug, generateUniqueSlug } from "@/lib/utils/slug"
 import { isCurrentUserAdmin } from "@/lib/utils/admin"
 import { hasVisualMedia, getPrimaryVisualMediaUrl } from "@/lib/media"
-import { generateDerivativesMap } from "./media-derivatives"
+import { generateDerivativesMap } from "@/lib/utils/media-derivatives"
 
 export async function createArtifact(
   input: CreateArtifactInput,
