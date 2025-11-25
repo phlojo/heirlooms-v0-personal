@@ -34,7 +34,7 @@ export function CollectionCardHorizontal({ collection, mode }: CollectionCardHor
 
   return (
     <Link href={href}>
-      <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0 flex flex-row h-28 min-h-28">
+      <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0 flex flex-row h-28 min-h-28 animate-fade-in">
         {/* Thumbnail - 1/3 of card width */}
         <div className="relative w-1/3 overflow-hidden bg-muted shrink-0">
           <div className="h-full w-full transition-transform group-hover:scale-105">
@@ -95,10 +95,10 @@ export function CollectionCardHorizontal({ collection, mode }: CollectionCardHor
           </div>
 
           <div className="flex items-center justify-between gap-4 min-w-0">
+            {mode === "all" && <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />}
             <p className="text-sm text-muted-foreground whitespace-nowrap">
               {collection.itemCount} {collection.itemCount === 1 ? "artifact" : "artifacts"}
             </p>
-            <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />
           </div>
         </div>
       </Card>

@@ -75,7 +75,7 @@ export function ArtifactStickyNav({
   const showSuperUserBadge = isCurrentUserAdmin && contentOwnerId && currentUserId && contentOwnerId !== currentUserId
 
   return (
-    <div className="sticky top-4 lg:top-16 z-50 bg-background/90 border rounded-lg mb-4 py-2">
+    <div className="sticky top-0 lg:top-16 z-50 bg-background/90 border rounded-lg mb-4 py-2 will-change-transform">
       <div className="container max-w-7xl mx-auto">
         <div className="flex flex-col gap-0">
           {/* First row: Title and Heart icon */}

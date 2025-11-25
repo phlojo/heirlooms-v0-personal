@@ -36,7 +36,7 @@ export function ArtifactCard({ artifact, showAuthor = false, authorName }: Artif
 
   return (
     <Link href={`/artifacts/${artifact.slug}`} data-testid="artifact-link">
-      <Card className="group overflow-hidden border p-0 transition-all hover:shadow-lg rounded-md">
+      <Card className="group overflow-hidden border p-0 transition-all hover:shadow-lg rounded-md animate-fade-in">
         <div className="relative aspect-square overflow-hidden bg-muted">
           {thumbnailUrl ? (
             <>

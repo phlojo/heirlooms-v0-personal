@@ -180,8 +180,8 @@
     text-size-adjust: 100%;
     /* Optimize tap highlighting */
     -webkit-tap-highlight-color: transparent;
-    /* Improve touch scrolling */
-    -webkit-overflow-scrolling: touch;
+    /* Note: -webkit-overflow-scrolling: touch removed - it can cause sticky position jitter on iOS
+       Modern iOS browsers handle momentum scrolling well without this property */
     /* Remove overflow-x: clip from html - it breaks sticky positioning */
   }
 
@@ -219,5 +219,63 @@
       padding-left: env(safe-area-inset-left);
       padding-right: env(safe-area-inset-right);
     }
+  }
+}
+
+@layer components {
+  /* Smooth page transition animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Smooth scale entrance for detail views */
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Utility classes for animations */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  /* Smooth hover transitions for cards */
+  .card-transition {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  /* Enhanced tab transitions */
+  .tab-transition {
+    @apply transition-opacity duration-200;
   }
 }

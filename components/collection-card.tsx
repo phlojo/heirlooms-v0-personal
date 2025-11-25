@@ -34,7 +34,7 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
 
   return (
     <Link href={href}>
-      <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0">
+      <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0 animate-fade-in">
         <div className="relative aspect-[4/2] overflow-hidden bg-muted">
           <div className="h-full transition-transform group-hover:scale-105">
             {safeThumbnailImages.length > 0 ? (
@@ -92,10 +92,10 @@ export function CollectionCard({ collection, mode }: CollectionCardProps) {
           )}
 
           <div className="flex items-center justify-between mt-2">
+            {mode === "all" && <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />}
             <p className="text-sm text-muted-foreground">
               {collection.itemCount} {collection.itemCount === 1 ? "artifact" : "artifacts"}
             </p>
-            <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />
           </div>
         </div>
       </Card>

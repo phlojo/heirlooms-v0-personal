@@ -56,7 +56,7 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
 
   return (
     <Link href={href}>
-      <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0 relative">
+      <Card className="group overflow-hidden border transition-all hover:shadow-lg p-0 relative animate-fade-in">
         <div className="relative aspect-[4/1] overflow-hidden bg-muted">
           <div className="h-full transition-transform group-hover:scale-105">
             {collection.thumbnailImages && collection.thumbnailImages.length > 0 ? (
@@ -98,10 +98,10 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
           </div>
 
           <div className="flex items-center justify-between mt-2">
+            {mode === "all" && <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />}
             <p className="text-sm text-muted-foreground">
               {collection.itemCount} {collection.itemCount === 1 ? "artifact" : "artifacts"}
             </p>
-            <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />
           </div>
         </div>
       </Card>
