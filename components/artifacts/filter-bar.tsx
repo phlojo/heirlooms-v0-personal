@@ -20,6 +20,7 @@ interface FilterBarProps {
   onTypeChange: (types: string[]) => void
   onClearFilters: () => void
   hasActiveFilters: boolean
+  artifactCount: number
 }
 
 export function FilterBar({
@@ -30,6 +31,7 @@ export function FilterBar({
   onTypeChange,
   onClearFilters,
   hasActiveFilters,
+  artifactCount,
 }: FilterBarProps) {
   return (
     <div className="py-3 space-y-2">
@@ -37,6 +39,9 @@ export function FilterBar({
         <div className="flex flex-row gap-2 items-center min-w-0 flex-1">
           <SortDropdown value={sortBy} onChange={onSortChange} />
           <TypeFilter types={artifactTypes} selectedTypes={selectedTypes} onChange={onTypeChange} />
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <span className="text-xs text-muted-foreground font-medium">{artifactCount} artifact{artifactCount !== 1 ? "s" : ""}</span>
         </div>
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={onClearFilters} className="h-9 shrink-0">

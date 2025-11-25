@@ -271,7 +271,7 @@ export function ArtifactsTabs({
         )}
       </div>
 
-      <TabsContent value="all" className="mt-6">
+      <TabsContent value="all" className="mt-2">
         <FilterBar
           sortBy={sortBy}
           selectedTypes={selectedTypes}
@@ -280,6 +280,7 @@ export function ArtifactsTabs({
           onTypeChange={handleTypeChange}
           onClearFilters={handleClearFilters}
           hasActiveFilters={hasFilters}
+          artifactCount={allArtifactsList.length}
         />
 
         {allArtifactsList.length > 0 ? (
@@ -341,7 +342,7 @@ export function ArtifactsTabs({
         )}
       </TabsContent>
 
-      <TabsContent value="mine" className="mt-6">
+      <TabsContent value="mine" className="mt-2">
         {!user ? (
           <div className="mx-auto max-w-md">
             <LoginModule returnTo={pathname} title="Access Your Artifacts" showBackButton={false} />
@@ -356,6 +357,7 @@ export function ArtifactsTabs({
               onTypeChange={handleTypeChange}
               onClearFilters={handleClearFilters}
               hasActiveFilters={hasFilters}
+              artifactCount={myArtifactsList.length}
             />
 
             {myArtifactsList.length > 0 ? (
