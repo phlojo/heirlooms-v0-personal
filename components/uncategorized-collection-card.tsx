@@ -98,10 +98,10 @@ export function UncategorizedCollectionCard({ collection, mode }: UncategorizedC
           </div>
 
           <div className="flex items-center justify-between mt-2">
+            {mode === "all" && <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />}
             <p className="text-sm text-muted-foreground">
               {collection.itemCount} {collection.itemCount === 1 ? "artifact" : "artifacts"}
             </p>
-            <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />
           </div>
         </div>
       </Card>

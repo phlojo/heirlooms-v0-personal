@@ -95,10 +95,10 @@ export function CollectionCardHorizontal({ collection, mode }: CollectionCardHor
           </div>
 
           <div className="flex items-center justify-between gap-4 min-w-0">
+            {mode === "all" && <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />}
             <p className="text-sm text-muted-foreground whitespace-nowrap">
               {collection.itemCount} {collection.itemCount === 1 ? "artifact" : "artifacts"}
             </p>
-            <Author userId={collection.user_id} authorName={collection.authorName || undefined} size="sm" />
           </div>
         </div>
       </Card>
