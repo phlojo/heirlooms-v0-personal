@@ -120,8 +120,11 @@ export async function updateArtifactDerivatives(
 /**
  * Gets derivative URL for a media item from the derivatives map
  * Falls back to null if not found
+ *
+ * Note: Not exported because it's in a "use server" file.
+ * Use the utility functions in lib/cloudinary.ts instead.
  */
-export function getDerivativeUrl(
+function getDerivativeUrl(
   mediaDerivatives: Record<string, MediaDerivatives> | null,
   originalUrl: string,
   size: "thumb" | "medium" | "large"
