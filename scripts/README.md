@@ -2,6 +2,47 @@
 
 Utilities for cleaning up orphaned media files from storage backends.
 
+## Overview
+
+The app uses a hybrid storage architecture:
+- **Supabase Storage**: Stores original media files
+- **Cloudinary**:
+  - **Legacy uploads** (Phase 1): Direct uploads stored in Cloudinary
+  - **Fetch cache** (Phase 2): On-demand derivatives fetched from Supabase Storage
+
+When artifacts are deleted, media should be automatically cleaned up from both backends. However, if cleanup fails or you have orphaned media from before the fix was implemented, these scripts help you recover storage space.
+
+## Quick Start
+
+**First time running cleanup? Follow this workflow:**
+
+1. **Check a sample URL** (optional but recommended):
+   ```bash
+   pnpm tsx scripts/check-url.ts "https://res.cloudinary.com/your/url/here.jpg"
+   ```
+
+2. **Preview what will be deleted** (dry run):
+   ```bash
+   pnpm tsx scripts/cleanup-cloudinary.ts
+   ```
+
+3. **Test with limited deletions**:
+   ```bash
+   pnpm tsx scripts/cleanup-cloudinary.ts --delete --limit=10
+   ```
+
+4. **Verify test deletions worked**, then run full cleanup:
+   ```bash
+   pnpm tsx scripts/cleanup-cloudinary.ts --delete
+   ```
+
+5. **Clean Supabase Storage** (same workflow):
+   ```bash
+   pnpm tsx scripts/cleanup-supabase-storage.ts
+   pnpm tsx scripts/cleanup-supabase-storage.ts --delete --limit=10
+   pnpm tsx scripts/cleanup-supabase-storage.ts --delete
+   ```
+
 ## Scripts
 
 ### 1. Check URL (`check-url.ts`)
@@ -34,7 +75,7 @@ pnpm tsx scripts/check-url.ts "https://res.cloudinary.com/your/url/here.jpg"
 
 ### 2. Cloudinary Cleanup (`cleanup-cloudinary.ts`)
 
-Finds and deletes Cloudinary media that isn't referenced in any artifact.
+Finds and deletes orphaned Cloudinary media (both direct uploads AND fetch cache).
 
 **Dry run (preview only):**
 ```bash
@@ -52,11 +93,19 @@ pnpm tsx scripts/cleanup-cloudinary.ts --delete
 ```
 
 **What it does:**
-- Fetches all media from Cloudinary (images and videos)
-- Compares against all `media_urls` and `thumbnail_url` in artifacts table
-- Identifies orphaned media
-- Shows total count and storage savings
+- Fetches **all** Cloudinary resources:
+  - **Upload-type**: Direct uploads from Phase 1 (legacy Cloudinary uploads)
+  - **Fetch-type**: Cached derivatives from Phase 2 (Cloudinary fetching from Supabase)
+- Compares against all `media_urls` and `thumbnail_url` in artifacts table using **exact URL matching**
+- Identifies orphaned media in both categories
+- Shows breakdown by type and total storage savings
+- Deletes with proper `type` parameter for each resource
 - Optionally deletes orphaned media (with 5-second confirmation)
+
+**Important:** This script handles Cloudinary's fetch cache, which can accumulate when:
+- Artifacts are deleted but fetch cache remains
+- Supabase Storage files are deleted but Cloudinary still has cached versions
+- Media reorganization leaves behind old fetch URLs
 
 ### 3. Supabase Storage Cleanup (`cleanup-supabase-storage.ts`)
 
@@ -110,6 +159,7 @@ Both scripts include:
 
 ## Example Output
 
+### Dry Run (Preview)
 ```
 🧹 Cloudinary Media Cleanup Script
 =====================================
@@ -119,27 +169,51 @@ Mode: 👀 DRY RUN (preview only)
 📊 Fetching all artifact media URLs from Supabase...
 ✅ Found 45 Cloudinary URLs in 23 artifacts
 ☁️  Fetching all media from Cloudinary...
-  📷 Found 60 images
-  🎥 Found 8 videos
-✅ Total Cloudinary resources: 68
+  📷 Uploaded images: 380
+  🔗 Fetch-cached images: 52
+  🎥 Uploaded videos: 8
+  🔗 Fetch-cached videos: 2
+✅ Total Cloudinary resources: 442
 
 📋 Analysis:
-  - Cloudinary resources: 68
+  - Cloudinary resources: 442
   - Used in artifacts: 45
 
-🗑️  Found 23 orphaned resources (145.32 MB):
+🗑️  Found 397 orphaned resources (845.32 MB):
 
-  📷 Images: 20
-  🎥 Videos: 3
+  📷 Images: 386
+  🎥 Videos: 11
 
 📄 Sample of orphaned resources (first 10):
   1. [image] heirlooms/abc123/photo1.jpg (5.24 MB)
-  2. [image] heirlooms/abc123/photo2.jpg (4.82 MB)
+  2. [image] f:https://project.supabase.co/.../img.jpg (3.82 MB)
   ...
 
 💡 To actually delete these resources, run:
    pnpm tsx scripts/cleanup-cloudinary.ts --delete
 ```
+
+### Real Cleanup Results
+
+Example from actual cleanup session (2025-01-26):
+
+**First cleanup (upload-type resources):**
+```
+✅ Cleanup complete!
+  Deleted: 372
+  Errors: 0
+  Freed: 701.45 MB
+```
+
+**Second cleanup (fetch-type resources):**
+```
+✅ Cleanup complete!
+  Deleted: 54
+  Errors: 0
+  Freed: 143.87 MB
+```
+
+**Total savings:** ~845 MB of orphaned media cleaned from Cloudinary
 
 ## When to Use
 
@@ -169,14 +243,34 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 ```
 
+## Troubleshooting
+
+### "Something is deleting but still showing in Cloudinary"
+- **Likely cause**: Fetch-type resources being deleted with wrong `type` parameter
+- **Fix**: The script now automatically detects and uses the correct type (upload vs fetch)
+- **Verify**: Run dry run again to check if resources are still showing as orphaned
+
+### "check-url.ts reports image is used in all artifacts"
+- **Likely cause**: Empty string matching bug (fixed in current version)
+- **Fix**: Script now uses exact URL matching, not substring matching
+- **Test**: Run `pnpm tsx scripts/check-url.ts "your-url"` to verify
+
+### "Counts seem wrong"
+- **First**: Run `check-artifact-count.ts` to verify actual artifact count in database
+- **Check**: Compare Cloudinary resource count against artifact media URL count
+- **Remember**: One artifact can have multiple media URLs
+- **Note**: Fetch cache can significantly inflate Cloudinary resource count
+
 ## Tips
 
 1. **Always run dry run first** - Review what will be deleted
 2. **Spot-check URLs** - Use `check-url.ts` to verify a few sample URLs before deleting
-3. **Run during low-traffic times** - Avoid race conditions with active uploads
-4. **Check the counts** - If numbers seem wrong, investigate before deleting
-5. **Save the output** - Redirect to a file for records: `pnpm tsx scripts/cleanup-cloudinary.ts > cleanup-report.txt`
-6. **Run after major cleanups** - If you deleted many artifacts, these scripts help recover storage
+3. **Test with --limit first** - Run `--delete --limit=10` before full cleanup
+4. **Run during low-traffic times** - Avoid race conditions with active uploads
+5. **Check the counts** - If numbers seem wrong, investigate before deleting
+6. **Save the output** - Redirect to a file for records: `pnpm tsx scripts/cleanup-cloudinary.ts > cleanup-report.txt`
+7. **Run after major cleanups** - If you deleted many artifacts, these scripts help recover storage
+8. **Monitor fetch cache growth** - Fetch cache can accumulate faster than uploads
 
 ## Technical Notes
 
@@ -185,3 +279,24 @@ CLOUDINARY_API_SECRET=
 - Supabase script recursively walks all folders
 - Both scripts process files in batches to avoid API limits
 - Deletion operations use `invalidate: true` (Cloudinary) to clear CDN cache
+
+### Key Improvements (2025-01-26)
+
+**1. Fetch-type resource support:**
+- Script now fetches BOTH upload-type and fetch-type resources from Cloudinary
+- Properly passes `type` parameter to delete API (critical for fetch cache deletion)
+- Without this fix, fetch-cached resources would appear to delete but remain in Cloudinary
+
+**2. Exact URL matching:**
+- Changed from substring/identifier matching to exact URL matching for safety
+- Previous regex-based matching had a bug where failed regex resulted in empty string matching everything
+- Exact matching ensures only truly orphaned media is deleted
+
+**3. Alphabetically sorted signatures:**
+- Cloudinary API requires parameters to be alphabetically sorted before signing
+- Signature generation now properly sorts params to avoid "Invalid Signature" errors
+
+**4. REST API implementation:**
+- Uses Cloudinary REST API directly instead of requiring SDK
+- Reduces dependencies and gives more control over request formatting
+- Uses HTTP Basic Auth for Admin API, SHA-1 signed requests for Destroy API
