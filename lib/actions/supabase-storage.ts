@@ -53,7 +53,23 @@ export async function uploadToSupabaseStorage(
 
     if (uploadError) {
       console.error("[supabase-storage] Upload failed:", uploadError)
-      return { error: uploadError.message }
+
+      // Provide user-friendly error messages
+      let errorMessage = uploadError.message
+
+      if (uploadError.message?.toLowerCase().includes('payload') ||
+          uploadError.message?.toLowerCase().includes('too large') ||
+          uploadError.message?.toLowerCase().includes('size')) {
+        errorMessage = `File is too large. Please reduce the file size and try again.`
+      } else if (uploadError.message?.toLowerCase().includes('quota') ||
+                 uploadError.message?.toLowerCase().includes('storage limit')) {
+        errorMessage = `Storage quota exceeded. Please contact support.`
+      } else if (uploadError.message?.toLowerCase().includes('permission') ||
+                 uploadError.message?.toLowerCase().includes('unauthorized')) {
+        errorMessage = `You don't have permission to upload files.`
+      }
+
+      return { error: errorMessage }
     }
 
     // Get public URL

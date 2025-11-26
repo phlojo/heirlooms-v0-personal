@@ -41,6 +41,18 @@ export async function uploadMediaToSupabase(formData: FormData): Promise<UploadM
       return { error: "No file provided" }
     }
 
+    // Validate file size
+    const isVideo = file.type.startsWith("video/")
+    const maxSize = isVideo ? 500 * 1024 * 1024 : 50 * 1024 * 1024 // 500MB for videos, 50MB for images/audio
+
+    if (file.size > maxSize) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1)
+      const maxSizeMB = (maxSize / (1024 * 1024)).toFixed(0)
+      return {
+        error: `File "${file.name}" is too large (${fileSizeMB}MB). Maximum allowed size is ${maxSizeMB}MB for ${isVideo ? 'videos' : 'images/audio'}.`
+      }
+    }
+
     console.log("[media-upload] Supabase upload request:", {
       fileName: file.name,
       fileSize: file.size,

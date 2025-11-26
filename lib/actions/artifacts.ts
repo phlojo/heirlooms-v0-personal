@@ -12,9 +12,10 @@ import { redirect } from "next/navigation"
 import { deleteCloudinaryMedia, extractPublicIdFromUrl } from "./cloudinary"
 import { generateSlug, generateUniqueSlug } from "@/lib/utils/slug"
 import { isCurrentUserAdmin } from "@/lib/utils/admin"
-import { hasVisualMedia, getPrimaryVisualMediaUrl } from "@/lib/media"
+import { hasVisualMedia, getPrimaryVisualMediaUrl, getStorageType } from "@/lib/media"
 import { reorganizeArtifactMedia } from "./media-reorganize"
 import { generateDerivativesMap } from "@/lib/utils/media-derivatives"
+import { deleteFromSupabaseStorage } from "./supabase-storage"
 
 export async function createArtifact(
   input: CreateArtifactInput,
@@ -901,6 +902,8 @@ export async function deleteMediaFromArtifact(artifactId: string, mediaUrl: stri
 export async function getArtifactBySlug(artifactSlug: string) {
   const supabase = await createClient()
 
+  console.log("[getArtifactBySlug] Looking up artifact with slug:", artifactSlug)
+
   const { data, error } = await supabase
     .from("artifacts")
     .select(`
@@ -912,7 +915,13 @@ export async function getArtifactBySlug(artifactSlug: string) {
     .single()
 
   if (error) {
-    console.error("Error fetching artifact:", error)
+    console.error("[getArtifactBySlug] Error fetching artifact:", {
+      slug: artifactSlug,
+      error: error,
+      errorCode: error.code,
+      errorMessage: error.message,
+      errorDetails: error.details,
+    })
     return null
   }
 
@@ -955,31 +964,70 @@ export async function deleteArtifact(artifactId: string) {
     return { success: false, error: "Unauthorized" }
   }
 
+  // Delete all media from storage (both Supabase and Cloudinary)
   const mediaUrls = artifact.media_urls || []
-  const deletedPublicIds = new Set<string>()
+  const deletedCloudinaryIds = new Set<string>()
+  const deletedSupabaseUrls = new Set<string>()
+
+  console.log("[deleteArtifact] Deleting media for artifact:", {
+    artifactId,
+    mediaCount: mediaUrls.length,
+  })
 
   for (const url of mediaUrls) {
-    const publicId = await extractPublicIdFromUrl(url)
-    if (publicId) {
-      await deleteCloudinaryMedia(publicId)
-      deletedPublicIds.add(publicId)
+    const storageType = getStorageType(url)
+
+    if (storageType === "supabase") {
+      // Delete from Supabase Storage
+      const { success, error } = await deleteFromSupabaseStorage(url)
+      if (success) {
+        deletedSupabaseUrls.add(url)
+        console.log("[deleteArtifact] Deleted from Supabase Storage:", url)
+      } else {
+        console.error("[deleteArtifact] Failed to delete from Supabase Storage:", { url, error })
+      }
+    } else if (storageType === "cloudinary") {
+      // Delete from Cloudinary
+      const publicId = await extractPublicIdFromUrl(url)
+      if (publicId) {
+        await deleteCloudinaryMedia(publicId)
+        deletedCloudinaryIds.add(publicId)
+        console.log("[deleteArtifact] Deleted from Cloudinary:", publicId)
+      }
+    } else {
+      console.warn("[deleteArtifact] Unknown storage type for URL:", url)
     }
   }
 
+  // Delete thumbnail if it's different from media URLs
   if (artifact.thumbnail_url) {
-    const thumbnailPublicId = await extractPublicIdFromUrl(artifact.thumbnail_url)
-    if (thumbnailPublicId && !deletedPublicIds.has(thumbnailPublicId)) {
-      await deleteCloudinaryMedia(thumbnailPublicId)
-      console.log("[v0] DELETE ARTIFACT - Deleted separate thumbnail:", thumbnailPublicId)
+    const storageType = getStorageType(artifact.thumbnail_url)
+
+    if (storageType === "supabase" && !deletedSupabaseUrls.has(artifact.thumbnail_url)) {
+      const { success, error } = await deleteFromSupabaseStorage(artifact.thumbnail_url)
+      if (success) {
+        console.log("[deleteArtifact] Deleted separate thumbnail from Supabase:", artifact.thumbnail_url)
+      } else {
+        console.error("[deleteArtifact] Failed to delete thumbnail from Supabase:", { url: artifact.thumbnail_url, error })
+      }
+    } else if (storageType === "cloudinary") {
+      const thumbnailPublicId = await extractPublicIdFromUrl(artifact.thumbnail_url)
+      if (thumbnailPublicId && !deletedCloudinaryIds.has(thumbnailPublicId)) {
+        await deleteCloudinaryMedia(thumbnailPublicId)
+        console.log("[deleteArtifact] Deleted separate thumbnail from Cloudinary:", thumbnailPublicId)
+      }
     }
   }
 
+  // Delete artifact from database
   const { error: deleteError } = await supabase.from("artifacts").delete().eq("id", artifactId)
 
   if (deleteError) {
-    console.error("Error deleting artifact:", deleteError)
+    console.error("[deleteArtifact] Error deleting artifact from database:", deleteError)
     return { success: false, error: "Failed to delete artifact" }
   }
+
+  console.log("[deleteArtifact] Successfully deleted artifact:", artifactId)
 
   revalidatePath(`/artifacts/${artifact.slug}`)
   revalidatePath("/collections")
