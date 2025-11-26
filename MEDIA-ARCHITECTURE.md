@@ -349,13 +349,73 @@ To keep things consistent:
 
 ---
 
-## 10. How to Use This Document
+## 10. Phase 1 Status & Next Steps
+
+### 10.1 Phase 1 Completion (Nov 25, 2025)
+
+**✅ Completed:**
+- Database migration: Added `media_derivatives` JSONB column to `artifacts` table
+- Derivative generation: Generate thumb/medium/large URLs at artifact creation
+- Utility updates: Modified `lib/cloudinary.ts` with backwards compatibility
+- Component updates: 4 components now pass derivatives to utility functions
+- Documentation: Implementation summary, rollback guide, deployment checklist
+- Deployment: Successfully deployed to production with environment variable fix
+
+**📊 Impact:**
+- New artifacts: Create exactly 3 transformations per image (predictable)
+- Old artifacts: Continue using dynamic transformations (backwards compatible)
+- UI: No visual changes, purely architectural improvement
+- Rollback: Safe rollback available if needed
+
+**🔍 Monitoring:**
+- Console logs show "Using stored derivative" for new artifacts
+- Console logs show "Generating dynamic transformation (fallback)" for old artifacts
+- Cloudinary quota usage should stabilize for new uploads
+
+### 10.2 Next Steps (Future Phases)
+
+**Phase 2 - Backfill old artifacts (optional):**
+- Script to populate `media_derivatives` for existing artifacts
+- Gradual migration to eliminate dynamic transformations
+- Monitor Cloudinary quota decrease
+
+**Phase 3 - Move originals to cheap storage:**
+- Migrate original files from Cloudinary → Supabase Storage / S3 / Backblaze
+- Update `media_urls` to point to new storage
+- Keep only derivatives in Cloudinary
+- **Goal:** Reduce Cloudinary costs to near-zero (only derivatives)
+
+**Phase 4 - Client-side optimization:**
+- Compress images before upload
+- Resize very large images client-side
+- Reduce upload bandwidth and storage costs
+
+**Phase 5 - Advanced features:**
+- Strict Cloudinary transformation whitelist
+- Media admin dashboard
+- Automated cleanup of orphaned media
+- Video optimization and poster frame generation
+
+### 10.3 Related Documentation
+
+- `PHASE-1-IMPLEMENTATION-SUMMARY.md` - Detailed Phase 1 implementation notes
+- `ROLLBACK-GUIDE.md` - How to safely rollback Phase 1 changes
+- `DEPLOYMENT-CHECKLIST.md` - Step-by-step deployment guide
+- `scripts/012_add_media_derivatives.sql` - Database migration script
+- `scripts/012_rollback_media_derivatives.sql` - Rollback script
+
+---
+
+## 11. How to Use This Document
 
 - When implementing new features (e.g. artifact gallery, collection filtering), treat this media model as the contract:
-  - Only use the defined fields (`thumbUrl`, `mediumUrl`, `largeUrl`, `originalUrl`).
-  - Do not introduce new ad-hoc transformation patterns in the UI.
+  - Pass `artifact.media_derivatives` to utility functions
+  - Use `getThumbnailUrl()`, `getMediumUrl()`, `getLargeUrl()` from `lib/cloudinary.ts`
+  - Do not introduce new ad-hoc transformation patterns in the UI
 - When refactoring:
-  - Update the relevant sections (Media model, Pipeline, Cleanup, Conventions).
+  - Update the relevant sections (Current State, Pipeline, Cleanup, Conventions)
+  - Mark sections as "implemented" or "planned"
 - When working with AI tools (Claude, ChatGPT, v0):
-  - Link or paste the relevant sections so that code changes stay aligned with the media architecture.
+  - Link or paste the relevant sections so that code changes stay aligned with the media architecture
+  - Reference this document when asking for media-related feature implementations
 
