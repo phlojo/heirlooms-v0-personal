@@ -61,31 +61,59 @@ export function ArtifactStickyNav({
   const [lastScrollY, setLastScrollY] = useState(0)
 
   useEffect(() => {
+    let rafId: number | null = null
+
     const handleScroll = () => {
-      const currentScrollY = window.scrollY
-      const scrollDifference = Math.abs(currentScrollY - lastScrollY)
-
-      // Only change state if scrolled more than threshold (prevents jumpiness)
-      const SCROLL_THRESHOLD = 50
-
-      if (scrollDifference < SCROLL_THRESHOLD) {
-        return // Ignore tiny scrolls
+      // Cancel pending animation frame to debounce
+      if (rafId) {
+        cancelAnimationFrame(rafId)
       }
 
-      // Show top section when scrolling up or at top of page
-      // Hide top section when scrolling down
-      if (currentScrollY < lastScrollY || currentScrollY < 50) {
-        setIsScrolled(false)
-      } else if (currentScrollY > lastScrollY && currentScrollY > 50) {
-        setIsScrolled(true)
-      }
+      rafId = requestAnimationFrame(() => {
+        const currentScrollY = window.scrollY
+        const scrollDifference = Math.abs(currentScrollY - lastScrollY)
 
-      setLastScrollY(currentScrollY)
+        // Only change state if scrolled more than threshold (prevents jumpiness)
+        const SCROLL_THRESHOLD = 50
+
+        if (scrollDifference < SCROLL_THRESHOLD) {
+          return // Ignore tiny scrolls
+        }
+
+        // Prevent state updates at scroll boundaries to avoid flicker
+        const docHeight = document.documentElement.scrollHeight
+        const windowHeight = window.innerHeight
+        const isAtBottom = currentScrollY + windowHeight >= docHeight - 10
+        const isAtTop = currentScrollY < 50
+
+        // Don't update state if we're at scroll boundaries
+        if (isAtBottom || isAtTop) {
+          if (isAtTop && isScrolled) {
+            setIsScrolled(false)
+          }
+          return
+        }
+
+        // Show top section when scrolling up or at top of page
+        // Hide top section when scrolling down
+        if (currentScrollY < lastScrollY) {
+          setIsScrolled(false)
+        } else if (currentScrollY > lastScrollY) {
+          setIsScrolled(true)
+        }
+
+        setLastScrollY(currentScrollY)
+      })
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [lastScrollY])
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      if (rafId) {
+        cancelAnimationFrame(rafId)
+      }
+    }
+  }, [lastScrollY, isScrolled])
 
   const getNavUrl = (slug: string) => (isEditMode ? `/artifacts/${slug}?mode=edit` : `/artifacts/${slug}`)
 

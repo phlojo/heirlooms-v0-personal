@@ -53,7 +53,8 @@
   --shadow-color: #000000;
 
   /* Updated bottom nav height to match dynamic calculation */
-  --bottom-nav-height: calc(80px + max(env(safe-area-inset-bottom, 0px), 12px));
+  /* Simplified to reduce browser reflow - removed max() */
+  --bottom-nav-height: calc(80px + env(safe-area-inset-bottom, 0px) + 12px);
 }
 
 .dark {
