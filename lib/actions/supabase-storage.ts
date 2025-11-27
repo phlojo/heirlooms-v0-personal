@@ -53,7 +53,28 @@ export async function uploadToSupabaseStorage(
 
     if (uploadError) {
       console.error("[supabase-storage] Upload failed:", uploadError)
-      return { error: uploadError.message }
+
+      // Provide user-friendly error messages
+      let errorMessage = uploadError.message
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2)
+
+      if (uploadError.message?.toLowerCase().includes('payload') ||
+          uploadError.message?.toLowerCase().includes('too large') ||
+          uploadError.message?.toLowerCase().includes('size') ||
+          uploadError.message?.toLowerCase().includes('exceeds')) {
+        errorMessage = `File "${file.name}" (${fileSizeMB}MB) exceeds the storage limit. Supabase Storage default is 50MB per file. Please reduce file size or contact support to increase the limit.`
+      } else if (uploadError.message?.toLowerCase().includes('quota') ||
+                 uploadError.message?.toLowerCase().includes('storage limit')) {
+        errorMessage = `Storage quota exceeded. Please contact support.`
+      } else if (uploadError.message?.toLowerCase().includes('permission') ||
+                 uploadError.message?.toLowerCase().includes('unauthorized')) {
+        errorMessage = `You don't have permission to upload files.`
+      } else {
+        // Include file details in generic errors
+        errorMessage = `Failed to upload "${file.name}" (${fileSizeMB}MB): ${uploadError.message}`
+      }
+
+      return { error: errorMessage }
     }
 
     // Get public URL

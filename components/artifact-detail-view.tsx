@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { getDetailUrl } from "@/lib/cloudinary"
+import { getMediumUrl } from "@/lib/cloudinary"
 import { AudioPlayer } from "@/components/audio-player"
 import ReactMarkdown from "react-markdown"
 import { ArtifactSwipeWrapper } from "@/components/artifact-swipe-wrapper"
@@ -278,8 +278,10 @@ export function ArtifactDetailView({
     try {
       const result = await deleteArtifact(artifact.id)
       if (result.success) {
-        router.push(collectionHref)
-        router.refresh()
+        // Disable beforeunload warning before redirecting
+        shouldWarnOnUnloadRef.current = false
+        // Use hard navigation to prevent the page from trying to re-fetch deleted artifact
+        window.location.href = collectionHref
       } else {
         alert(result.error || "Failed to delete artifact")
         setIsDeleting(false)
@@ -714,7 +716,7 @@ export function ArtifactDetailView({
                       </div>
                     )}
                     <ArtifactImageWithViewer
-                      src={getDetailUrl(url, artifact.media_derivatives) || "/placeholder.svg"}
+                      src={getMediumUrl(url, artifact.media_derivatives) || "/placeholder.svg"}
                       alt={`${artifact.title} - Image ${imageUrlsFiltered.indexOf(url) + 1}`}
                       setIsImageFullscreen={setIsImageFullscreen}
                     />
@@ -879,14 +881,14 @@ export function ArtifactDetailView({
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete Artifact</AlertDialogTitle>
                     <AlertDialogDescription className="space-y-3">
-                      <p>
+                      <span className="block">
                         You are about to permanently delete <strong>"{artifact.title}"</strong>.
-                      </p>
-                      <p className="text-destructive font-medium">
+                      </span>
+                      <span className="block text-destructive font-medium">
                         All media files ({totalMedia} {totalMedia === 1 ? "file" : "files"}) will be permanently deleted
                         from storage.
-                      </p>
-                      <p className="text-xs text-muted-foreground">This action cannot be undone.</p>
+                      </span>
+                      <span className="block text-xs text-muted-foreground">This action cannot be undone.</span>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

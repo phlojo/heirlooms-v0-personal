@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Masonry from 'masonry-layout'
+import type Masonry from 'masonry-layout'
 
 interface MasonryGridProps {
   children: React.ReactNode
@@ -87,68 +87,86 @@ export function MasonryGrid({ children, isCompact, gutter = 8, onColumnWidthChan
   useEffect(() => {
     if (!containerRef.current || containerWidth === 0) return
 
-    if (!masonryRef.current) {
-      masonryRef.current = new Masonry(containerRef.current, {
-        columnWidth: columnWidth,
-        gutter,
-        transitionDuration: '0.3s',
-      })
-    } else {
-      // Update masonry by reinitializing
-      masonryRef.current.destroy()
-      masonryRef.current = new Masonry(containerRef.current, {
-        columnWidth: columnWidth,
-        gutter,
-        transitionDuration: '0.3s',
-      })
-    }
+    // Dynamically import Masonry only on client side
+    let mounted = true
 
-    // Reflow on images load
-    const images = containerRef.current.querySelectorAll('img')
-    let loadedCount = 0
-    const totalImages = images.length
+    import('masonry-layout').then((MasonryModule) => {
+      if (!mounted || !containerRef.current) return
 
-    if (totalImages === 0) {
-      if (masonryRef.current) {
-        masonryRef.current.reloadItems()
-        masonryRef.current.layout()
+      const MasonryConstructor = MasonryModule.default
+
+      if (!masonryRef.current) {
+        masonryRef.current = new MasonryConstructor(containerRef.current, {
+          columnWidth: columnWidth,
+          gutter,
+          transitionDuration: '0.3s',
+        })
+      } else {
+        // Update masonry by reinitializing
+        masonryRef.current.destroy()
+        masonryRef.current = new MasonryConstructor(containerRef.current, {
+          columnWidth: columnWidth,
+          gutter,
+          transitionDuration: '0.3s',
+        })
       }
-    } else {
-      images.forEach((img) => {
-        const handleLoad = () => {
-          loadedCount++
-          if (loadedCount === totalImages && masonryRef.current) {
-            masonryRef.current.reloadItems()
-            masonryRef.current.layout()
-          }
-        }
-        const handleError = () => {
-          loadedCount++
-          if (loadedCount === totalImages && masonryRef.current) {
-            masonryRef.current.reloadItems()
-            masonryRef.current.layout()
-          }
-        }
 
-        img.addEventListener('load', handleLoad)
-        img.addEventListener('error', handleError)
-      })
-    }
+      // Reflow after initialization
 
-    // Use ResizeObserver to handle card height changes (for variable-height titles)
-    const resizeObserver = new ResizeObserver(() => {
-      if (masonryRef.current) {
-        masonryRef.current.reloadItems()
-        masonryRef.current.layout()
+      // Reflow on images load
+      const images = containerRef.current.querySelectorAll('img')
+      let loadedCount = 0
+      const totalImages = images.length
+
+      if (totalImages === 0) {
+        if (masonryRef.current) {
+          masonryRef.current.reloadItems()
+          masonryRef.current.layout()
+        }
+      } else {
+        images.forEach((img) => {
+          const handleLoad = () => {
+            loadedCount++
+            if (loadedCount === totalImages && masonryRef.current) {
+              masonryRef.current.reloadItems()
+              masonryRef.current.layout()
+            }
+          }
+          const handleError = () => {
+            loadedCount++
+            if (loadedCount === totalImages && masonryRef.current) {
+              masonryRef.current.reloadItems()
+              masonryRef.current.layout()
+            }
+          }
+
+          img.addEventListener('load', handleLoad)
+          img.addEventListener('error', handleError)
+        })
       }
+
+      // Use ResizeObserver to handle card height changes (for variable-height titles)
+      const resizeObserver = new ResizeObserver(() => {
+        if (masonryRef.current) {
+          masonryRef.current.reloadItems()
+          masonryRef.current.layout()
+        }
+      })
+
+      if (containerRef.current) {
+        resizeObserver.observe(containerRef.current)
+      }
+
+      return () => {
+        mounted = false
+        resizeObserver.disconnect()
+      }
+    }).catch((error) => {
+      console.error('[masonry-grid] Failed to load Masonry:', error)
     })
 
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current)
-    }
-
     return () => {
-      resizeObserver.disconnect()
+      mounted = false
     }
   }, [columnWidth, gutter, containerWidth])
 

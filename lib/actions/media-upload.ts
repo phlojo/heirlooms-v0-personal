@@ -38,7 +38,26 @@ export async function uploadMediaToSupabase(formData: FormData): Promise<UploadM
     const artifactId = formData.get("artifactId") as string | null
 
     if (!file) {
-      return { error: "No file provided" }
+      console.error("[media-upload] No file in FormData. FormData keys:", Array.from(formData.keys()))
+      return { error: "No file provided. Please try again or contact support if the issue persists." }
+    }
+
+    console.log("[media-upload] File received:", {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      sizeInMB: (file.size / (1024 * 1024)).toFixed(2) + 'MB'
+    })
+
+    // Validate file size (Supabase Storage free tier limit: 50MB)
+    const maxSize = 50 * 1024 * 1024 // 50MB for all file types
+
+    if (file.size > maxSize) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1)
+      const maxSizeMB = (maxSize / (1024 * 1024)).toFixed(0)
+      return {
+        error: `File "${file.name}" is too large (${fileSizeMB}MB). Maximum allowed size is ${maxSizeMB}MB (Supabase Storage free tier limit).`
+      }
     }
 
     console.log("[media-upload] Supabase upload request:", {
