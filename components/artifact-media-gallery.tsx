@@ -11,6 +11,43 @@ import { Button } from "@/components/ui/button"
 // Dynamic import type for Flickity
 type FlickityType = typeof import("flickity").default
 
+// Gallery image with shimmer loading
+function GalleryImage({
+  src,
+  alt,
+  className,
+  loading,
+}: {
+  src: string
+  alt: string
+  className?: string
+  loading?: "eager" | "lazy"
+}) {
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  return (
+    <>
+      {/* Shimmer placeholder */}
+      {!isLoaded && (
+        <div className="absolute inset-0 bg-muted overflow-hidden">
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        className={cn(
+          "transition-opacity duration-300",
+          isLoaded ? "opacity-100" : "opacity-0",
+          className
+        )}
+        loading={loading}
+        onLoad={() => setIsLoaded(true)}
+      />
+    </>
+  )
+}
+
 interface ArtifactMediaGalleryProps {
   media: ArtifactMediaWithDerivatives[]
   className?: string
@@ -152,10 +189,10 @@ export function ArtifactMediaGallery({
                   onClick={() => toggleImageFit(item.id)}
                   title="Tap to toggle between fill and fit modes"
                 >
-                  <img
+                  <GalleryImage
                     src={mediaData.mediumUrl || mediaData.public_url}
                     alt={item.caption_override || `Media ${item.sort_order + 1}`}
-                    className={`max-h-full max-w-full transition-all duration-200 ${
+                    className={`max-h-full max-w-full ${
                       imageFitModes[item.id] === 'contain' ? 'object-contain' : 'object-cover w-full h-full'
                     }`}
                     loading={item.sort_order <= 1 ? "eager" : "lazy"}
@@ -194,6 +231,7 @@ export function ArtifactMediaGallery({
           }
           .artifact-media-gallery .flickity-page-dots {
             margin-top: 8px !important;
+            margin-bottom: 16px !important;
             bottom: auto !important;
             position: relative !important;
           }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { type ArtifactMediaWithDerivatives, type UserMediaWithDerivatives } from "@/lib/types/media"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import { X, Image as ImageIcon, GripVertical, Pencil } from "lucide-react"
 import { SectionTitle } from "@/components/ui/section-title"
 import { HelpText } from "@/components/ui/help-text"
@@ -29,6 +30,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverEvent,
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -114,6 +117,8 @@ export function ArtifactGalleryEditor({
   const [isPickerOpen, setIsPickerOpen] = useState(false)
   const [isReordering, setIsReordering] = useState(false)
   const [items, setItems] = useState(galleryMedia)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
 
   // Sync items with galleryMedia when it changes (for add/remove operations)
   useEffect(() => {
@@ -131,8 +136,20 @@ export function ArtifactGalleryEditor({
     })
   )
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+  }
+
+  const handleDragOver = (event: DragOverEvent) => {
+    setOverId(event.over?.id as string | null)
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
+
+    // Reset drag state
+    setActiveId(null)
+    setOverId(null)
 
     if (!over || active.id === over.id) {
       return
@@ -231,13 +248,16 @@ export function ArtifactGalleryEditor({
         <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
           Auto-saved
         </span>
+        <div className="flex-1" />
+        <div className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full border-2 border-purple-600">
+          <Pencil className="h-3.5 w-3.5 text-purple-600" />
+        </div>
       </div>
       <div className="flex items-end justify-between gap-4">
         <HelpText>
           Media carousel displayed at the top of your artifact page. Drag to reorder, changes save automatically.
         </HelpText>
         <Button onClick={() => setIsPickerOpen(true)} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
-          <Pencil className="mr-2 h-4 w-4" />
           Edit Gallery
         </Button>
       </div>
@@ -252,26 +272,57 @@ export function ArtifactGalleryEditor({
           </Button>
         </Card>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={items.map(item => item.id)}
-            strategy={horizontalListSortingStrategy}
+        <div className="space-y-3">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
           >
-            <div className="gallery-grid relative overflow-x-auto overflow-y-hidden whitespace-nowrap">
-              {items.map((item) => (
-                <SortableItem
-                  key={item.id}
-                  item={item}
-                  onRemove={handleRemove}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+            <SortableContext
+              items={items.map(item => item.id)}
+              strategy={horizontalListSortingStrategy}
+            >
+              <div className="gallery-grid relative overflow-x-auto overflow-y-hidden whitespace-nowrap">
+                {items.map((item) => (
+                  <SortableItem
+                    key={item.id}
+                    item={item}
+                    onRemove={handleRemove}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
+          {/* Page dots indicator */}
+          <div className="flex justify-center gap-1.5">
+            {(() => {
+              // Calculate projected order during drag
+              const activeIndex = activeId ? items.findIndex(item => item.id === activeId) : -1
+              const overIndex = overId ? items.findIndex(item => item.id === overId) : -1
+              const projectedItems = activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex
+                ? arrayMove(items, activeIndex, overIndex)
+                : items
+
+              return projectedItems.map((item) => {
+                const isActive = item.id === activeId
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "h-2 rounded-full transition-all duration-200",
+                      isActive
+                        ? "w-6 bg-primary"
+                        : "w-2 bg-muted-foreground/30"
+                    )}
+                  />
+                )
+              })
+            })()}
+          </div>
+        </div>
       )}
 
       {/* Media Picker Dialog */}

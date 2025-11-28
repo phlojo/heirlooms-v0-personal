@@ -500,31 +500,35 @@ export function ArtifactDetailView({
         )}
 
         {/* Description Section */}
-        <section className="space-y-4 py-4">
-          {isEditMode && <SectionTitle>Description</SectionTitle>}
-          {isEditMode ? (
-            <TranscriptionInput
-              value={editDescription}
-              onChange={setEditDescription}
-              placeholder="Tell the story of this artifact..."
-              type="textarea"
-              fieldType="description"
-              userId={userId}
-              entityType="artifact"
-              rows={4}
-            />
-          ) : (
-            <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown>{artifact.description || "No description provided"}</ReactMarkdown>
-              {artifact.ai_description && (
-                <div className="mt-4 pt-4 border-t">
-                  <p className="text-xs font-semibold text-purple-600 mb-2">AI-Enhanced Description</p>
-                  <ReactMarkdown>{artifact.ai_description}</ReactMarkdown>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
+        {(isEditMode || artifact.description || artifact.ai_description) && (
+          <section className="space-y-4 py-4">
+            {isEditMode && <SectionTitle>Description</SectionTitle>}
+            {isEditMode ? (
+              <TranscriptionInput
+                value={editDescription}
+                onChange={setEditDescription}
+                placeholder="Tell the story of this artifact..."
+                type="textarea"
+                fieldType="description"
+                userId={userId}
+                entityType="artifact"
+                rows={4}
+              />
+            ) : (
+              <div className="text-pretty text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
+                {artifact.description && (
+                  <ReactMarkdown>{artifact.description}</ReactMarkdown>
+                )}
+                {artifact.ai_description && (
+                  <div className={artifact.description ? "mt-4 pt-4 border-t" : ""}>
+                    <p className="text-xs font-semibold text-purple-600 mb-2">AI-Enhanced Description</p>
+                    <ReactMarkdown>{artifact.ai_description}</ReactMarkdown>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         {isEditMode && (
           <section className="space-y-2">
@@ -568,27 +572,29 @@ export function ArtifactDetailView({
 
         {isEditMode && artifactTypes.length > 0 && <div className="pt-4" />}
 
-        {/* Attributes Section */}
-        <section className="mb-0">
-          <Collapsible open={isAttributesOpen} onOpenChange={setIsAttributesOpen}>
-            <div className="rounded-md border border-input bg-transparent dark:bg-input/30 shadow-xs">
-              <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-2 hover:opacity-80 transition-opacity">
-                <SectionTitle className="pl-0">Attributes</SectionTitle>
-                <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground opacity-50 transition-transform ${isAttributesOpen ? "rotate-180" : ""}`}
-                />
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-3 pb-3">
-                  <p className="text-sm text-muted-foreground italic">
-                    No attributes added yet. Future updates will include fields for make, model, year, measurements,
-                    materials, and condition.
-                  </p>
-                </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
-        </section>
+        {/* Attributes Section - Only show in edit mode until attributes are implemented */}
+        {isEditMode && (
+          <section className="mb-0">
+            <Collapsible open={isAttributesOpen} onOpenChange={setIsAttributesOpen}>
+              <div className="rounded-md border border-input bg-transparent dark:bg-input/30 shadow-xs">
+                <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-2 hover:opacity-80 transition-opacity">
+                  <SectionTitle className="pl-0">Attributes</SectionTitle>
+                  <ChevronDown
+                    className={`h-4 w-4 text-muted-foreground opacity-50 transition-transform ${isAttributesOpen ? "rotate-180" : ""}`}
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-3 pb-3">
+                    <p className="text-sm text-muted-foreground italic">
+                      No attributes added yet. Future updates will include fields for make, model, year, measurements,
+                      materials, and condition.
+                    </p>
+                  </div>
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
+          </section>
+        )}
 
         <Separator className="my-4" />
 
