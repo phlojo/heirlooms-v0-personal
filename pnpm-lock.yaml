@@ -149,6 +149,9 @@ importers:
       date-fns:
         specifier: 4.1.0
         version: 4.1.0
+      draggabilly:
+        specifier: ^3.0.0
+        version: 3.0.0
       embla-carousel-react:
         specifier: latest
         version: 8.6.0(react@19.2.0)
@@ -161,6 +164,9 @@ importers:
       framer-motion:
         specifier: latest
         version: 12.23.24(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      imagesloaded:
+        specifier: ^5.0.0
+        version: 5.0.0
       input-otp:
         specifier: latest
         version: 1.4.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -179,6 +185,9 @@ importers:
       next-themes:
         specifier: latest
         version: 0.4.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      packery:
+        specifier: ^3.0.0
+        version: 3.0.0
       path:
         specifier: latest
         version: 0.12.7
@@ -2765,6 +2774,9 @@ packages:
     resolution: {integrity: sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w==}
     engines: {node: '>=12'}
 
+  draggabilly@3.0.0:
+    resolution: {integrity: sha512-aEs+B6prbMZQMxc9lgTpCBfyCUhRur/VFucHhIOvlvvdARTj7TcDmX/cdOUtqbjJJUh7+agyJXR5Z6IFe1MxwQ==}
+
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
 
@@ -3773,6 +3785,9 @@ packages:
 
   package-json-from-dist@1.0.1:
     resolution: {integrity: sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==}
+
+  packery@3.0.0:
+    resolution: {integrity: sha512-mTaE43T4kJCxkln4/lSFMjfI+19cZaFcg3Z64JO4XHlCxUgwhHWne+KeYAsBrHCaNJ1/8gyjormp3G5Uh1rNIA==}
 
   pako@1.0.11:
     resolution: {integrity: sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==}
@@ -7081,6 +7096,11 @@ snapshots:
 
   dotenv@17.2.3: {}
 
+  draggabilly@3.0.0:
+    dependencies:
+      get-size: 3.0.0
+      unidragger: 3.0.1
+
   eastasianwidth@0.2.0: {}
 
   edge-paths@3.0.5:
@@ -8284,6 +8304,11 @@ snapshots:
       netmask: 2.0.2
 
   package-json-from-dist@1.0.1: {}
+
+  packery@3.0.0:
+    dependencies:
+      get-size: 2.0.3
+      outlayer: 2.1.1
 
   pako@1.0.11: {}
 

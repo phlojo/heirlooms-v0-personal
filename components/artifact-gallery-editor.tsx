@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { type ArtifactMediaWithDerivatives, type UserMediaWithDerivatives } from "@/lib/types/media"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { X, ChevronUp, ChevronDown, Plus, Image as ImageIcon } from "lucide-react"
+import { X, Plus, Image as ImageIcon, GripVertical } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   createArtifactMediaLink,
@@ -29,7 +29,7 @@ interface ArtifactGalleryEditorProps {
 
 /**
  * Gallery management section for artifact editor
- * Allows adding, removing, and reordering gallery media
+ * Allows adding, removing, and reordering gallery media with drag-and-drop
  */
 export function ArtifactGalleryEditor({
   artifactId,
@@ -38,9 +38,206 @@ export function ArtifactGalleryEditor({
 }: ArtifactGalleryEditorProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false)
   const [isReordering, setIsReordering] = useState(false)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const packeryInstance = useRef<any>(null)
+  const scrollInterval = useRef<number | null>(null)
+  const isDragging = useRef<boolean>(false)
 
   // Get existing gallery media URLs to exclude from picker
   const existingUrls = galleryMedia.map((item) => item.media.public_url)
+
+  // Initialize Packery once
+  useEffect(() => {
+    if (!gridRef.current || galleryMedia.length === 0) return
+
+    // Skip if already initialized
+    if (packeryInstance.current) {
+      return
+    }
+
+    const initPackery = async () => {
+      const Packery = (await import("packery")).default
+      const Draggabilly = (await import("draggabilly")).default
+      const imagesLoaded = (await import("imagesloaded")).default
+
+      if (!gridRef.current) return
+
+      // Wait for images to load before initializing Packery
+      imagesLoaded(gridRef.current, () => {
+        if (!gridRef.current || packeryInstance.current) return
+
+        // Initialize Packery for horizontal layout
+        const pckry = new Packery(gridRef.current, {
+          itemSelector: ".gallery-grid-item",
+          isHorizontal: true,
+          gutter: 8,
+        })
+
+        packeryInstance.current = pckry
+
+        // Layout after initialization
+        pckry.layout()
+
+        // Make items draggable
+        const items = pckry.getItemElements()
+        console.log('[Packery] Found items:', items.length)
+
+        items.forEach((itemElem: HTMLElement) => {
+          if (!itemElem) return
+
+          const draggie = new Draggabilly(itemElem)
+          pckry.bindDraggabillyEvents(draggie)
+          console.log('[Packery] Made item draggable')
+
+          // Track drag state
+          draggie.on('dragStart', () => {
+            isDragging.current = true
+          })
+
+          // Auto-scroll on drag near edges
+          draggie.on('dragMove', (event: any, pointer: any) => {
+            if (!gridRef.current || !pointer) return
+
+            try {
+              const container = gridRef.current
+              if (!container) return
+
+              const containerRect = container.getBoundingClientRect()
+              if (!containerRect) return
+
+              const scrollEdgeSize = 100 // pixels from edge to trigger scroll
+              const scrollSpeed = 10
+
+              // Clear existing scroll interval
+              if (scrollInterval.current) {
+                clearInterval(scrollInterval.current)
+                scrollInterval.current = null
+              }
+
+              // Check if near left edge
+              if (pointer.pageX - containerRect.left < scrollEdgeSize && container.scrollLeft > 0) {
+                scrollInterval.current = window.setInterval(() => {
+                  if (!gridRef.current) {
+                    if (scrollInterval.current) clearInterval(scrollInterval.current)
+                    return
+                  }
+                  if (container.scrollLeft > 0) {
+                    container.scrollLeft -= scrollSpeed
+                  } else if (scrollInterval.current) {
+                    clearInterval(scrollInterval.current)
+                    scrollInterval.current = null
+                  }
+                }, 20)
+              }
+              // Check if near right edge
+              else if (containerRect.right - pointer.pageX < scrollEdgeSize) {
+                scrollInterval.current = window.setInterval(() => {
+                  if (!gridRef.current) {
+                    if (scrollInterval.current) clearInterval(scrollInterval.current)
+                    return
+                  }
+                  const maxScroll = container.scrollWidth - container.clientWidth
+                  if (container.scrollLeft < maxScroll) {
+                    container.scrollLeft += scrollSpeed
+                  } else if (scrollInterval.current) {
+                    clearInterval(scrollInterval.current)
+                    scrollInterval.current = null
+                  }
+                }, 20)
+              }
+            } catch (error) {
+              console.error('[Packery] Error in dragMove:', error)
+              if (scrollInterval.current) {
+                clearInterval(scrollInterval.current)
+                scrollInterval.current = null
+              }
+            }
+          })
+
+          // Clear scroll interval on drag end
+          draggie.on('dragEnd', () => {
+            if (scrollInterval.current) {
+              clearInterval(scrollInterval.current)
+              scrollInterval.current = null
+            }
+          })
+        })
+
+        // Handle drag end to save new order
+        pckry.on("dragItemPositioned", async () => {
+        const itemElems = pckry.getItemElements()
+        const newOrder = itemElems.map((elem, idx) => {
+          const mediaId = elem.getAttribute("data-media-id")
+          return {
+            media_id: mediaId!,
+            new_sort_order: idx,
+          }
+        })
+
+        setIsReordering(true)
+        try {
+          const result = await reorderArtifactMedia({
+            artifact_id: artifactId,
+            role: "gallery",
+            reorders: newOrder,
+          })
+
+          if (result.error) {
+            toast.error(`Failed to reorder: ${result.error}`)
+            isDragging.current = false
+            return
+          }
+
+          toast.success("Reordered successfully")
+
+          // Delay update to let Packery finish its animation
+          setTimeout(() => {
+            isDragging.current = false
+            onUpdate()
+          }, 100)
+        } catch (error) {
+          console.error("[GalleryEditor] Error reordering:", error)
+          toast.error("Failed to reorder media")
+          isDragging.current = false
+        } finally {
+          setIsReordering(false)
+        }
+        })
+      })
+    }
+
+    initPackery()
+
+    return () => {
+      // Only destroy on unmount
+      if (packeryInstance.current) {
+        packeryInstance.current.destroy()
+        packeryInstance.current = null
+      }
+    }
+  }, []) // Empty deps - initialize once
+
+  // Update layout when gallery changes
+  useEffect(() => {
+    if (!packeryInstance.current || galleryMedia.length === 0) return
+
+    // Skip layout updates during drag
+    if (isDragging.current) return
+
+    // Small delay to ensure DOM is updated
+    const timeoutId = setTimeout(() => {
+      try {
+        if (packeryInstance.current && gridRef.current && !isDragging.current) {
+          packeryInstance.current.reloadItems()
+          packeryInstance.current.layout()
+        }
+      } catch (error) {
+        console.error('[Packery] Error updating layout:', error)
+      }
+    }, 50)
+
+    return () => clearTimeout(timeoutId)
+  }, [galleryMedia])
 
   const handleAddMedia = async (selectedMedia: UserMediaWithDerivatives[]) => {
     try {
@@ -50,7 +247,7 @@ export function ArtifactGalleryEditor({
           artifact_id: artifactId,
           media_id: media.id,
           role: "gallery",
-          sort_order: galleryMedia.length, // Add at end
+          sort_order: galleryMedia.length,
         })
 
         if (result.error) {
@@ -85,98 +282,6 @@ export function ArtifactGalleryEditor({
     }
   }
 
-  const handleMoveUp = async (item: ArtifactMediaWithDerivatives, index: number) => {
-    if (index === 0) return
-
-    setIsReordering(true)
-    try {
-      // Swap with previous item - construct new order array
-      const newOrder = [...galleryMedia]
-      newOrder[index] = galleryMedia[index - 1]
-      newOrder[index - 1] = item
-
-      // Build reorders array with new sort positions
-      const reorders = newOrder.map((media, idx) => ({
-        media_id: media.media_id,
-        new_sort_order: idx,
-      }))
-
-      console.log("[GalleryEditor] Reordering up:", {
-        artifactId,
-        reorders,
-        currentIndex: index,
-      })
-
-      const result = await reorderArtifactMedia({
-        artifact_id: artifactId,
-        role: "gallery",
-        reorders,
-      })
-
-      console.log("[GalleryEditor] Reorder result:", result)
-
-      if (result.error) {
-        console.error("[GalleryEditor] Reorder error:", result.error)
-        toast.error(`Failed to reorder: ${result.error}`)
-        return
-      }
-
-      toast.success("Reordered successfully")
-      onUpdate()
-    } catch (error) {
-      console.error("[GalleryEditor] Error reordering:", error)
-      toast.error("Failed to reorder media")
-    } finally {
-      setIsReordering(false)
-    }
-  }
-
-  const handleMoveDown = async (item: ArtifactMediaWithDerivatives, index: number) => {
-    if (index === galleryMedia.length - 1) return
-
-    setIsReordering(true)
-    try {
-      // Swap with next item - construct new order array
-      const newOrder = [...galleryMedia]
-      newOrder[index] = galleryMedia[index + 1]
-      newOrder[index + 1] = item
-
-      // Build reorders array with new sort positions
-      const reorders = newOrder.map((media, idx) => ({
-        media_id: media.media_id,
-        new_sort_order: idx,
-      }))
-
-      console.log("[GalleryEditor] Reordering down:", {
-        artifactId,
-        reorders,
-        currentIndex: index,
-      })
-
-      const result = await reorderArtifactMedia({
-        artifact_id: artifactId,
-        role: "gallery",
-        reorders,
-      })
-
-      console.log("[GalleryEditor] Reorder result:", result)
-
-      if (result.error) {
-        console.error("[GalleryEditor] Reorder error:", result.error)
-        toast.error(`Failed to reorder: ${result.error}`)
-        return
-      }
-
-      toast.success("Reordered successfully")
-      onUpdate()
-    } catch (error) {
-      console.error("[GalleryEditor] Error reordering:", error)
-      toast.error("Failed to reorder media")
-    } finally {
-      setIsReordering(false)
-    }
-  }
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -189,7 +294,7 @@ export function ArtifactGalleryEditor({
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Media carousel displayed at the top of your artifact page. Changes save automatically.
+            Media carousel displayed at the top of your artifact page. Drag to reorder, changes save automatically.
           </p>
         </div>
         <Button onClick={() => setIsPickerOpen(true)} size="sm">
@@ -198,7 +303,7 @@ export function ArtifactGalleryEditor({
         </Button>
       </div>
 
-      {/* Gallery Items */}
+      {/* Gallery Grid */}
       {galleryMedia.length === 0 ? (
         <Card className="flex h-40 flex-col items-center justify-center gap-2 border-dashed rounded-sm">
           <ImageIcon className="h-8 w-8 text-muted-foreground" />
@@ -208,16 +313,25 @@ export function ArtifactGalleryEditor({
           </Button>
         </Card>
       ) : (
-        <div className="space-y-2">
+        <div ref={gridRef} className="gallery-grid h-[192px] relative">
           {galleryMedia.map((item, index) => {
             const media = item.media
             const isImage = media.media_type === "image"
             const isVideo = media.media_type === "video"
 
             return (
-              <Card key={item.id} className="flex items-center gap-3 p-3 rounded-sm">
+              <Card
+                key={item.id}
+                data-media-id={item.media_id}
+                className="gallery-grid-item w-auto inline-flex items-center justify-center gap-1 p-3 rounded-sm cursor-grab active:cursor-grabbing"
+              >
+                {/* Drag Handle */}
+                <div className="drag-handle flex-shrink-0 flex items-center justify-center cursor-grab active:cursor-grabbing">
+                  <GripVertical className="h-5 w-5 text-muted-foreground" />
+                </div>
+
                 {/* Thumbnail */}
-                <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+                <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded bg-muted flex items-center justify-center">
                   {isImage && (
                     <img
                       src={media.thumbnailUrl || media.public_url}
@@ -226,7 +340,7 @@ export function ArtifactGalleryEditor({
                     />
                   )}
                   {isVideo && (
-                    <div className="relative h-full w-full">
+                    <div className="relative h-full w-full flex items-center justify-center">
                       {media.thumbnailUrl ? (
                         <img
                           src={media.thumbnailUrl}
@@ -243,42 +357,21 @@ export function ArtifactGalleryEditor({
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-medium">{media.filename}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {media.media_type} • Position {index + 1}
+                <div className="flex-shrink-0 flex items-center justify-center">
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {media.media_type}
                   </p>
                 </div>
 
-                {/* Controls */}
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleMoveUp(item, index)}
-                    disabled={index === 0 || isReordering}
-                    className={cn(index === 0 && "invisible")}
-                  >
-                    <ChevronUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleMoveDown(item, index)}
-                    disabled={index === galleryMedia.length - 1 || isReordering}
-                    className={cn(index === galleryMedia.length - 1 && "invisible")}
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemove(item.id, media.filename)}
-                    className="text-destructive hover:bg-destructive/10"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
+                {/* Remove Button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemove(item.id, media.filename)}
+                  className="text-destructive hover:bg-destructive/10 flex-shrink-0 inline-flex items-center justify-center"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </Card>
             )
           })}
@@ -301,6 +394,29 @@ export function ArtifactGalleryEditor({
           />
         </DialogContent>
       </Dialog>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .gallery-grid {
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            white-space: nowrap !important;
+          }
+          .gallery-grid-item {
+            display: inline-block !important;
+            vertical-align: top !important;
+          }
+
+          /* Hide scrollbar but keep scrolling */
+          .gallery-grid::-webkit-scrollbar {
+            display: none !important;
+          }
+          .gallery-grid {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+          }
+        `
+      }} />
     </div>
   )
 }
