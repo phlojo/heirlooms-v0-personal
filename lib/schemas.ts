@@ -43,6 +43,8 @@ export const createArtifactSchema = z.object({
   image_captions: z.record(z.string().url(), z.string()).optional(),
   video_summaries: z.record(z.string().url(), z.string()).optional(),
   audio_transcripts: z.record(z.string().url(), z.string()).optional(),
+  // Gallery URLs are separate from media_urls to create artifact_media links with "gallery" role
+  gallery_urls: z.array(z.string().url("Invalid gallery URL")).nullable().optional(),
 })
 
 export type CreateArtifactInput = z.infer<typeof createArtifactSchema>

@@ -195,7 +195,13 @@ export function ArtifactDetailView({
   const imageCaptions = isEditMode ? editImageCaptions : artifact.image_captions || {}
   const videoSummaries = isEditMode ? editVideoSummaries : artifact.video_summaries || {}
   const audioTranscripts = isEditMode ? editAudioTranscripts : artifact.audio_transcripts || {}
-  const mediaUrls = isEditMode ? Array.from(new Set(editMediaUrls)) : Array.from(new Set(artifact.media_urls || []))
+  const allMediaUrls = isEditMode ? Array.from(new Set(editMediaUrls)) : Array.from(new Set(artifact.media_urls || []))
+
+  // Extract gallery URLs from galleryMedia to exclude them from media blocks
+  const galleryUrls = new Set(currentGalleryMedia.map(gm => gm.media.public_url))
+
+  // Media blocks should only show URLs that are NOT in the gallery
+  const mediaUrls = allMediaUrls.filter(url => !galleryUrls.has(url))
 
   const audioUrlsFiltered = mediaUrls.filter(isAudioUrl)
   const videoUrlsFiltered = mediaUrls.filter(isVideoUrl)

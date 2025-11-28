@@ -574,3 +574,123 @@ export async function getMediaUsage(
 
   return { data: usage }
 }
+
+// ============================================================================
+// Helper Functions for Artifact Creation
+// ============================================================================
+
+/**
+ * Create a user_media record from a URL
+ * Extracts filename and media type from the URL
+ */
+export async function createUserMediaFromUrl(
+  url: string,
+  userId: string
+): Promise<{ data?: UserMedia; error?: string }> {
+  const supabase = await createClient()
+
+  // Extract filename from URL
+  const urlParts = url.split("/")
+  const filename = urlParts[urlParts.length - 1].split("?")[0] || "media"
+
+  // Determine media type from URL
+  const urlLower = url.toLowerCase()
+  let mediaType: "image" | "video" | "audio" = "image"
+  if (urlLower.includes(".mp4") || urlLower.includes(".mov") || urlLower.includes(".webm") || urlLower.includes("/video/")) {
+    mediaType = "video"
+  } else if (urlLower.includes(".mp3") || urlLower.includes(".wav") || urlLower.includes(".m4a") || urlLower.includes(".webm") && urlLower.includes("audio")) {
+    mediaType = "audio"
+  }
+
+  // Check if user_media already exists for this URL
+  const { data: existingMedia } = await supabase
+    .from("user_media")
+    .select("*")
+    .eq("public_url", url)
+    .eq("user_id", userId)
+    .single()
+
+  if (existingMedia) {
+    return { data: existingMedia }
+  }
+
+  // Create new user_media record
+  const { data, error } = await supabase
+    .from("user_media")
+    .insert({
+      user_id: userId,
+      filename,
+      media_type: mediaType,
+      public_url: url,
+      storage_path: url, // For Cloudinary URLs, storage_path is the URL itself
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error("[createUserMediaFromUrl] Database error:", error)
+    return { error: "Failed to create media record" }
+  }
+
+  return { data }
+}
+
+/**
+ * Create artifact_media links for multiple media URLs
+ * Creates user_media records if they don't exist, then links them to the artifact
+ */
+export async function createArtifactMediaLinks(
+  artifactId: string,
+  mediaUrls: string[],
+  userId: string,
+  role: "gallery" | "inline_block" | "cover" = "gallery"
+): Promise<{ error?: string; createdCount?: number }> {
+  const supabase = await createClient()
+  let createdCount = 0
+
+  for (let i = 0; i < mediaUrls.length; i++) {
+    const url = mediaUrls[i]
+
+    // Create or get user_media record
+    const mediaResult = await createUserMediaFromUrl(url, userId)
+    if (mediaResult.error || !mediaResult.data) {
+      console.error(`[createArtifactMediaLinks] Failed to create user_media for ${url}:`, mediaResult.error)
+      continue
+    }
+
+    // Check if artifact_media link already exists
+    const { data: existingLink } = await supabase
+      .from("artifact_media")
+      .select("id")
+      .eq("artifact_id", artifactId)
+      .eq("media_id", mediaResult.data.id)
+      .eq("role", role)
+      .single()
+
+    if (existingLink) {
+      console.log(`[createArtifactMediaLinks] Link already exists for media ${mediaResult.data.id}`)
+      continue
+    }
+
+    // Create artifact_media link
+    const { error } = await supabase
+      .from("artifact_media")
+      .insert({
+        artifact_id: artifactId,
+        media_id: mediaResult.data.id,
+        role,
+        sort_order: i,
+        is_primary: i === 0,
+      })
+
+    if (error) {
+      console.error(`[createArtifactMediaLinks] Failed to create link for ${url}:`, error)
+      continue
+    }
+
+    createdCount++
+  }
+
+  console.log(`[createArtifactMediaLinks] Created ${createdCount} links for artifact ${artifactId}`)
+  return { createdCount }
+}

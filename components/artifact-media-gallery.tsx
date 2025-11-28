@@ -24,6 +24,14 @@ function GalleryImage({
   loading?: "eager" | "lazy"
 }) {
   const [isLoaded, setIsLoaded] = useState(false)
+  const imgRef = useRef<HTMLImageElement>(null)
+
+  // Handle already-cached images (onLoad fires before React attaches listener)
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current?.naturalHeight > 0) {
+      setIsLoaded(true)
+    }
+  }, [src])
 
   return (
     <>
@@ -34,6 +42,7 @@ function GalleryImage({
         </div>
       )}
       <img
+        ref={imgRef}
         src={src}
         alt={alt}
         className={cn(
