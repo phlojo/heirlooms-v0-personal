@@ -5,9 +5,14 @@ import { type ArtifactMediaWithDerivatives } from "@/lib/types/media"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { X, Image as ImageIcon, GripVertical, Pencil, BookImage } from "lucide-react"
+import { X, Image as ImageIcon, GripVertical, BookImage, HelpCircle, Upload, FolderOpen } from "lucide-react"
 import { SectionTitle } from "@/components/ui/section-title"
-import { HelpText } from "@/components/ui/help-text"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   createArtifactMediaLink,
   removeArtifactMediaLink,
@@ -138,6 +143,7 @@ export function ArtifactGalleryEditor({
   onSelectThumbnail,
 }: ArtifactGalleryEditorProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false)
+  const [initialSource, setInitialSource] = useState<"new" | "existing" | null>(null)
   const [isReordering, setIsReordering] = useState(false)
   const [items, setItems] = useState(galleryMedia)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -279,31 +285,60 @@ export function ArtifactGalleryEditor({
   return (
     <div className="space-y-4 pt-4">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <SectionTitle>Gallery</SectionTitle>
-        <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
-          Auto-saved
-        </span>
-        <div className="flex-1" />
-        <div className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full border-2 border-purple-600">
-          <Pencil className="h-3.5 w-3.5 text-purple-600" />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <SectionTitle>Gallery</SectionTitle>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <HelpCircle className="h-4 w-4" />
+                  <span className="sr-only">Gallery help</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" align="center">
+                Media carousel displayed at the top of your artifact page. Drag to reorder, changes save automatically.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            Auto-saved
+          </span>
         </div>
-      </div>
-      <div className="flex items-end justify-between gap-4">
-        <HelpText>
-          Media carousel displayed at the top of your artifact page.
-          <br />Drag to reorder, changes save automatically.
-        </HelpText>
-        <Button onClick={() => setIsPickerOpen(true)} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
-          Edit Gallery
-        </Button>
+        <div className="flex items-center justify-between">
+          <Button
+            onClick={() => {
+              setInitialSource("existing")
+              setIsPickerOpen(true)
+            }}
+            size="sm"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <FolderOpen className="h-4 w-4 mr-1.5" />
+            + From Library
+          </Button>
+          <Button
+            onClick={() => {
+              setInitialSource("new")
+              setIsPickerOpen(true)
+            }}
+            size="sm"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <Upload className="h-4 w-4 mr-1.5" />
+            + From Device
+          </Button>
+        </div>
       </div>
 
       {/* Gallery Grid */}
       {galleryMedia.length === 0 ? (
         <button
           type="button"
-          onClick={() => setIsPickerOpen(true)}
+          onClick={() => {
+            setInitialSource(null)
+            setIsPickerOpen(true)
+          }}
           className="w-full h-48 flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-purple-400/50 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/70 transition-all cursor-pointer group"
         >
           <div className="h-14 w-14 rounded-full bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
@@ -312,6 +347,7 @@ export function ArtifactGalleryEditor({
           <div className="text-center">
             <p className="text-base font-semibold text-purple-600 dark:text-purple-400">Add Media to Gallery</p>
             <p className="text-xs text-muted-foreground mt-1">Photos, videos, and audio files</p>
+            <p className="text-xs text-muted-foreground mt-1">Media carousel displayed at the top of your artifact page.</p>
           </div>
         </button>
       ) : (
@@ -377,6 +413,7 @@ export function ArtifactGalleryEditor({
         artifactId={artifactId}
         userId={userId}
         onMediaAdded={handleAddMedia}
+        initialSource={initialSource}
       />
 
       <style dangerouslySetInnerHTML={{

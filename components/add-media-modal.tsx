@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Camera, Video, Mic, Upload, FolderOpen, ArrowLeft, X } from "lucide-react"
@@ -33,6 +33,7 @@ interface AddMediaModalProps {
   artifactId: string | null
   userId: string
   onMediaAdded: (urls: string[]) => void
+  initialSource?: "new" | "existing" | null
 }
 
 type MediaMode = "record" | null
@@ -46,8 +47,8 @@ interface UploadProgress {
   estimatedTimeRemaining: number | null
 }
 
-export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaAdded }: AddMediaModalProps) {
-  const [mediaSource, setMediaSource] = useState<MediaSource>(null)
+export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaAdded, initialSource = null }: AddMediaModalProps) {
+  const [mediaSource, setMediaSource] = useState<MediaSource>(initialSource)
   const [selectedMode, setSelectedMode] = useState<MediaMode>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,6 +56,13 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
 
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const videoCameraInputRef = useRef<HTMLInputElement>(null)
+
+  // Sync mediaSource with initialSource when modal opens
+  useEffect(() => {
+    if (open && initialSource) {
+      setMediaSource(initialSource)
+    }
+  }, [open, initialSource])
 
   const handleReset = () => {
     setMediaSource(null)
