@@ -133,12 +133,15 @@ The artifact media system uses a **unified media model** where:
 - Auto-pause videos on slide change
 - Page dots for position indicator
 
-**Edit Mode** (`components/artifact-gallery-editor.tsx`):
+**Edit Mode** (`components/artifact-gallery-editor.tsx`, `components/new-artifact-gallery-editor.tsx`):
 - Uses **@dnd-kit** for React-first drag-and-drop
 - Horizontal sortable list with `horizontalListSortingStrategy`
 - Optimistic updates (instant UI feedback, no refetch on reorder)
-- Auto-save with two-phase database update
-- MediaPicker integration for selecting from library
+- Auto-save with two-phase database update (edit page only)
+- Two action buttons: "+ From Library" and "+ From Device"
+- AddMediaModal with `initialSource` prop for direct navigation
+- Tooltip help icon next to Gallery title
+- Centered gallery cards layout
 - Touch/keyboard/mouse support via sensors
 
 **Server Actions** (`lib/actions/media.ts`):

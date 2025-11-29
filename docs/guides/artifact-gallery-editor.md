@@ -1,8 +1,8 @@
 # Artifact Gallery Editor Guide
 
-**Component**: `components/artifact-gallery-editor.tsx`
+**Component**: `components/artifact-gallery-editor.tsx` (edit), `components/new-artifact-gallery-editor.tsx` (new)
 **Library**: @dnd-kit (React drag-and-drop)
-**Date**: 2025-11-27
+**Date**: 2025-11-29 (updated)
 
 ## Overview
 
@@ -12,25 +12,35 @@ The Artifact Gallery Editor provides a drag-and-drop interface for managing medi
 
 ### Core Functionality
 - **Drag-and-drop reordering** - Horizontal list with visual feedback
-- **Auto-save** - Changes persist immediately (optimistic updates)
-- **Add media** - MediaPicker integration for selecting from library
+- **Auto-save** - Changes persist immediately (optimistic updates) - edit page only
+- **Add media** - Two dedicated buttons for adding from device or library
 - **Remove media** - One-click removal with confirmation toast
 - **Empty state** - Helpful prompt when no media exists
 - **Accessibility** - Touch, mouse, and keyboard support
+- **Tooltip help** - Info icon next to Gallery title with usage instructions
 
 ### Visual Design
 - **Compact cards** - 64x64 thumbnails with type labels
 - **Drag handles** - GripVertical icon for intuitive dragging
 - **Hidden scrollbar** - Clean appearance with scroll functionality
-- **Auto-saved badge** - Green indicator showing changes persist automatically
+- **Auto-saved badge** - Green indicator showing changes persist automatically (edit page)
+- **Centered gallery** - Media cards centered whether 1 or many items
+- **Purple action buttons** - Solid purple buttons matching site design
 - **Responsive** - Works on mobile and desktop
 
 ## Component Architecture
 
 ### Component Tree
 ```
-ArtifactGalleryEditor
-├── Header (title, badge, "Add to Gallery" button)
+ArtifactGalleryEditor / NewArtifactGalleryEditor
+├── Header
+│   ├── Title Row (Gallery + Tooltip + Auto-saved badge)
+│   │   ├── SectionTitle "Gallery"
+│   │   ├── HelpCircle tooltip icon (with usage instructions)
+│   │   └── Auto-saved badge (edit page only)
+│   └── Button Row (justify-between)
+│       ├── "+ From Library" button (left)
+│       └── "+ From Device" button (right)
 ├── Gallery Grid (DndContext)
 │   ├── SortableContext (horizontal strategy)
 │   │   └── SortableItem (for each media)
@@ -39,7 +49,7 @@ ArtifactGalleryEditor
 │   │       ├── Type Label (capitalize media type)
 │   │       └── Remove Button (X icon)
 │   └── Empty State (when no media)
-└── MediaPicker Dialog
+└── AddMediaModal (with initialSource prop)
 ```
 
 ### Key Components
@@ -66,7 +76,8 @@ Main container component.
 - `onUpdate: () => void` - Callback to refetch data after add/remove
 
 **State:**
-- `isPickerOpen` - MediaPicker dialog visibility
+- `isPickerOpen` - AddMediaModal dialog visibility
+- `initialSource` - Which modal state to open ("new", "existing", or null)
 - `isReordering` - Loading state during save
 - `items` - Local state for optimistic updates
 
@@ -283,21 +294,85 @@ const handleDragEnd = async (event: DragEndEvent) => {
 - **Cursor**: `cursor-grab` (idle), `cursor-grabbing` (active)
 - **Size**: 20x20 (h-5 w-5)
 
+## Add Media Modal Integration
+
+### Two-Button Interface
+
+The gallery header features two action buttons that open the AddMediaModal to specific states:
+
+```typescript
+// "+ From Library" button (left side)
+<Button
+  onClick={() => {
+    setInitialSource("existing")  // Opens to media picker
+    setIsPickerOpen(true)
+  }}
+  size="sm"
+  className="bg-purple-600 hover:bg-purple-700 text-white"
+>
+  <FolderOpen className="h-4 w-4 mr-1.5" />
+  + From Library
+</Button>
+
+// "+ From Device" button (right side)
+<Button
+  onClick={() => {
+    setInitialSource("new")  // Opens to upload/capture options
+    setIsPickerOpen(true)
+  }}
+  size="sm"
+  className="bg-purple-600 hover:bg-purple-700 text-white"
+>
+  <Upload className="h-4 w-4 mr-1.5" />
+  + From Device
+</Button>
+```
+
+### AddMediaModal Props
+
+```typescript
+<AddMediaModal
+  open={isPickerOpen}
+  onOpenChange={setIsPickerOpen}
+  artifactId={artifactId}
+  userId={userId}
+  onMediaAdded={handleAddMedia}
+  initialSource={initialSource}  // "new" | "existing" | null
+/>
+```
+
+**initialSource behavior:**
+- `"new"` - Opens directly to upload/capture screen (Photos, Videos, Audio options)
+- `"existing"` - Opens directly to media library picker
+- `null` - Opens to initial choice screen (Add from Device / Select Existing)
+
+### Empty State Click
+
+When clicking the empty gallery placeholder, the modal opens to the initial choice screen:
+
+```typescript
+onClick={() => {
+  setInitialSource(null)  // Show both options
+  setIsPickerOpen(true)
+}}
+```
+
 ## Common Use Cases
 
 ### 1. Adding Gallery Media
 
 ```typescript
-// User clicks "Add to Gallery" button
-// → MediaPicker dialog opens
+// User clicks "+ From Library" button
+// → AddMediaModal opens to media picker
 // → User selects media from library
 // → handleAddMedia() creates links
 // → onUpdate() refetches with new media
 
-<Button onClick={() => setIsPickerOpen(true)}>
-  <Plus className="mr-2 h-4 w-4" />
-  Add to Gallery
-</Button>
+// User clicks "+ From Device" button
+// → AddMediaModal opens to upload/capture screen
+// → User uploads or captures media
+// → handleAddMedia() creates links
+// → onUpdate() refetches with new media
 ```
 
 ### 2. Reordering Media
@@ -442,9 +517,12 @@ return
 
 ## Related Files
 
-- `components/artifact-gallery-editor.tsx` - This component
+- `components/artifact-gallery-editor.tsx` - Gallery editor for existing artifacts (edit page)
+- `components/new-artifact-gallery-editor.tsx` - Gallery editor for new artifacts
+- `components/add-media-modal.tsx` - Modal for adding media (upload/capture/library)
+- `components/media-picker.tsx` - Media selection from library
 - `components/artifact-media-gallery.tsx` - View mode component
-- `components/media-picker.tsx` - Media selection dialog
+- `components/ui/tooltip.tsx` - Radix tooltip component
 - `lib/actions/media.ts` - Server actions (lines 203-529)
 - `lib/types/media.ts` - TypeScript types
 - `docs/planning/artifact-gallery.md` - Feature design doc
