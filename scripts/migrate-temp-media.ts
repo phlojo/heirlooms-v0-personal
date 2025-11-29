@@ -1,9 +1,10 @@
 /**
  * Migrate Media from Temp Folder Script
  *
- * Finds artifacts with media still in the temp folder and moves them to the proper
- * artifact folder structure. This fixes the issue where updateArtifact() was not
- * calling reorganizeArtifactMedia().
+ * Finds all media (both in artifacts.media_urls AND user_media for gallery)
+ * that is still in the temp folder and moves them to the proper artifact folder.
+ *
+ * This fixes the issue where updateArtifact() was not calling reorganizeArtifactMedia().
  *
  * Bug Reference: UB-251129-01
  *
@@ -28,25 +29,20 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 // Create Supabase client with service role key (bypasses RLS)
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-interface ArtifactWithTempMedia {
-  id: string
-  user_id: string
-  title: string
-  slug: string
-  media_urls: string[]
-  thumbnail_url: string | null
-  image_captions: Record<string, string> | null
-  video_summaries: Record<string, string> | null
-  audio_transcripts: Record<string, string> | null
-  tempUrls: string[]
+interface TempMediaItem {
+  userMediaId: string
+  userId: string
+  artifactId: string
+  artifactTitle: string
+  tempUrl: string
+  source: "gallery" | "media_blocks" | "thumbnail"
 }
 
 /**
  * Check if a URL is in the temp folder
  */
 function isTempUrl(url: string): boolean {
-  if (!url.includes("supabase")) return false
-  // Check for /temp/ in the path
+  if (!url || !url.includes("supabase")) return false
   return url.includes("/temp/")
 }
 
@@ -55,7 +51,6 @@ function isTempUrl(url: string): boolean {
  */
 function extractPathFromUrl(url: string): string | null {
   try {
-    // Format: https://{project}.supabase.co/storage/v1/object/public/{bucket}/{path}
     const match = url.match(/\/public\/[^/]+\/(.+)$/)
     return match ? match[1] : null
   } catch {
@@ -71,223 +66,243 @@ function getPublicUrl(path: string): string {
 }
 
 /**
- * Find all artifacts with media in temp folder
+ * Find all user_media with temp URLs that are linked to artifacts via artifact_media
  */
-async function findArtifactsWithTempMedia(): Promise<ArtifactWithTempMedia[]> {
-  console.log("📊 Scanning artifacts for temp folder media...")
+async function findTempGalleryMedia(): Promise<TempMediaItem[]> {
+  console.log("📊 Scanning gallery media (artifact_media + user_media)...")
+
+  const { data: links, error } = await supabase
+    .from("artifact_media")
+    .select(`
+      artifact_id,
+      user_media!inner(id, user_id, public_url),
+      artifacts!inner(title)
+    `)
+
+  if (error) {
+    throw new Error(`Failed to fetch artifact_media: ${error.message}`)
+  }
+
+  const tempItems: TempMediaItem[] = []
+
+  for (const link of links || []) {
+    const userMedia = link.user_media as any
+    const artifact = link.artifacts as any
+
+    if (userMedia && isTempUrl(userMedia.public_url)) {
+      tempItems.push({
+        userMediaId: userMedia.id,
+        userId: userMedia.user_id,
+        artifactId: link.artifact_id,
+        artifactTitle: artifact?.title || "Unknown",
+        tempUrl: userMedia.public_url,
+        source: "gallery",
+      })
+    }
+  }
+
+  return tempItems
+}
+
+/**
+ * Find all artifacts with temp URLs in media_urls or thumbnail_url
+ */
+async function findTempArtifactMedia(): Promise<TempMediaItem[]> {
+  console.log("📊 Scanning artifact media_urls and thumbnails...")
 
   const { data: artifacts, error } = await supabase
     .from("artifacts")
-    .select("id, user_id, title, slug, media_urls, thumbnail_url, image_captions, video_summaries, audio_transcripts")
+    .select("id, user_id, title, media_urls, thumbnail_url")
 
   if (error) {
     throw new Error(`Failed to fetch artifacts: ${error.message}`)
   }
 
-  const affectedArtifacts: ArtifactWithTempMedia[] = []
+  const tempItems: TempMediaItem[] = []
+  const seenUrls = new Set<string>()
 
   for (const artifact of artifacts || []) {
-    const tempUrls: string[] = []
-
     // Check media_urls
     if (artifact.media_urls && Array.isArray(artifact.media_urls)) {
       for (const url of artifact.media_urls) {
-        if (isTempUrl(url)) {
-          tempUrls.push(url)
+        if (isTempUrl(url) && !seenUrls.has(url)) {
+          seenUrls.add(url)
+          tempItems.push({
+            userMediaId: "", // Will look up
+            userId: artifact.user_id,
+            artifactId: artifact.id,
+            artifactTitle: artifact.title,
+            tempUrl: url,
+            source: "media_blocks",
+          })
         }
       }
     }
 
     // Check thumbnail_url
-    if (artifact.thumbnail_url && isTempUrl(artifact.thumbnail_url)) {
-      if (!tempUrls.includes(artifact.thumbnail_url)) {
-        tempUrls.push(artifact.thumbnail_url)
-      }
-    }
-
-    if (tempUrls.length > 0) {
-      affectedArtifacts.push({
-        ...artifact,
-        tempUrls,
+    if (artifact.thumbnail_url && isTempUrl(artifact.thumbnail_url) && !seenUrls.has(artifact.thumbnail_url)) {
+      seenUrls.add(artifact.thumbnail_url)
+      tempItems.push({
+        userMediaId: "",
+        userId: artifact.user_id,
+        artifactId: artifact.id,
+        artifactTitle: artifact.title,
+        tempUrl: artifact.thumbnail_url,
+        source: "thumbnail",
       })
     }
   }
 
-  return affectedArtifacts
+  return tempItems
 }
 
 /**
- * Migrate a single artifact's media from temp to artifact folder
+ * Move a file and update all references
  */
-async function migrateArtifactMedia(
-  artifact: ArtifactWithTempMedia,
+async function migrateFile(
+  item: TempMediaItem,
   dryRun: boolean
-): Promise<{ success: boolean; movedCount: number; errors: string[] }> {
-  const errors: string[] = []
-  const urlMapping = new Map<string, string>() // old URL -> new URL
-  let movedCount = 0
-
-  console.log(`\n  Processing: ${artifact.title} (${artifact.tempUrls.length} temp files)`)
-
-  for (const tempUrl of artifact.tempUrls) {
-    const currentPath = extractPathFromUrl(tempUrl)
-    if (!currentPath) {
-      errors.push(`Invalid URL: ${tempUrl}`)
-      continue
-    }
-
-    // Generate new path: userId/artifactId/filename
-    const filename = currentPath.split("/").pop()
-    const newPath = `${artifact.user_id}/${artifact.id}/${filename}`
-    const newUrl = getPublicUrl(newPath)
-
-    if (dryRun) {
-      console.log(`    Would move: ${currentPath}`)
-      console.log(`            to: ${newPath}`)
-      urlMapping.set(tempUrl, newUrl)
-      movedCount++
-      continue
-    }
-
-    // Actually move the file
-    try {
-      // Copy to new location
-      const { error: copyError } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .copy(currentPath, newPath)
-
-      if (copyError) {
-        // Check if it's because file already exists at destination
-        if (copyError.message?.includes("already exists")) {
-          console.log(`    Skipped (already exists): ${newPath}`)
-          urlMapping.set(tempUrl, newUrl)
-          movedCount++
-        } else {
-          errors.push(`Failed to copy ${currentPath}: ${copyError.message}`)
-        }
-        continue
-      }
-
-      // Delete from temp
-      const { error: deleteError } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .remove([currentPath])
-
-      if (deleteError) {
-        console.log(`    Warning: Copied but failed to delete original: ${currentPath}`)
-        // Don't fail - file was copied successfully
-      }
-
-      console.log(`    Moved: ${filename}`)
-      urlMapping.set(tempUrl, newUrl)
-      movedCount++
-    } catch (error) {
-      errors.push(`Exception moving ${currentPath}: ${error}`)
-    }
+): Promise<{ success: boolean; newUrl?: string; error?: string }> {
+  const currentPath = extractPathFromUrl(item.tempUrl)
+  if (!currentPath) {
+    return { success: false, error: "Invalid URL format" }
   }
 
-  // Update artifact with new URLs
-  if (movedCount > 0 && !dryRun) {
-    // Update media_urls array
-    const updatedMediaUrls = (artifact.media_urls || []).map(
-      (url) => urlMapping.get(url) || url
-    )
+  // Generate new path
+  const filename = currentPath.split("/").pop()
+  const newPath = `${item.userId}/${item.artifactId}/${filename}`
+  const newUrl = getPublicUrl(newPath)
 
-    // Update thumbnail_url
-    const updatedThumbnailUrl = artifact.thumbnail_url
-      ? urlMapping.get(artifact.thumbnail_url) || artifact.thumbnail_url
-      : null
+  if (dryRun) {
+    console.log(`    Would move: ${currentPath}`)
+    console.log(`            to: ${newPath}`)
+    return { success: true, newUrl }
+  }
 
-    // Update AI metadata keys
-    const updatedImageCaptions: Record<string, string> = {}
-    if (artifact.image_captions) {
-      for (const [oldUrl, caption] of Object.entries(artifact.image_captions)) {
-        const newUrl = urlMapping.get(oldUrl) || oldUrl
-        updatedImageCaptions[newUrl] = caption
+  try {
+    // Copy to new location
+    const { error: copyError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .copy(currentPath, newPath)
+
+    if (copyError) {
+      if (copyError.message?.includes("already exists")) {
+        console.log(`    Skipped (already exists): ${filename}`)
+      } else {
+        return { success: false, error: `Copy failed: ${copyError.message}` }
       }
+    } else {
+      // Delete from temp
+      await supabase.storage.from(STORAGE_BUCKET).remove([currentPath])
+      console.log(`    Moved: ${filename}`)
     }
 
-    const updatedVideoSummaries: Record<string, string> = {}
-    if (artifact.video_summaries) {
-      for (const [oldUrl, summary] of Object.entries(artifact.video_summaries)) {
-        const newUrl = urlMapping.get(oldUrl) || oldUrl
-        updatedVideoSummaries[newUrl] = summary
-      }
-    }
-
-    const updatedAudioTranscripts: Record<string, string> = {}
-    if (artifact.audio_transcripts) {
-      for (const [oldUrl, transcript] of Object.entries(artifact.audio_transcripts)) {
-        const newUrl = urlMapping.get(oldUrl) || oldUrl
-        updatedAudioTranscripts[newUrl] = transcript
-      }
-    }
-
-    // Update the artifact record
+    // Update user_media record
     const { error: updateError } = await supabase
-      .from("artifacts")
+      .from("user_media")
       .update({
-        media_urls: updatedMediaUrls,
-        thumbnail_url: updatedThumbnailUrl,
-        image_captions: Object.keys(updatedImageCaptions).length > 0 ? updatedImageCaptions : null,
-        video_summaries: Object.keys(updatedVideoSummaries).length > 0 ? updatedVideoSummaries : null,
-        audio_transcripts: Object.keys(updatedAudioTranscripts).length > 0 ? updatedAudioTranscripts : null,
+        public_url: newUrl,
+        storage_path: newUrl,
       })
-      .eq("id", artifact.id)
+      .eq("public_url", item.tempUrl)
 
     if (updateError) {
-      errors.push(`Failed to update artifact record: ${updateError.message}`)
-    } else {
-      console.log(`    Updated artifact record with new URLs`)
+      console.log(`    Warning: Could not update user_media: ${updateError.message}`)
     }
 
-    // Also update user_media records
-    for (const [oldUrl, newUrl] of urlMapping) {
-      const { error: userMediaError } = await supabase
-        .from("user_media")
-        .update({
-          public_url: newUrl,
-          storage_path: newUrl,
-        })
-        .eq("public_url", oldUrl)
-        .eq("user_id", artifact.user_id)
+    // Update artifacts.media_urls if this was from media_blocks
+    if (item.source === "media_blocks") {
+      const { data: artifact } = await supabase
+        .from("artifacts")
+        .select("media_urls")
+        .eq("id", item.artifactId)
+        .single()
 
-      if (userMediaError) {
-        // Non-fatal - user_media record might not exist for older artifacts
-        console.log(`    Note: Could not update user_media for ${oldUrl}`)
+      if (artifact?.media_urls) {
+        const updatedUrls = artifact.media_urls.map((url: string) =>
+          url === item.tempUrl ? newUrl : url
+        )
+        await supabase
+          .from("artifacts")
+          .update({ media_urls: updatedUrls })
+          .eq("id", item.artifactId)
       }
     }
-  }
 
-  return { success: errors.length === 0, movedCount, errors }
+    // Update artifacts.thumbnail_url if needed
+    if (item.source === "thumbnail") {
+      await supabase
+        .from("artifacts")
+        .update({ thumbnail_url: newUrl })
+        .eq("id", item.artifactId)
+        .eq("thumbnail_url", item.tempUrl)
+    }
+
+    // Also check and update thumbnail_url even for gallery items
+    await supabase
+      .from("artifacts")
+      .update({ thumbnail_url: newUrl })
+      .eq("id", item.artifactId)
+      .eq("thumbnail_url", item.tempUrl)
+
+    return { success: true, newUrl }
+  } catch (error) {
+    return { success: false, error: `Exception: ${error}` }
+  }
 }
 
 /**
  * Main migration function
  */
 async function migrateTempMedia(shouldMigrate: boolean) {
-  console.log("\n🔄 Temp Media Migration Script")
-  console.log("================================\n")
+  console.log("\n🔄 Temp Media Migration Script (v2 - Gallery + Media Blocks)")
+  console.log("=============================================================\n")
   console.log(`Mode: ${shouldMigrate ? "🚀 MIGRATE" : "👀 DRY RUN (preview only)"}`)
   console.log(`Bug Reference: UB-251129-01\n`)
 
   try {
-    const affectedArtifacts = await findArtifactsWithTempMedia()
+    // Find all temp media from both sources
+    const [galleryItems, artifactItems] = await Promise.all([
+      findTempGalleryMedia(),
+      findTempArtifactMedia(),
+    ])
 
-    if (affectedArtifacts.length === 0) {
-      console.log("\n✨ No artifacts found with temp folder media! Everything is properly organized.")
+    // Dedupe by URL
+    const allItems = new Map<string, TempMediaItem>()
+    for (const item of [...galleryItems, ...artifactItems]) {
+      if (!allItems.has(item.tempUrl)) {
+        allItems.set(item.tempUrl, item)
+      }
+    }
+
+    const items = Array.from(allItems.values())
+
+    if (items.length === 0) {
+      console.log("\n✨ No temp folder media found! Everything is properly organized.")
       return
     }
 
-    // Calculate totals
-    const totalTempFiles = affectedArtifacts.reduce((sum, a) => sum + a.tempUrls.length, 0)
+    // Group by artifact for display
+    const byArtifact = new Map<string, TempMediaItem[]>()
+    for (const item of items) {
+      const key = `${item.artifactId}|${item.artifactTitle}`
+      if (!byArtifact.has(key)) {
+        byArtifact.set(key, [])
+      }
+      byArtifact.get(key)!.push(item)
+    }
 
-    console.log(`\n📋 Found ${affectedArtifacts.length} artifacts with ${totalTempFiles} temp folder files:\n`)
+    console.log(`\n📋 Found ${items.length} temp folder files in ${byArtifact.size} artifacts:\n`)
 
-    for (const artifact of affectedArtifacts) {
-      console.log(`  - "${artifact.title}" (${artifact.tempUrls.length} files)`)
-      console.log(`    Artifact ID: ${artifact.id}`)
-      console.log(`    User ID: ${artifact.user_id}`)
+    for (const [key, artifactItems] of byArtifact) {
+      const [id, title] = key.split("|")
+      const galleryCt = artifactItems.filter((i) => i.source === "gallery").length
+      const blocksCt = artifactItems.filter((i) => i.source === "media_blocks").length
+      const thumbCt = artifactItems.filter((i) => i.source === "thumbnail").length
+
+      console.log(`  - "${title}" (${artifactItems.length} files)`)
+      console.log(`    Artifact ID: ${id}`)
+      console.log(`    Sources: gallery=${galleryCt}, blocks=${blocksCt}, thumbnail=${thumbCt}`)
     }
 
     if (!shouldMigrate) {
@@ -304,30 +319,27 @@ async function migrateTempMedia(shouldMigrate: boolean) {
 
     console.log("\n🚀 Starting migration...")
 
-    let totalMoved = 0
-    let totalErrors = 0
-    const failedArtifacts: string[] = []
+    let successCount = 0
+    let errorCount = 0
 
-    for (const artifact of affectedArtifacts) {
-      const result = await migrateArtifactMedia(artifact, false)
-      totalMoved += result.movedCount
+    for (const [key, artifactItems] of byArtifact) {
+      const [, title] = key.split("|")
+      console.log(`\n  Processing: ${title} (${artifactItems.length} files)`)
 
-      if (!result.success) {
-        totalErrors += result.errors.length
-        failedArtifacts.push(artifact.title)
-        console.log(`    ⚠️  Errors: ${result.errors.join(", ")}`)
+      for (const item of artifactItems) {
+        const result = await migrateFile(item, false)
+        if (result.success) {
+          successCount++
+        } else {
+          errorCount++
+          console.log(`    ❌ Error: ${result.error}`)
+        }
       }
     }
 
     console.log("\n✅ Migration complete!")
-    console.log(`  Artifacts processed: ${affectedArtifacts.length}`)
-    console.log(`  Files moved: ${totalMoved}`)
-    console.log(`  Errors: ${totalErrors}`)
-
-    if (failedArtifacts.length > 0) {
-      console.log(`\n⚠️  Artifacts with errors:`)
-      failedArtifacts.forEach((title) => console.log(`  - ${title}`))
-    }
+    console.log(`  Files migrated: ${successCount}`)
+    console.log(`  Errors: ${errorCount}`)
   } catch (error) {
     console.error("\n❌ Script failed:", error)
     process.exit(1)

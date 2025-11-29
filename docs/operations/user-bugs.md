@@ -65,23 +65,32 @@ Should be reorganized to: `{userId}/{artifactId}/{timestamp}-{filename}`
 `reorganizeArtifactMedia()` in `lib/actions/media-reorganize.ts` should run after artifact creation/update but appears to not be executing or failing silently.
 
 ### Root Cause
+**Two issues combined:**
+
+**Issue 1: Files stuck in temp folder**
 `updateArtifact()` in `lib/actions/artifacts.ts` was missing the call to `reorganizeArtifactMedia()`.
 
 When a user edits an existing artifact and adds new media:
 1. Files upload to temp folder: `temp/{userId}/{timestamp}-{filename}`
 2. `updateArtifact()` marks uploads as saved (removes from `pending_uploads`)
 3. **BUG**: `updateArtifact()` did NOT call `reorganizeArtifactMedia()` to move files
-4. Files remain in temp folder with user-scoped RLS policies
-5. Only the owner can access temp folder files
+4. Files remain in temp folder
 
 Meanwhile `createArtifact()` correctly called `reorganizeArtifactMedia()` after saving.
 
-**Why owner can see but others can't:**
-- Temp folder has RLS policy: only authenticated user who uploaded can read
-- Artifact folder has public read policy (for public collections)
+**Issue 2: RLS policy on user_media table (the actual blocker)**
+Even after migrating files out of temp, gallery still didn't display for other users.
+
+The `user_media` table had RLS policies that only allowed the **owner** to read their records. When the gallery component fetched `artifact_media` joined with `user_media`, the join returned `null` for non-owners because RLS blocked access.
+
+This is why:
+- Owner viewing their own artifacts → RLS passes → works
+- Other user (or logged out) viewing → RLS blocks `user_media` join → gallery empty
+- Testing with Supabase Dashboard → service role bypasses RLS → looks fine
 
 ### Fix Applied
-**File: `lib/actions/artifacts.ts:834-846`**
+
+**Fix 1: Code change - `lib/actions/artifacts.ts:834-846`**
 
 Added `reorganizeArtifactMedia()` call after marking uploads as saved in `updateArtifact()`:
 
@@ -89,24 +98,36 @@ Added `reorganizeArtifactMedia()` call after marking uploads as saved in `update
 // Phase 2: Reorganize Supabase Storage media from temp to artifact folder
 console.log("[v0] UPDATE ARTIFACT - Reorganizing newly uploaded media files...")
 const reorganizeResult = await reorganizeArtifactMedia(validatedFields.data.id)
-
-if (reorganizeResult.error) {
-  console.error("[v0] UPDATE ARTIFACT - Failed to reorganize media (non-fatal):", reorganizeResult.error)
-} else if (reorganizeResult.movedCount && reorganizeResult.movedCount > 0) {
-  console.log("[v0] UPDATE ARTIFACT - Successfully reorganized", reorganizeResult.movedCount, "media files")
-} else {
-  console.log("[v0] UPDATE ARTIFACT - No media files needed reorganization")
-}
 ```
 
-**Commit:** [pending]
+**Fix 2: RLS policy - `scripts/sql/fix-user-media-rls.sql`**
+
+Added SELECT policy on `user_media` to allow public read for linked media:
+
+```sql
+CREATE POLICY "Allow public read for media linked to artifacts"
+ON user_media
+FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM artifact_media
+    WHERE artifact_media.media_id = user_media.id
+  )
+);
+```
+
+**Fix 3: Migration script - `scripts/migrate-temp-media.ts`**
+
+Moved existing temp folder media to artifact folders and updated all database references.
 
 ### Verification
-- [ ] Fix tested locally
-- [ ] Fix deployed to staging
-- [ ] Existing affected artifacts need manual fix (see below)
-- [ ] User confirmed fix
-- [ ] Fix deployed to production
+- [x] Fix tested locally
+- [x] RLS policy applied to dev database
+- [x] Migration script run (14 files moved)
+- [x] Gallery now visible on dev.heirloomsapp.com
+- [ ] Code changes deployed to production
+- [ ] RLS policy applied to production database
+- [ ] User (Jason) confirmed fix
 
 ### Manual Fix for Existing Affected Artifacts
 For Jason Leake's artifacts that already have media stuck in temp:
