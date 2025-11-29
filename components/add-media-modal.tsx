@@ -328,10 +328,11 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
         const mediaType = e.target === cameraInputRef.current ? "Photo" : "Video"
         addDebug(`Camera capture done, staying open (${mediaType})`)
         toast.success(`${mediaType} added to gallery`)
-        // Set flag to ignore the next onOpenChange(false) from Radix
-        setKeepOpenAfterCapture(true)
-        // Reset flag after a short delay (after Radix's focus events settle)
-        setTimeout(() => setKeepOpenAfterCapture(false), 500)
+        // Reset flag after a delay (after all Radix focus events settle)
+        setTimeout(() => {
+          addDebug("Resetting keepOpen flag")
+          setKeepOpenAfterCapture(false)
+        }, 1000)
       } else {
         addDebug("Regular upload done, closing")
         // Regular file upload - close modal as before
@@ -456,12 +457,16 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
 
   const handleCameraCapture = () => {
     if (cameraInputRef.current) {
+      addDebug("Opening camera for photo")
+      setKeepOpenAfterCapture(true)
       cameraInputRef.current.click()
     }
   }
 
   const handleVideoCameraCapture = () => {
     if (videoCameraInputRef.current) {
+      addDebug("Opening camera for video")
+      setKeepOpenAfterCapture(true)
       videoCameraInputRef.current.click()
     }
   }
