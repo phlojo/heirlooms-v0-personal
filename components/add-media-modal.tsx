@@ -52,13 +52,6 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
-  const [debugLog, setDebugLog] = useState<string[]>([])
-  const [keepOpenAfterCapture, setKeepOpenAfterCapture] = useState(false)
-
-  const addDebug = (msg: string) => {
-    console.log(msg)
-    setDebugLog(prev => [...prev.slice(-5), `${new Date().toLocaleTimeString()}: ${msg}`])
-  }
 
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const videoCameraInputRef = useRef<HTMLInputElement>(null)
@@ -324,20 +317,12 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
       const isCameraCapture = e.target === cameraInputRef.current || e.target === videoCameraInputRef.current
 
       if (isCameraCapture) {
-        // Stay open for more captures, show success toast
+        // Show success toast - modal will close due to iOS browser behavior
         const mediaType = e.target === cameraInputRef.current ? "Photo" : "Video"
-        addDebug(`Camera capture done, staying open (${mediaType})`)
         toast.success(`${mediaType} added to gallery`)
-        // Reset flag after a delay (after all Radix focus events settle)
-        setTimeout(() => {
-          addDebug("Resetting keepOpen flag")
-          setKeepOpenAfterCapture(false)
-        }, 1000)
-      } else {
-        addDebug("Regular upload done, closing")
-        // Regular file upload - close modal as before
-        handleClose()
       }
+      // Close modal after any upload
+      handleClose()
     } catch (err) {
       console.error("[v0] Upload error:", err)
       setError(err instanceof Error ? err.message : "Failed to upload files. Please try again.")
@@ -457,16 +442,12 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
 
   const handleCameraCapture = () => {
     if (cameraInputRef.current) {
-      addDebug("Opening camera for photo")
-      setKeepOpenAfterCapture(true)
       cameraInputRef.current.click()
     }
   }
 
   const handleVideoCameraCapture = () => {
     if (videoCameraInputRef.current) {
-      addDebug("Opening camera for video")
-      setKeepOpenAfterCapture(true)
       videoCameraInputRef.current.click()
     }
   }
@@ -487,14 +468,7 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
-      addDebug(`onOpenChange: isOpen=${isOpen}, keepOpen=${keepOpenAfterCapture}`)
-      if (!isOpen) {
-        if (keepOpenAfterCapture) {
-          addDebug("Ignoring close request (capture mode)")
-          return // Ignore close request after camera capture
-        }
-        handleClose()
-      }
+      if (!isOpen) handleClose()
     }}>
       <DialogContent className="sm:max-w-md border-2 border-dashed border-purple-400/50" showCloseButton={false}>
         <DialogHeader className={mediaSource ? "space-y-1" : "space-y-3"}>
@@ -732,16 +706,6 @@ export function AddMediaModal({ open, onOpenChange, artifactId, userId, onMediaA
                 </div>
                 <Progress value={uploadProgress.currentFileProgress} className="h-2" />
               </div>
-            </div>
-          )}
-
-          {/* Debug panel - remove after testing */}
-          {debugLog.length > 0 && (
-            <div className="mt-4 p-2 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">
-              <div className="font-bold mb-1">Debug:</div>
-              {debugLog.map((log, i) => (
-                <div key={i}>{log}</div>
-              ))}
             </div>
           )}
         </div>

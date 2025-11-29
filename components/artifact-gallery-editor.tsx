@@ -383,6 +383,7 @@ export function ArtifactGalleryEditor({
         __html: `
           .gallery-grid {
             display: flex;
+            justify-content: center;
             gap: 8px;
           }
 
