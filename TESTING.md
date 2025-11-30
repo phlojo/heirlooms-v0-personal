@@ -92,7 +92,7 @@ __tests__/
 
 ## Test Files Included
 
-**Current Status:** 439 passing tests, 14 skipped (in 17 test files)
+**Current Status:** 528 passing tests, 14 skipped (in 20 test files)
 
 ### Unit Tests
 
@@ -138,6 +138,37 @@ __tests__/
 - Tests for auditPendingUploads media audit report generation
 
 **Status:** ✅ All 23 tests passing
+
+#### Media Server Actions (`__tests__/unit/actions/media.test.ts`)
+
+- **48 tests** covering the unified media model (user_media + artifact_media)
+- Tests for createUserMedia, updateUserMedia, getUserMediaLibrary, deleteUserMedia
+- Tests for createArtifactMediaLink, updateArtifactMediaLink, removeArtifactMediaLink
+- Tests for getArtifactMediaByRole, getArtifactGalleryMedia, reorderArtifactMedia
+- Tests for getMediaUsage and helper functions (createUserMediaFromUrl, createArtifactMediaLinks)
+- Covers validation, authentication, authorization, and database operations
+
+**Status:** ✅ All 49 tests passing
+
+#### Media Reorganize (`__tests__/unit/actions/media-reorganize.test.ts`)
+
+- **14 tests** covering media file reorganization from temp to artifact folder
+- Tests for authentication and authorization
+- Tests for moving Supabase Storage files, handling mixed URLs (Cloudinary + Supabase)
+- Tests for AI metadata key updates (image_captions, video_summaries, audio_transcripts)
+- Tests for error handling and partial failures
+
+**Status:** ✅ All 14 tests passing
+
+#### Supabase Storage (`__tests__/unit/actions/supabase-storage.test.ts`)
+
+- **26 tests** covering Supabase Storage operations
+- Tests for uploadToSupabaseStorage, deleteFromSupabaseStorage, moveSupabaseFile
+- Tests for extractSupabaseStoragePath and getSupabasePublicUrl
+- Tests for user-friendly error messages (file too large, quota exceeded, permission denied)
+- Tests for authentication and error handling
+
+**Status:** ✅ All 26 tests passing
 
 #### Slug Utilities (`__tests__/unit/utils/slug.test.ts`)
 
@@ -204,6 +235,8 @@ __tests__/
 
 - ✅ `__tests__/unit/actions/collections.test.ts` - Collection operations (22 tests)
 - ✅ `__tests__/unit/actions/pending-uploads.test.ts` - Upload tracking (23 tests)
+- ✅ `__tests__/unit/actions/media-reorganize.test.ts` - Media reorganization (14 tests)
+- ✅ `__tests__/unit/actions/supabase-storage.test.ts` - Supabase Storage operations (26 tests)
 - `__tests__/unit/actions/auth.test.ts` - Authentication flows
 - `__tests__/unit/actions/cloudinary.test.ts` - Cloudinary integration
 - `__tests__/unit/actions/profile.test.ts` - User profile operations
