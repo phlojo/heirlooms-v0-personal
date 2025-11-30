@@ -103,7 +103,65 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log(`[v0] Cron cleanup complete: ${deletedFromStorage} from storage, ${deletedFromDatabase} from pending_uploads, ${deletedUserMedia} from user_media`)
+    // Phase 3: Clean up orphaned user_media with temp URLs not linked to any artifact
+    // These slip through when files are "saved" (removed from pending_uploads) but
+    // reorganizeArtifactMedia() failed to move them, and the artifact was later deleted
+    let orphanedTempMediaDeleted = 0
+    const orphanedTempMediaFailed: string[] = []
+
+    // Find user_media records with temp URLs that aren't linked to any artifact
+    const { data: orphanedTempMedia, error: orphanedError } = await supabase
+      .from("user_media")
+      .select("id, public_url, user_id")
+      .like("public_url", "%/temp/%")
+
+    if (orphanedError) {
+      console.error("[v0] Cron: Failed to query orphaned temp media:", orphanedError)
+    } else if (orphanedTempMedia && orphanedTempMedia.length > 0) {
+      console.log(`[v0] Cron: Found ${orphanedTempMedia.length} user_media with temp URLs, checking links...`)
+
+      for (const media of orphanedTempMedia) {
+        // Check if this media is linked to any artifact
+        const { data: links } = await supabase
+          .from("artifact_media")
+          .select("id")
+          .eq("media_id", media.id)
+          .limit(1)
+
+        const isLinked = links && links.length > 0
+
+        if (!isLinked) {
+          // Not linked to any artifact - safe to delete
+          console.log(`[v0] Cron: Deleting orphaned temp media: ${media.public_url}`)
+
+          // Delete from storage first
+          if (isSupabaseStorageUrl(media.public_url)) {
+            const deleteResult = await deleteFromSupabaseStorage(media.public_url)
+            if (deleteResult.error) {
+              // File might already be gone, that's OK
+              console.log(`[v0] Cron: Storage delete note: ${deleteResult.error}`)
+            }
+          }
+
+          // Delete the user_media record
+          const { error: deleteMediaError } = await supabase
+            .from("user_media")
+            .delete()
+            .eq("id", media.id)
+
+          if (deleteMediaError) {
+            console.error(`[v0] Cron: Failed to delete user_media ${media.id}:`, deleteMediaError)
+            orphanedTempMediaFailed.push(media.public_url)
+          } else {
+            orphanedTempMediaDeleted++
+          }
+        }
+      }
+
+      console.log(`[v0] Cron: Cleaned ${orphanedTempMediaDeleted} orphaned temp user_media records`)
+    }
+
+    console.log(`[v0] Cron cleanup complete: ${deletedFromStorage} from storage, ${deletedFromDatabase} from pending_uploads, ${deletedUserMedia} from user_media, ${orphanedTempMediaDeleted} orphaned temp media`)
 
     return NextResponse.json({
       success: true,
@@ -115,7 +173,9 @@ export async function GET(request: Request) {
         deletedFromStorage,
         deletedFromDatabase,
         deletedUserMedia,
+        orphanedTempMediaDeleted,
         failedDeletions: failedDeletions.length,
+        orphanedTempMediaFailed: orphanedTempMediaFailed.length,
       }
     })
   } catch (error) {
