@@ -5,7 +5,7 @@ import { type ArtifactMediaWithDerivatives } from "@/lib/types/media"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { X, Image as ImageIcon, GripVertical, BookImage, HelpCircle, Upload, FolderOpen } from "lucide-react"
+import { X, Image as ImageIcon, GripVertical, BookImage, HelpCircle, Upload, FolderOpen, Camera, Video, Mic } from "lucide-react"
 import { SectionTitle } from "@/components/ui/section-title"
 import {
   Tooltip,
@@ -144,6 +144,7 @@ export function ArtifactGalleryEditor({
 }: ArtifactGalleryEditorProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false)
   const [initialSource, setInitialSource] = useState<"new" | "existing" | null>(null)
+  const [initialAction, setInitialAction] = useState<"upload" | "camera" | "video" | "audio" | null>(null)
   const [isReordering, setIsReordering] = useState(false)
   const [items, setItems] = useState(galleryMedia)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -283,7 +284,7 @@ export function ArtifactGalleryEditor({
   }
 
   return (
-    <div className="space-y-4 pt-4">
+    <div className="space-y-4 pt-6">
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
@@ -309,25 +310,65 @@ export function ArtifactGalleryEditor({
           <Button
             onClick={() => {
               setInitialSource("existing")
+              setInitialAction(null)
               setIsPickerOpen(true)
             }}
             size="sm"
             className="bg-purple-600 hover:bg-purple-700 text-white"
           >
             <FolderOpen className="h-4 w-4 mr-1.5" />
-            + From Library
+            My Media
           </Button>
-          <Button
-            onClick={() => {
-              setInitialSource("new")
-              setIsPickerOpen(true)
-            }}
-            size="sm"
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <Upload className="h-4 w-4 mr-1.5" />
-            + From Device
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              onClick={() => {
+                setInitialSource(null)
+                setInitialAction("upload")
+                setIsPickerOpen(true)
+              }}
+              size="icon"
+              className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+              title="Upload files"
+            >
+              <Upload className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={() => {
+                setInitialSource(null)
+                setInitialAction("camera")
+                setIsPickerOpen(true)
+              }}
+              size="icon"
+              className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+              title="Take photo"
+            >
+              <Camera className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={() => {
+                setInitialSource(null)
+                setInitialAction("video")
+                setIsPickerOpen(true)
+              }}
+              size="icon"
+              className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+              title="Record video"
+            >
+              <Video className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={() => {
+                setInitialSource(null)
+                setInitialAction("audio")
+                setIsPickerOpen(true)
+              }}
+              size="icon"
+              className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+              title="Record audio"
+            >
+              <Mic className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -414,6 +455,7 @@ export function ArtifactGalleryEditor({
         userId={userId}
         onMediaAdded={handleAddMedia}
         initialSource={initialSource}
+        initialAction={initialAction}
       />
 
       <style dangerouslySetInnerHTML={{

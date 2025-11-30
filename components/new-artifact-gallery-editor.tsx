@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { X, Image as ImageIcon, GripVertical, HelpCircle, Upload, FolderOpen } from "lucide-react"
+import { X, Image as ImageIcon, GripVertical, HelpCircle, Upload, FolderOpen, BookImage, Camera, Video, Mic } from "lucide-react"
 import { SectionTitle } from "@/components/ui/section-title"
 import {
   Tooltip,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/tooltip"
 import { AddMediaModal } from "@/components/add-media-modal"
 import { cn } from "@/lib/utils"
-import { isImageUrl, isVideoUrl } from "@/lib/media"
+import { isImageUrl, isVideoUrl, isAudioUrl } from "@/lib/media"
 import { getThumbnailUrl } from "@/lib/cloudinary"
 import {
   DndContext,
@@ -39,17 +39,25 @@ interface NewArtifactGalleryEditorProps {
   mediaUrls: string[]
   onMediaUrlsChange: (urls: string[]) => void
   userId: string
+  currentThumbnailUrl?: string | null
+  onSelectThumbnail?: (url: string) => void
 }
 
 interface SortableItemProps {
   id: string
   url: string
   onRemove: (url: string) => void
+  isThumbnail?: boolean
+  onSelectThumbnail?: (url: string) => void
 }
 
-function SortableItem({ id, url, onRemove }: SortableItemProps) {
+function SortableItem({ id, url, onRemove, isThumbnail, onSelectThumbnail }: SortableItemProps) {
   const thumbnailSrc = getThumbnailUrl(url, null) || url
   const isVideo = isVideoUrl(url)
+  const isImage = isImageUrl(url)
+  const isAudio = isAudioUrl(url)
+  // Only images and videos can be thumbnails
+  const canBeThumbnail = isImage || isVideo
 
   const {
     attributes,
@@ -63,7 +71,10 @@ function SortableItem({ id, url, onRemove }: SortableItemProps) {
   return (
     <div
       ref={setNodeRef}
-      className="flex flex-col items-center gap-1 p-2 border rounded bg-card shadow-sm w-24 shrink-0"
+      className={cn(
+        "flex flex-col items-center gap-1 p-2 border rounded bg-card shadow-sm w-24 shrink-0",
+        isThumbnail && "ring-2 ring-yellow-500 border-yellow-500"
+      )}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
@@ -83,18 +94,37 @@ function SortableItem({ id, url, onRemove }: SortableItemProps) {
           className="h-16 w-16 rounded object-cover bg-muted"
         />
         <span className="text-xs text-muted-foreground capitalize">
-          {isVideo ? "video" : "image"}
+          {isVideo ? "video" : isAudio ? "audio" : "image"}
         </span>
       </div>
 
-      {/* Remove Button (not draggable) */}
-      <button
-        type="button"
-        onClick={() => onRemove(url)}
-        className="p-2 text-destructive hover:bg-destructive/10 rounded"
-      >
-        <X className="h-4 w-4" />
-      </button>
+      {/* Action Buttons (not draggable) */}
+      <div className="flex items-center gap-1">
+        {/* Thumbnail selector - only for images/videos */}
+        {onSelectThumbnail && canBeThumbnail && (
+          <button
+            type="button"
+            onClick={() => onSelectThumbnail(url)}
+            className={cn(
+              "p-1.5 rounded transition-colors",
+              isThumbnail
+                ? "text-yellow-500"
+                : "text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10"
+            )}
+            title={isThumbnail ? "Current thumbnail" : "Set as thumbnail"}
+          >
+            <BookImage className="h-4 w-4" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => onRemove(url)}
+          className="p-1.5 text-destructive hover:bg-destructive/10 rounded"
+          title="Remove from gallery"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   )
 }
@@ -107,13 +137,17 @@ export function NewArtifactGalleryEditor({
   mediaUrls,
   onMediaUrlsChange,
   userId,
+  currentThumbnailUrl,
+  onSelectThumbnail,
 }: NewArtifactGalleryEditorProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false)
   const [initialSource, setInitialSource] = useState<"new" | "existing" | null>(null)
+  const [initialAction, setInitialAction] = useState<"upload" | "camera" | "video" | "audio" | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
 
-  // Filter to only visual media (images and videos)
+  // Filter to only visual media (images and videos) for display
+  // Audio files are still in mediaUrls but not shown in gallery grid
   const visualMediaUrls = mediaUrls.filter(url => isImageUrl(url) || isVideoUrl(url))
 
   // Configure drag sensors
@@ -166,7 +200,7 @@ export function NewArtifactGalleryEditor({
   }
 
   return (
-    <div className="space-y-4 pt-4">
+    <div className="space-y-4">
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
@@ -190,26 +224,69 @@ export function NewArtifactGalleryEditor({
             type="button"
             onClick={() => {
               setInitialSource("existing")
+              setInitialAction(null)
               setIsPickerOpen(true)
             }}
             size="sm"
             className="bg-purple-600 hover:bg-purple-700 text-white"
           >
             <FolderOpen className="h-4 w-4 mr-1.5" />
-            + From Library
+            My Media
           </Button>
-          <Button
-            type="button"
-            onClick={() => {
-              setInitialSource("new")
-              setIsPickerOpen(true)
-            }}
-            size="sm"
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <Upload className="h-4 w-4 mr-1.5" />
-            + From Device
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              onClick={() => {
+                setInitialSource(null)
+                setInitialAction("upload")
+                setIsPickerOpen(true)
+              }}
+              size="icon"
+              className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+              title="Upload files"
+            >
+              <Upload className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setInitialSource(null)
+                setInitialAction("camera")
+                setIsPickerOpen(true)
+              }}
+              size="icon"
+              className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+              title="Take photo"
+            >
+              <Camera className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setInitialSource(null)
+                setInitialAction("video")
+                setIsPickerOpen(true)
+              }}
+              size="icon"
+              className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+              title="Record video"
+            >
+              <Video className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setInitialSource(null)
+                setInitialAction("audio")
+                setIsPickerOpen(true)
+              }}
+              size="icon"
+              className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+              title="Record audio"
+            >
+              <Mic className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -252,6 +329,8 @@ export function NewArtifactGalleryEditor({
                     id={url}
                     url={url}
                     onRemove={handleRemove}
+                    isThumbnail={currentThumbnailUrl === url}
+                    onSelectThumbnail={onSelectThumbnail}
                   />
                 ))}
               </div>
@@ -294,6 +373,7 @@ export function NewArtifactGalleryEditor({
         userId={userId}
         onMediaAdded={handleAddMedia}
         initialSource={initialSource}
+        initialAction={initialAction}
       />
 
       <style dangerouslySetInnerHTML={{

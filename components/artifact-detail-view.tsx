@@ -21,7 +21,6 @@ import { type ArtifactMediaWithDerivatives } from "@/lib/types/media"
 import { getArtifactGalleryMedia } from "@/lib/actions/media"
 import {
   ChevronDown,
-  Plus,
   Save,
   X,
   Trash2,
@@ -32,6 +31,13 @@ import {
   MessageSquare,
   BookImage,
   MoreVertical,
+  HelpCircle,
+  FolderOpen,
+  Upload,
+  Camera,
+  Video,
+  Mic,
+  LayoutGrid,
 } from "lucide-react"
 import { updateArtifact, deleteArtifact } from "@/lib/actions/artifacts"
 import { permanentlyDeleteMedia } from "@/lib/actions/media"
@@ -58,6 +64,12 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { SectionTitle } from "@/components/ui/section-title"
 import { HelpText } from "@/components/ui/help-text"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { ArtifactTypeSelector } from "./artifact-type-selector"
 import { ArtifactStickyNav } from "./artifact-sticky-nav"
 import { getArtifactTypes } from "@/lib/actions/artifact-types"
@@ -115,6 +127,8 @@ export function ArtifactDetailView({
   const [isAttributesOpen, setIsAttributesOpen] = useState(false)
   const [isProvenanceOpen, setIsProvenanceOpen] = useState(false)
   const [isAddMediaOpen, setIsAddMediaOpen] = useState(false)
+  const [blocksInitialSource, setBlocksInitialSource] = useState<"new" | "existing" | null>(null)
+  const [blocksInitialAction, setBlocksInitialAction] = useState<"upload" | "camera" | "video" | "audio" | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [mediaActionModalOpen, setMediaActionModalOpen] = useState(false)
   const [mediaToAction, setMediaToAction] = useState<string | null>(null)
@@ -546,9 +560,9 @@ export function ArtifactDetailView({
           userId={userId}
         />
       )}
-      <div className={`overflow-x-hidden pb-[240px]`}>
+      <div className="space-y-6 overflow-x-hidden pb-[240px]">
         {!isEditMode && canEdit && (
-          <div className="flex items-center justify-between gap-3 pt-4 mb-4">
+          <div className="flex items-center justify-between gap-3">
             <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
               <Link href={`/artifacts/${artifact.slug}?mode=edit`}>
                 <Pencil className="mr-2 h-4 w-4" />
@@ -593,7 +607,7 @@ export function ArtifactDetailView({
 
         {/* Description Section */}
         {(isEditMode || artifact.description || artifact.ai_description) && (
-          <section className="space-y-4 py-4">
+          <section className="space-y-3">
             {isEditMode && <SectionTitle>Description</SectionTitle>}
             {isEditMode ? (
               <TranscriptionInput
@@ -623,7 +637,7 @@ export function ArtifactDetailView({
         )}
 
         {isEditMode && (
-          <section className="space-y-2">
+          <section className="space-y-3">
             <SectionTitle as="label" htmlFor="collection">Collection</SectionTitle>
             <Select
               value={editCollectionId}
@@ -650,7 +664,6 @@ export function ArtifactDetailView({
           </section>
         )}
 
-        {isEditMode && artifactTypes.length > 0 && <div className="pt-4" />}
         {isEditMode && artifactTypes.length > 0 && (
           <ArtifactTypeSelector
             types={artifactTypes}
@@ -662,11 +675,9 @@ export function ArtifactDetailView({
           />
         )}
 
-        {isEditMode && artifactTypes.length > 0 && <div className="pt-4" />}
-
         {/* Attributes Section - Only show in edit mode until attributes are implemented */}
         {isEditMode && (
-          <section className="mb-0">
+          <section>
             <Collapsible open={isAttributesOpen} onOpenChange={setIsAttributesOpen}>
               <div className="rounded-md border border-input bg-transparent dark:bg-input/30 shadow-xs">
                 <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-2 hover:opacity-80 transition-opacity">
@@ -688,27 +699,93 @@ export function ArtifactDetailView({
           </section>
         )}
 
-        <Separator className="my-4" />
+        <Separator />
 
-        {/* Media Blocks Section */}
-        <section className="space-y-6 mb-6 overflow-x-hidden">
+        {/* Content Blocks Section */}
+        <section className="space-y-4 overflow-x-hidden">
           {isEditMode && (
-            <div className="flex items-center justify-between">
-              <div>
-                <SectionTitle>Media Blocks</SectionTitle>
-                <HelpText className="mt-0.5">
-                  Click "Save" at the bottom to persist changes
-                </HelpText>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <SectionTitle>Content Blocks</SectionTitle>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                        <HelpCircle className="h-4 w-4" />
+                        <span className="sr-only">Content blocks help</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" align="center">
+                      Additional media with captions and AI analysis. Click "Save" at the bottom to persist changes.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               {canEdit && (
-                <Button
-                  onClick={() => setIsAddMediaOpen(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                  size="sm"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Block(s)
-                </Button>
+                <div className="flex items-center justify-between">
+                  <Button
+                    onClick={() => {
+                      setBlocksInitialSource("existing")
+                      setBlocksInitialAction(null)
+                      setIsAddMediaOpen(true)
+                    }}
+                    size="sm"
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    <FolderOpen className="h-4 w-4 mr-1.5" />
+                    My Media
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      onClick={() => {
+                        setBlocksInitialSource(null)
+                        setBlocksInitialAction("upload")
+                        setIsAddMediaOpen(true)
+                      }}
+                      size="icon"
+                      className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+                      title="Upload files"
+                    >
+                      <Upload className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setBlocksInitialSource(null)
+                        setBlocksInitialAction("camera")
+                        setIsAddMediaOpen(true)
+                      }}
+                      size="icon"
+                      className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+                      title="Take photo"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setBlocksInitialSource(null)
+                        setBlocksInitialAction("video")
+                        setIsAddMediaOpen(true)
+                      }}
+                      size="icon"
+                      className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+                      title="Record video"
+                    >
+                      <Video className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setBlocksInitialSource(null)
+                        setBlocksInitialAction("audio")
+                        setIsAddMediaOpen(true)
+                      }}
+                      size="icon"
+                      className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+                      title="Record audio"
+                    >
+                      <Mic className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -922,6 +999,25 @@ export function ArtifactDetailView({
               }
             })}
           </div>
+        ) : isEditMode ? (
+          <button
+            type="button"
+            onClick={() => {
+              setBlocksInitialSource(null)
+              setBlocksInitialAction(null)
+              setIsAddMediaOpen(true)
+            }}
+            className="w-full h-48 flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-purple-400/50 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/70 transition-all cursor-pointer group"
+          >
+            <div className="h-14 w-14 rounded-full bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
+              <LayoutGrid className="h-7 w-7 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="text-center">
+              <p className="text-base font-semibold text-purple-600 dark:text-purple-400">Add Content Block</p>
+              <p className="text-xs text-muted-foreground mt-1">Photos, videos, and audio with captions</p>
+              <p className="text-xs text-muted-foreground mt-1">Each block appears inline in your artifact story.</p>
+            </div>
+          </button>
         ) : (
           <div className="min-h-[200px] rounded-lg border bg-muted/30 flex items-center justify-center mx-6 lg:px-8">
             <p className="text-sm text-muted-foreground">No media available</p>
@@ -1061,6 +1157,8 @@ export function ArtifactDetailView({
           artifactId={artifact.id}
           userId={artifact.user_id}
           onMediaAdded={handleMediaAdded}
+          initialSource={blocksInitialSource}
+          initialAction={blocksInitialAction}
         />
       )}
 
