@@ -9,7 +9,7 @@ import type { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
 import { useState, useEffect } from "react"
-import { ChevronDown, Save, X, Plus, BookImage, MoreVertical } from "lucide-react"
+import { ChevronDown, Save, X, BookImage, MoreVertical, HelpCircle, FolderOpen, Upload, Camera, Video, Mic, LayoutGrid } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { normalizeMediaUrls, isAudioUrl, isImageUrl, isVideoUrl } from "@/lib/media"
 import { getMediumUrl } from "@/lib/cloudinary"
@@ -20,11 +20,16 @@ import { GenerateImageCaptionButton } from "@/components/artifact/GenerateImageC
 import { GenerateVideoSummaryButton } from "@/components/artifact/GenerateVideoSummaryButton"
 import { ArtifactImageWithViewer } from "@/components/artifact-image-with-viewer"
 import { useRouter } from "next/navigation"
-import { CollectionSelector } from "@/components/collection-selector"
+import { CollectionPicker } from "@/components/collection-picker"
 import ArtifactTypeSelector from "@/components/artifact-type-selector"
 import { getArtifactTypes } from "@/lib/actions/artifact-types"
 import { SectionTitle } from "@/components/ui/section-title"
-import { HelpText } from "@/components/ui/help-text"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
 import { NewArtifactGalleryEditor } from "@/components/new-artifact-gallery-editor"
 import { AddMediaModal } from "@/components/add-media-modal"
@@ -55,6 +60,8 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isAttributesOpen, setIsAttributesOpen] = useState(false)
   const [isAddMediaOpen, setIsAddMediaOpen] = useState(false)
+  const [blocksInitialSource, setBlocksInitialSource] = useState<"new" | "existing" | null>(null)
+  const [blocksInitialAction, setBlocksInitialAction] = useState<"upload" | "camera" | "video" | "audio" | null>(null)
   const [selectedThumbnailUrl, setSelectedThumbnailUrl] = useState<string | null>(null)
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null)
   const [artifactTypes, setArtifactTypes] = useState<any[]>([])
@@ -324,7 +331,7 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-48">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-48">
         {error && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
             {error}
@@ -332,100 +339,92 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
         )}
 
         {/* Title Section */}
-        <section className="space-y-2">
-          <SectionTitle>Title</SectionTitle>
-          <FormField
-            control={form.control}
-            name="title"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <TranscriptionInput
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder="Enter artifact title"
-                    type="input"
-                    fieldType="title"
-                    userId={userId}
-                    entityType="artifact"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </section>
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <TranscriptionInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Enter artifact title"
+                  type="input"
+                  fieldType="title"
+                  userId={userId}
+                  entityType="artifact"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* Gallery Section */}
         <NewArtifactGalleryEditor
           mediaUrls={galleryUrls}
           onMediaUrlsChange={handleGalleryUrlsChange}
           userId={userId}
+          currentThumbnailUrl={selectedThumbnailUrl}
+          onSelectThumbnail={handleSelectThumbnail}
         />
 
         {/* Description Section */}
-        <section className="space-y-4 py-4">
-          <SectionTitle>Description</SectionTitle>
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <TranscriptionInput
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                    placeholder="Tell the story of this artifact..."
-                    type="textarea"
-                    fieldType="description"
-                    userId={userId}
-                    entityType="artifact"
-                    rows={4}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </section>
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <TranscriptionInput
+                  value={field.value || ""}
+                  onChange={field.onChange}
+                  placeholder="Describe this artifact..."
+                  type="textarea"
+                  fieldType="description"
+                  userId={userId}
+                  entityType="artifact"
+                  rows={4}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* Collection Section */}
-        <section className="space-y-2">
-          <FormField
-            control={form.control}
-            name="collectionId"
-            render={({ field }) => (
-              <FormItem>
-                <CollectionSelector
-                  userId={userId}
-                  value={field.value}
-                  onChange={field.onChange}
-                  disabled={isSubmitting}
-                />
-                <HelpText>Choose which collection this artifact belongs to</HelpText>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </section>
+        <FormField
+          control={form.control}
+          name="collectionId"
+          render={({ field }) => (
+            <FormItem>
+              <CollectionPicker
+                userId={userId}
+                selectedCollectionId={field.value || null}
+                onSelectCollection={(id) => field.onChange(id || "")}
+                required={false}
+                defaultOpen={true}
+                storageKey="collectionPicker_new_open"
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* Type Section */}
         {artifactTypes.length > 0 && (
-          <>
-            <div className="pt-4" />
-            <ArtifactTypeSelector
+          <ArtifactTypeSelector
               types={artifactTypes}
               selectedTypeId={selectedTypeId}
               onSelectType={setSelectedTypeId}
               required={false}
               defaultOpen={true}
               storageKey="artifactTypeSelector_new_open"
-            />
-          </>
+          />
         )}
 
         {/* Attributes Section */}
-        <section className="mb-0">
+        <section>
           <Collapsible open={isAttributesOpen} onOpenChange={setIsAttributesOpen}>
             <div className="rounded-md border border-input bg-transparent dark:bg-input/30 shadow-xs">
               <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-2 hover:opacity-80 transition-opacity">
@@ -446,26 +445,96 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
           </Collapsible>
         </section>
 
-        <Separator className="my-4" />
+        <Separator />
 
-        {/* Media Blocks Section */}
-        <section className="space-y-6 mb-6 overflow-x-hidden">
-          <div className="flex items-center justify-between">
-            <div>
-              <SectionTitle>Media Blocks</SectionTitle>
-              <HelpText className="mt-0.5">
-                Additional media with captions and AI analysis
-              </HelpText>
+        {/* Content Blocks Section */}
+        <section className="space-y-4 overflow-x-hidden">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <SectionTitle>Content</SectionTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                      <HelpCircle className="h-4 w-4" />
+                      <span className="sr-only">Content blocks help</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Additional media with captions and AI analysis. Each block appears inline in your artifact story.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-            <Button
-              type="button"
-              onClick={() => setIsAddMediaOpen(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-              size="sm"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Block(s)
-            </Button>
+            <div className="flex items-center justify-between">
+              <Button
+                type="button"
+                onClick={() => {
+                  setBlocksInitialSource("existing")
+                  setBlocksInitialAction(null)
+                  setIsAddMediaOpen(true)
+                }}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                <FolderOpen className="h-4 w-4 mr-1.5" />
+                My Media
+              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setBlocksInitialSource(null)
+                    setBlocksInitialAction("upload")
+                    setIsAddMediaOpen(true)
+                  }}
+                  size="icon"
+                  className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+                  title="Upload files"
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setBlocksInitialSource(null)
+                    setBlocksInitialAction("camera")
+                    setIsAddMediaOpen(true)
+                  }}
+                  size="icon"
+                  className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+                  title="Take photo"
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setBlocksInitialSource(null)
+                    setBlocksInitialAction("video")
+                    setIsAddMediaOpen(true)
+                  }}
+                  size="icon"
+                  className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+                  title="Record video"
+                >
+                  <Video className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setBlocksInitialSource(null)
+                    setBlocksInitialAction("audio")
+                    setIsAddMediaOpen(true)
+                  }}
+                  size="icon"
+                  className="h-8 w-8 bg-purple-600 hover:bg-purple-700 text-white"
+                  title="Record audio"
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
 
           {mediaBlockUrls.length > 0 ? (
@@ -649,9 +718,24 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
               })}
             </div>
           ) : (
-            <div className="min-h-[120px] rounded-lg border border-dashed bg-muted/30 flex items-center justify-center">
-              <p className="text-sm text-muted-foreground">No media blocks added yet</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setBlocksInitialSource(null)
+                setBlocksInitialAction(null)
+                setIsAddMediaOpen(true)
+              }}
+              className="w-full h-48 flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-purple-400/50 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/70 transition-all cursor-pointer group"
+            >
+              <div className="h-14 w-14 rounded-full bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
+                <LayoutGrid className="h-7 w-7 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="text-center">
+                <p className="text-base font-semibold text-purple-600 dark:text-purple-400">Add Content Block</p>
+                <p className="text-xs text-muted-foreground mt-1">Photos, videos, and audio with captions</p>
+                <p className="text-xs text-muted-foreground mt-1">Each block appears inline in your artifact story.</p>
+              </div>
+            </button>
           )}
         </section>
       </form>
@@ -713,6 +797,8 @@ export default function NewArtifactForm({ collectionId, userId }: NewArtifactFor
         artifactId={null}
         userId={userId}
         onMediaAdded={handleMediaBlocksAdded}
+        initialSource={blocksInitialSource}
+        initialAction={blocksInitialAction}
       />
     </Form>
   )
