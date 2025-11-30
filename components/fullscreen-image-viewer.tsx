@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import MediaImage from "@/components/media-image"
@@ -11,13 +11,17 @@ interface FullscreenImageViewerProps {
   src: string
   alt: string
   onClose: () => void
+  /** Optional: source element rect for animated transition */
+  sourceRect?: DOMRect | null
 }
 
-export function FullscreenImageViewer({ src, alt, onClose }: FullscreenImageViewerProps) {
+export function FullscreenImageViewer({ src, alt, onClose, sourceRect }: FullscreenImageViewerProps) {
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [isAnimatingIn, setIsAnimatingIn] = useState(true)
+  const [isAnimatingOut, setIsAnimatingOut] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const lastTapTime = useRef<number>(0)
 
@@ -29,6 +33,13 @@ export function FullscreenImageViewer({ src, alt, onClose }: FullscreenImageView
     const originalContent = metaViewport?.getAttribute("content") || ""
     metaViewport?.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no")
 
+    // Trigger the entry animation after mount
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsAnimatingIn(false)
+      })
+    })
+
     return () => {
       document.body.style.overflow = ""
       if (originalContent) {
@@ -37,16 +48,24 @@ export function FullscreenImageViewer({ src, alt, onClose }: FullscreenImageView
     }
   }, [])
 
+  // Handle close with animation
+  const handleClose = useCallback(() => {
+    setIsAnimatingOut(true)
+    setTimeout(() => {
+      onClose()
+    }, 300) // Match animation duration
+  }, [onClose])
+
   // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose()
+        handleClose()
       }
     }
     window.addEventListener("keydown", handleEscape)
     return () => window.removeEventListener("keydown", handleEscape)
-  }, [onClose])
+  }, [handleClose])
 
   const handleZoomIn = () => {
     setScale((prev) => Math.min(prev + 0.5, 5))
@@ -151,40 +170,80 @@ export function FullscreenImageViewer({ src, alt, onClose }: FullscreenImageView
     }
   }
 
+  // Calculate initial transform from source rect for entry animation
+  const getInitialTransform = () => {
+    if (!sourceRect) return {}
+
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Calculate scale from source size to full screen
+    const scaleX = sourceRect.width / viewportWidth
+    const scaleY = sourceRect.height / viewportHeight
+    const initialScale = Math.max(scaleX, scaleY)
+
+    // Calculate translation to source position
+    const sourceCenterX = sourceRect.left + sourceRect.width / 2
+    const sourceCenterY = sourceRect.top + sourceRect.height / 2
+    const viewportCenterX = viewportWidth / 2
+    const viewportCenterY = viewportHeight / 2
+
+    const translateX = sourceCenterX - viewportCenterX
+    const translateY = sourceCenterY - viewportCenterY
+
+    return {
+      transform: `translate(${translateX}px, ${translateY}px) scale(${initialScale})`,
+    }
+  }
+
+  // Determine animation state
+  const showInitialPosition = isAnimatingIn && sourceRect
+  const showExitPosition = isAnimatingOut && sourceRect
+
   return (
-    <div className="fixed inset-0 z-[100] bg-black">
+    <div
+      className="fixed inset-0 z-[100]"
+      style={{
+        backgroundColor: showInitialPosition || showExitPosition ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,1)',
+        transition: 'background-color 0.3s ease-out',
+      }}
+    >
       <Button
         variant="ghost"
         size="icon"
-        onClick={onClose}
+        onClick={handleClose}
         className="fixed top-4 right-4 z-[200] h-10 w-10 rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
+        style={{
+          opacity: showInitialPosition || showExitPosition ? 0 : 1,
+          transition: 'opacity 0.3s ease-out',
+        }}
         aria-label="Close fullscreen viewer"
       >
         <X className="h-5 w-5" />
       </Button>
 
       <div className="hidden">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleZoomOut} 
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleZoomOut}
           disabled={scale <= 0.5}
           aria-label="Zoom out"
         >
           <ZoomOut className="h-5 w-5" />
         </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handleReset}
           aria-label="Reset zoom"
         >
           <RotateCcw className="h-5 w-5" />
         </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleZoomIn} 
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleZoomIn}
           disabled={scale >= 5}
           aria-label="Zoom in"
         >
@@ -212,8 +271,11 @@ export function FullscreenImageViewer({ src, alt, onClose }: FullscreenImageView
       >
         <div
           style={{
-            transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-            transition: isDragging ? "none" : "transform 0.2s ease-out",
+            ...(showInitialPosition || showExitPosition ? getInitialTransform() : {}),
+            transform: showInitialPosition || showExitPosition
+              ? getInitialTransform().transform
+              : `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+            transition: isDragging ? "none" : "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)",
             maxWidth: "100%",
             maxHeight: "100%",
             display: "flex",

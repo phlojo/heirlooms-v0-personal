@@ -536,7 +536,7 @@ export function ArtifactDetailView({
       )}
       <div className="space-y-6 overflow-x-hidden pb-[240px]">
         {!isEditMode && canEdit && (
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 mt-4">
             <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
               <Link href={`/artifacts/${artifact.slug}?mode=edit`}>
                 <Pencil className="mr-2 h-4 w-4" />
