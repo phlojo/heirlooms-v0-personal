@@ -197,14 +197,15 @@ export function FullscreenImageViewer({ src, alt, onClose, sourceRect }: Fullscr
   }
 
   // Determine animation state
+  // Entry: scale from source position to fullscreen
+  // Exit: fade out (no scale-back to avoid position shift)
   const showInitialPosition = isAnimatingIn && sourceRect
-  const showExitPosition = isAnimatingOut && sourceRect
 
   return (
     <div
       className="fixed inset-0 z-[100]"
       style={{
-        backgroundColor: showInitialPosition || showExitPosition ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,1)',
+        backgroundColor: showInitialPosition ? 'rgba(0,0,0,0)' : isAnimatingOut ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,1)',
         transition: 'background-color 0.3s ease-out',
       }}
     >
@@ -214,7 +215,7 @@ export function FullscreenImageViewer({ src, alt, onClose, sourceRect }: Fullscr
         onClick={handleClose}
         className="fixed top-4 right-4 z-[200] h-10 w-10 rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
         style={{
-          opacity: showInitialPosition || showExitPosition ? 0 : 1,
+          opacity: showInitialPosition || isAnimatingOut ? 0 : 1,
           transition: 'opacity 0.3s ease-out',
         }}
         aria-label="Close fullscreen viewer"
@@ -271,11 +272,12 @@ export function FullscreenImageViewer({ src, alt, onClose, sourceRect }: Fullscr
       >
         <div
           style={{
-            ...(showInitialPosition || showExitPosition ? getInitialTransform() : {}),
-            transform: showInitialPosition || showExitPosition
+            ...(showInitialPosition ? getInitialTransform() : {}),
+            transform: showInitialPosition
               ? getInitialTransform().transform
               : `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-            transition: isDragging ? "none" : "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)",
+            opacity: isAnimatingOut ? 0 : 1,
+            transition: isDragging ? "none" : "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease-out",
             maxWidth: "100%",
             maxHeight: "100%",
             display: "flex",
