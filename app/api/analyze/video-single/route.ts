@@ -90,7 +90,7 @@ export async function POST(request: Request) {
             ],
           },
         ],
-        maxTokens: 100,
+        maxOutputTokens: 100,
       })
 
       const summary = result.text.trim()
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
           ],
         },
       ],
-      maxTokens: 100,
+      maxOutputTokens: 100,
     })
 
     const summary = result.text.trim()

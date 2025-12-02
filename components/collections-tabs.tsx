@@ -16,12 +16,17 @@ import { updateViewPreference } from "@/lib/actions/profile"
 
 interface Collection {
   id: string
-  name: string
-  description: string | null
-  slug: string
-  thumbnailImages: string[]
+  title: string
+  name?: string
+  description?: string | null
+  slug?: string
+  cover_image?: string | null
+  thumbnailImages?: string[]
   itemCount: number
+  user_id: string
+  authorName?: string | null
   isUnsorted?: boolean
+  is_public?: boolean | null
   created_at: string
 }
 

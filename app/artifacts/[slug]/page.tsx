@@ -41,7 +41,7 @@ export default async function ArtifactDetailPage({
   }
 
   // Edit permission check
-  const canEdit = user && (artifact.user_id === user.id || isAdmin)
+  const canEdit = !!(user && (artifact.user_id === user.id || isAdmin))
 
   // If edit mode is requested but user doesn't have permission, deny access
   if (isEditMode && !canEdit) {

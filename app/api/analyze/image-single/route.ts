@@ -76,7 +76,7 @@ export async function POST(request: Request) {
             ],
           },
         ],
-        maxTokens: 100,
+        maxOutputTokens: 100,
       })
 
       const caption = result.text.trim()
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
           ],
         },
       ],
-      maxTokens: 100,
+      maxOutputTokens: 100,
     })
 
     const caption = result.text.trim()

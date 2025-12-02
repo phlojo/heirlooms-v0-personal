@@ -49,7 +49,7 @@ export default async function CollectionDetailPage({
   const isAdmin = await isCurrentUserAdmin()
 
   const canView = collection.is_public || (user && collection.user_id === user.id) || isAdmin
-  const canEdit = user && (collection.user_id === user.id || isAdmin) && !isUncategorized
+  const canEdit = !!(user && (collection.user_id === user.id || isAdmin)) && !isUncategorized
   const isOwnCollection = user && collection.user_id === user.id
 
   if (!canView) {
