@@ -5,7 +5,7 @@ import "flickity/css/flickity.css"
 import { type ArtifactMediaWithDerivatives } from "@/lib/types/media"
 import { isImageMedia, isVideoMedia } from "@/lib/types/media"
 import { cn } from "@/lib/utils"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FullscreenImageViewer } from "@/components/fullscreen-image-viewer"
 
@@ -137,7 +137,15 @@ export function ArtifactMediaGallery({
     src: string
     alt: string
     sourceRect: DOMRect | null
+    imageIndex: number  // Index in the images-only array
   } | null>(null)
+
+  // Get only images for fullscreen navigation (excluding videos)
+  const imageOnlyMedia = media.filter((item) => isImageMedia(item.media))
+  const imageUrls = imageOnlyMedia.map((item) => {
+    const mediaData = item.media
+    return mediaData.largeUrl || mediaData.mediumUrl || mediaData.public_url
+  })
 
   // Initialize Flickity
   useEffect(() => {
@@ -205,10 +213,22 @@ export function ArtifactMediaGallery({
   }
 
   // Handle image tap to open fullscreen
-  const handleImageTap = useCallback((src: string, alt: string, rect: DOMRect) => {
-    setFullscreenImage({ src, alt, sourceRect: rect })
+  const handleImageTap = useCallback((src: string, alt: string, rect: DOMRect, imageIndex: number) => {
+    setFullscreenImage({ src, alt, sourceRect: rect, imageIndex })
     onFullscreenChange?.(true)
   }, [onFullscreenChange])
+
+  // Handle navigation in fullscreen viewer
+  const handleFullscreenNavigate = useCallback((newImageIndex: number) => {
+    if (newImageIndex < 0 || newImageIndex >= imageOnlyMedia.length) return
+
+    const item = imageOnlyMedia[newImageIndex]
+    const mediaData = item.media
+    const src = mediaData.largeUrl || mediaData.mediumUrl || mediaData.public_url
+    const alt = item.caption_override || `Media ${item.sort_order + 1}`
+
+    setFullscreenImage((prev) => prev ? { ...prev, src, alt, imageIndex: newImageIndex } : null)
+  }, [imageOnlyMedia])
 
   // Close fullscreen viewer
   const handleCloseFullscreen = useCallback(() => {
@@ -256,13 +276,21 @@ export function ArtifactMediaGallery({
         )}
 
         {/* Flickity Gallery Container - Filmstrip layout */}
-        <div ref={galleryRef} className="artifact-media-gallery aspect-[4/3] mb-10 bg-purple-500/5">
+        <div ref={galleryRef} className="artifact-media-gallery aspect-[4/3] mb-10 bg-purple-500/5 relative">
+          {/* Decorative background icon - visible in empty space before first media */}
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-0 flex items-center">
+            <ImageIcon className="h-8 w-8 text-purple-400/15" />
+            <ChevronRight className="h-5 w-5 text-purple-400/15 -ml-1" />
+          </div>
           {media.map((item) => {
             const mediaData = item.media
             const imageSrc = mediaData.largeUrl || mediaData.mediumUrl || mediaData.public_url
             const displaySrc = mediaData.mediumUrl || mediaData.public_url
 
             if (isImageMedia(mediaData)) {
+              // Find the index of this image in the images-only array
+              const imageIndex = imageOnlyMedia.findIndex((img) => img.id === item.id)
+
               return (
                 <GalleryImage
                   key={item.id}
@@ -272,7 +300,8 @@ export function ArtifactMediaGallery({
                   onTap={(rect) => handleImageTap(
                     imageSrc, // Use large version for fullscreen
                     item.caption_override || `Media ${item.sort_order + 1}`,
-                    rect
+                    rect,
+                    imageIndex
                   )}
                 />
               )
@@ -299,6 +328,8 @@ export function ArtifactMediaGallery({
               height: 100% !important;
               border-radius: 4px;
               overflow: hidden;
+              position: relative;
+              z-index: 1;
             }
             .artifact-media-gallery .flickity-slider {
               height: 100% !important;
@@ -336,6 +367,9 @@ export function ArtifactMediaGallery({
           alt={fullscreenImage.alt}
           onClose={handleCloseFullscreen}
           sourceRect={fullscreenImage.sourceRect}
+          images={imageUrls}
+          currentIndex={fullscreenImage.imageIndex}
+          onNavigate={handleFullscreenNavigate}
         />
       )}
     </>

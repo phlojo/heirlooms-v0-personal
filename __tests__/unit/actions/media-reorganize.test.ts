@@ -128,16 +128,33 @@ describe("Media Reorganize Server Actions", () => {
           media_urls: [],
         }
 
-        mockSupabase.from.mockImplementation(() => ({
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: artifactWithNoMedia,
-                error: null,
+        mockSupabase.from.mockImplementation((table: string) => {
+          if (table === "artifacts") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: artifactWithNoMedia,
+                    error: null,
+                  }),
+                }),
               }),
-            }),
-          }),
-        }))
+            }
+          }
+          if (table === "artifact_media") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
+                  }),
+                }),
+              }),
+            }
+          }
+          return {}
+        })
 
         const result = await reorganizeArtifactMedia(fixtures.artifacts.imageArtifact.id)
 
@@ -152,16 +169,33 @@ describe("Media Reorganize Server Actions", () => {
           media_urls: null,
         }
 
-        mockSupabase.from.mockImplementation(() => ({
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: artifactWithNullMedia,
-                error: null,
+        mockSupabase.from.mockImplementation((table: string) => {
+          if (table === "artifacts") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: artifactWithNullMedia,
+                    error: null,
+                  }),
+                }),
               }),
-            }),
-          }),
-        }))
+            }
+          }
+          if (table === "artifact_media") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
+                  }),
+                }),
+              }),
+            }
+          }
+          return {}
+        })
 
         const result = await reorganizeArtifactMedia(fixtures.artifacts.imageArtifact.id)
 
@@ -182,16 +216,33 @@ describe("Media Reorganize Server Actions", () => {
           audio_transcripts: {},
         }
 
-        mockSupabase.from.mockImplementation(() => ({
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: artifactWithCloudinary,
-                error: null,
+        mockSupabase.from.mockImplementation((table: string) => {
+          if (table === "artifacts") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: artifactWithCloudinary,
+                    error: null,
+                  }),
+                }),
               }),
-            }),
-          }),
-        }))
+            }
+          }
+          if (table === "artifact_media") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
+                  }),
+                }),
+              }),
+            }
+          }
+          return {}
+        })
 
         const result = await reorganizeArtifactMedia(fixtures.artifacts.imageArtifact.id)
 
@@ -238,6 +289,18 @@ describe("Media Reorganize Server Actions", () => {
                 return {
                   eq: vi.fn().mockResolvedValue({ error: null }),
                 }
+              }),
+            }
+          }
+          if (table === "artifact_media") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
+                  }),
+                }),
               }),
             }
           }
@@ -304,6 +367,18 @@ describe("Media Reorganize Server Actions", () => {
               }),
             }
           }
+          if (table === "artifact_media") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
+                  }),
+                }),
+              }),
+            }
+          }
           if (table === "user_media") {
             return {
               update: vi.fn().mockReturnValue({
@@ -358,6 +433,18 @@ describe("Media Reorganize Server Actions", () => {
                 return {
                   eq: vi.fn().mockResolvedValue({ error: null }),
                 }
+              }),
+            }
+          }
+          if (table === "artifact_media") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
+                  }),
+                }),
               }),
             }
           }
@@ -425,6 +512,18 @@ describe("Media Reorganize Server Actions", () => {
               }),
             }
           }
+          if (table === "artifact_media") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
+                  }),
+                }),
+              }),
+            }
+          }
           if (table === "user_media") {
             return {
               update: vi.fn().mockReturnValue({
@@ -479,6 +578,18 @@ describe("Media Reorganize Server Actions", () => {
               }),
             }
           }
+          if (table === "artifact_media") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
+                  }),
+                }),
+              }),
+            }
+          }
           return {}
         })
 
@@ -514,6 +625,18 @@ describe("Media Reorganize Server Actions", () => {
               }),
               update: vi.fn().mockReturnValue({
                 eq: vi.fn().mockResolvedValue({ error: null }),
+              }),
+            }
+          }
+          if (table === "artifact_media") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
+                  }),
+                }),
               }),
             }
           }
@@ -570,6 +693,18 @@ describe("Media Reorganize Server Actions", () => {
               }),
             }
           }
+          if (table === "artifact_media") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
+                  }),
+                }),
+              }),
+            }
+          }
           return {}
         })
 
@@ -617,6 +752,18 @@ describe("Media Reorganize Server Actions", () => {
                 return {
                   eq: vi.fn().mockResolvedValue({ error: null }),
                 }
+              }),
+            }
+          }
+          if (table === "artifact_media") {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
+                  }),
+                }),
               }),
             }
           }
