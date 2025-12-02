@@ -5,13 +5,28 @@ import { LoggedOutHomepage } from "@/components/homepage/logged-out-homepage"
 import { LoggedInHomepage } from "@/components/homepage/logged-in-homepage"
 import { getMyArtifactsPaginated } from "@/lib/actions/artifacts"
 import { getMyCollectionsPaginated } from "@/lib/actions/collections"
-import { getPrimaryVisualMediaUrl } from "@/lib/media"
+import { getPrimaryVisualMediaUrl, isImageUrl, isVideoUrl } from "@/lib/media"
 
-async function getPublicShowcaseData() {
-  const supabase = await createClient()
+import type { ShowcaseSortOption } from "@/components/community-showcase"
 
-  // Fetch sample public artifacts for showcase
-  const { data: artifacts } = await supabase
+/**
+ * Fetch public artifacts for showcase with support for different sort options
+ *
+ * Current implementation:
+ * - random: Fetches more artifacts and shuffles client-side
+ * - newest: Orders by created_at desc
+ *
+ * Future implementation (requires DB columns):
+ * - most-loved: Order by love_count desc (needs love_count column)
+ * - most-viewed: Order by view_count desc (needs view_count column)
+ * - trending: Algorithm based on recent views/loves (needs analytics)
+ */
+async function getPublicShowcaseArtifacts(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  sortBy: ShowcaseSortOption = "random",
+  limit: number = 6
+) {
+  let query = supabase
     .from("artifacts")
     .select(`
       id,
@@ -22,10 +37,61 @@ async function getPublicShowcaseData() {
       media_derivatives,
       thumbnail_url,
       user_id,
+      created_at,
       artifact_type:artifact_types(id, name, icon_name)
     `)
     .not("media_urls", "is", null)
-    .limit(6)
+
+  switch (sortBy) {
+    case "newest":
+      query = query.order("created_at", { ascending: false }).limit(limit)
+      break
+    case "most-loved":
+      // Future: query = query.order("love_count", { ascending: false }).limit(limit)
+      // For now, fall back to newest
+      query = query.order("created_at", { ascending: false }).limit(limit)
+      break
+    case "most-viewed":
+      // Future: query = query.order("view_count", { ascending: false }).limit(limit)
+      // For now, fall back to newest
+      query = query.order("created_at", { ascending: false }).limit(limit)
+      break
+    case "trending":
+      // Future: Complex query based on recent activity
+      // For now, fall back to newest
+      query = query.order("created_at", { ascending: false }).limit(limit)
+      break
+    case "random":
+    default:
+      // Fetch more than needed and shuffle client-side
+      // PostgreSQL random() is expensive, so we fetch extra and shuffle in JS
+      query = query.limit(limit * 4)
+      break
+  }
+
+  const { data: artifacts } = await query
+
+  if (sortBy === "random" && artifacts) {
+    // Fisher-Yates shuffle for true randomness
+    const shuffled = [...artifacts]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    return shuffled.slice(0, limit)
+  }
+
+  return artifacts || []
+}
+
+async function getPublicShowcaseData() {
+  const supabase = await createClient()
+
+  // Fetch random public artifacts for hero carousel (24 cards, circular/infinite)
+  const heroCarouselArtifacts = await getPublicShowcaseArtifacts(supabase, "random", 24)
+
+  // Fetch random public artifacts for showcase (9 for compact view, 6 for standard)
+  const artifacts = await getPublicShowcaseArtifacts(supabase, "random", 9)
 
   // Fetch sample public collections for showcase
   const { data: collections } = await supabase
@@ -34,7 +100,7 @@ async function getPublicShowcaseData() {
     .eq("is_public", true)
     .limit(4)
 
-  // Get background images for hero
+  // Get background images for hero (Fisher-Yates shuffle for true randomness)
   const allImages =
     artifacts
       ?.map((artifact) => {
@@ -43,11 +109,15 @@ async function getPublicShowcaseData() {
       })
       .filter((url): url is string => url !== null) || []
 
-  const shuffled = allImages.sort(() => Math.random() - 0.5)
-  const backgroundImages = shuffled.slice(0, 3)
+  const shuffledImages = [...allImages]
+  for (let i = shuffledImages.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffledImages[i], shuffledImages[j]] = [shuffledImages[j], shuffledImages[i]]
+  }
+  const backgroundImages = shuffledImages.slice(0, 3)
 
-  // Transform artifacts and collections to match card prop interfaces
-  const showcaseArtifacts = artifacts?.map((a) => ({
+  // Transform artifacts to match card prop interfaces
+  const transformArtifact = (a: (typeof artifacts)[number]) => ({
     id: a.id,
     slug: a.slug,
     title: a.title,
@@ -57,7 +127,10 @@ async function getPublicShowcaseData() {
     thumbnail_url: a.thumbnail_url,
     user_id: a.user_id,
     artifact_type: a.artifact_type?.[0] || null,
-  })) || []
+  })
+
+  const heroArtifacts = heroCarouselArtifacts?.map(transformArtifact) || []
+  const showcaseArtifacts = artifacts?.map(transformArtifact) || []
 
   const showcaseCollections = await Promise.all(
     (collections || []).map(async (c) => {
@@ -92,7 +165,7 @@ async function getPublicShowcaseData() {
     })
   )
 
-  return { backgroundImages, showcaseArtifacts, showcaseCollections }
+  return { backgroundImages, heroArtifacts, showcaseArtifacts, showcaseCollections }
 }
 
 async function getUserDashboardData(userId: string) {
@@ -107,7 +180,7 @@ async function getUserDashboardData(userId: string) {
 
   // Fetch recent artifacts (sorted by last edited)
   const { artifacts: recentArtifacts } = await getMyArtifactsPaginated(userId, {
-    limit: 6,
+    limit: 9,
     sortBy: "last-edited",
   })
 
@@ -120,6 +193,26 @@ async function getUserDashboardData(userId: string) {
     supabase.from("collections").select("*", { count: "exact", head: true }).eq("user_id", userId),
   ])
 
+  // Collect all visual media URLs (images and videos, no audio) for random backgrounds
+  const allVisualMedia: string[] = []
+  recentArtifacts.forEach((artifact) => {
+    const mediaUrls = artifact.media_urls as string[] | undefined
+    if (mediaUrls) {
+      mediaUrls.forEach((url) => {
+        if (isImageUrl(url) || isVideoUrl(url)) {
+          allVisualMedia.push(url)
+        }
+      })
+    }
+  })
+
+  // Shuffle and pick 2 random images for stat card backgrounds
+  const shuffledMedia = allVisualMedia.sort(() => Math.random() - 0.5)
+  const statBackgrounds = {
+    artifacts: shuffledMedia[0] || null,
+    collections: shuffledMedia[1] || shuffledMedia[0] || null,
+  }
+
   return {
     profile,
     recentArtifacts,
@@ -128,6 +221,7 @@ async function getUserDashboardData(userId: string) {
       artifactsCount: artifactsCount.count || 0,
       collectionsCount: collectionsCount.count || 0,
     },
+    statBackgrounds,
   }
 }
 
@@ -144,6 +238,7 @@ export default async function HomePage() {
         recentArtifacts={dashboardData.recentArtifacts}
         collections={dashboardData.collections}
         stats={dashboardData.stats}
+        statBackgrounds={dashboardData.statBackgrounds}
       />
     )
   }
@@ -153,6 +248,7 @@ export default async function HomePage() {
   return (
     <LoggedOutHomepage
       backgroundImages={showcaseData.backgroundImages}
+      heroArtifacts={showcaseData.heroArtifacts}
       showcaseArtifacts={showcaseData.showcaseArtifacts}
       showcaseCollections={showcaseData.showcaseCollections}
     />

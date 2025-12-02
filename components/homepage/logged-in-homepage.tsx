@@ -18,7 +18,9 @@ import {
   BookOpen,
   Upload,
   ArrowRight,
-  Sparkles,
+  Users,
+  LayoutGrid,
+  LogOut,
 } from "lucide-react"
 
 interface DashboardArtifact {
@@ -62,7 +64,14 @@ interface LoggedInHomepageProps {
     artifactsCount: number
     collectionsCount: number
   }
+  statBackgrounds?: {
+    artifacts: string | null
+    collections: string | null
+  }
 }
+
+import { useRouter } from "next/navigation"
+import { useTransition } from "react"
 
 export function LoggedInHomepage({
   user,
@@ -70,17 +79,29 @@ export function LoggedInHomepage({
   recentArtifacts,
   collections,
   stats,
+  statBackgrounds,
 }: LoggedInHomepageProps) {
   const displayName = profile?.display_name || user.email?.split("@")[0] || "there"
   const firstName = displayName.split(" ")[0]
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+
+  const handleSignOut = async () => {
+    await fetch("/api/auth/signout", { method: "POST" })
+    startTransition(() => {
+      router.push("/")
+      router.refresh()
+    })
+  }
 
   return (
     <AppLayout user={user}>
       <div className="space-y-8 pb-20">
         {/* Welcome Header */}
         <div>
-          <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-gradient-to-br from-primary to-chart-2 text-primary-foreground shadow-sm rounded-sm">
+          {/* Title with Logo */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-gradient-to-br from-primary to-chart-2 text-primary-foreground shadow-sm rounded-lg">
               <svg
                 width="24"
                 height="26"
@@ -106,39 +127,71 @@ export function LoggedInHomepage({
                 <path d="M66.6001 43.3L66.6001 28.9L54.1001 21.6L54.1001 36.1L66.6001 43.3Z" fill="currentColor" />
               </svg>
             </div>
-            Welcome back, {firstName}
-            <div className="ml-auto lg:hidden">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+              Heirlooms
+              <span className="text-sm font-normal text-muted-foreground ml-2">(Beta)</span>
+            </h1>
+            <div className="ml-auto flex items-center gap-2 lg:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                disabled={isPending}
+              >
+                <LogOut className="h-5 w-5" />
+                <span className="sr-only">Log out</span>
+              </Button>
               <ThemeToggle />
             </div>
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Here&apos;s what&apos;s happening in your Heirlooms.
+          </div>
+
+          {/* Welcome message with username pill */}
+          <p className="text-muted-foreground flex items-center gap-2 flex-wrap">
+            Welcome back,
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-1.5 text-base font-bold text-primary">
+              {displayName}
+            </span>
+          </p>
+          <p className="text-muted-foreground mt-4">
+            Here&apos;s what&apos;s happening in your Heirlooms today.
           </p>
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <Link href="/artifacts">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                  <ImageIcon className="h-6 w-6 text-primary" />
+            <Card className="hover:shadow-md transition-shadow cursor-pointer overflow-hidden relative">
+              {statBackgrounds?.artifacts && (
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-15"
+                  style={{ backgroundImage: `url(${statBackgrounds.artifacts})` }}
+                />
+              )}
+              <CardContent className="px-3 py-2 flex items-center justify-center gap-3 relative z-10">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                  <Package className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.artifactsCount}</p>
+                  <p className="text-2xl font-bold leading-tight">{stats.artifactsCount}</p>
                   <p className="text-sm text-muted-foreground">Artifacts</p>
                 </div>
               </CardContent>
             </Card>
           </Link>
           <Link href="/collections">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                  <Package className="h-6 w-6 text-primary" />
+            <Card className="hover:shadow-md transition-shadow cursor-pointer overflow-hidden relative">
+              {statBackgrounds?.collections && (
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-15"
+                  style={{ backgroundImage: `url(${statBackgrounds.collections})` }}
+                />
+              )}
+              <CardContent className="px-3 py-2 flex items-center justify-center gap-3 relative z-10">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                  <LayoutGrid className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.collectionsCount}</p>
+                  <p className="text-2xl font-bold leading-tight">{stats.collectionsCount}</p>
                   <p className="text-sm text-muted-foreground">Collections</p>
                 </div>
               </CardContent>
@@ -151,7 +204,7 @@ export function LoggedInHomepage({
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Continue Where You Left Off</h2>
             {recentArtifacts.length > 0 && (
-              <Button variant="ghost" size="sm" asChild className="gap-1">
+              <Button variant="ghost" size="sm" asChild className="gap-1 text-muted-foreground hover:text-foreground">
                 <Link href="/artifacts">
                   View all
                   <ArrowRight className="h-4 w-4" />
@@ -168,6 +221,20 @@ export function LoggedInHomepage({
                     <ArtifactCard artifact={artifact} />
                   </div>
                 ))}
+                {/* Add Artifact Card */}
+                <Link href="/artifacts/new" className="w-[160px] shrink-0">
+                  <Card className="group overflow-hidden border-2 border-dashed border-muted-foreground/30 p-0 transition-all hover:border-primary hover:shadow-lg rounded-md flex flex-col h-full bg-transparent hover:bg-muted/30">
+                    <div className="relative aspect-square overflow-hidden flex items-center justify-center">
+                      <Package className="h-12 w-12 text-muted-foreground/40 group-hover:text-primary/60 transition-colors" />
+                    </div>
+                    <div className="pb-3 pt-2 px-2 flex-none">
+                      <div className="flex items-center justify-center gap-1.5 text-muted-foreground group-hover:text-primary transition-colors">
+                        <Plus className="h-4 w-4" />
+                        <span className="font-semibold text-sm">Add Artifact</span>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
               </div>
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
@@ -199,7 +266,7 @@ export function LoggedInHomepage({
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Your Collections</h2>
             {collections.length > 0 && (
-              <Button variant="ghost" size="sm" asChild className="gap-1">
+              <Button variant="ghost" size="sm" asChild className="gap-1 text-muted-foreground hover:text-foreground">
                 <Link href="/collections">
                   View all
                   <ArrowRight className="h-4 w-4" />
@@ -240,7 +307,7 @@ export function LoggedInHomepage({
         {/* Start Something New */}
         <section>
           <h2 className="text-xl font-semibold mb-4">Start Something New</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             {/* Create Artifact */}
             <Link href="/artifacts/new">
               <Card className="h-full hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer group">
@@ -261,7 +328,7 @@ export function LoggedInHomepage({
               <Card className="h-full hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer group">
                 <CardContent className="p-6 flex flex-col items-center text-center gap-4">
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <FolderOpen className="h-7 w-7" />
+                    <LayoutGrid className="h-7 w-7" />
                   </div>
                   <div>
                     <h3 className="font-semibold">Create Collection</h3>
@@ -276,7 +343,7 @@ export function LoggedInHomepage({
               <Card className="h-full hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer group">
                 <CardContent className="p-6 flex flex-col items-center text-center gap-4">
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Sparkles className="h-7 w-7" />
+                    <Users className="h-7 w-7" />
                   </div>
                   <div>
                     <h3 className="font-semibold">Explore Community</h3>

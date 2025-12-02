@@ -1,12 +1,16 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArtifactCard } from "@/components/artifact-card"
 import { CollectionCard } from "@/components/collection-card"
-import { Upload, BookOpen, FolderOpen, Users, Palette, Heart, Sparkles, ArrowRight, ChevronDown } from "lucide-react"
+import { CommunityShowcase } from "@/components/community-showcase"
+import { ArtifactsCarousel } from "@/components/artifacts-carousel"
+import { Upload, BookOpen, FolderOpen, Users, Palette, Heart, Sparkles, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Package, LayoutGrid } from "lucide-react"
 import MediaImage from "@/components/media-image"
+import BottomNav from "@/components/navigation/bottom-nav"
+import { cn } from "@/lib/utils"
 
 interface ShowcaseArtifact {
   id: string
@@ -36,14 +40,165 @@ interface ShowcaseCollection {
   thumbnailImages?: string[]
 }
 
+interface HeroArtifact {
+  id: string
+  slug: string
+  title: string
+  description?: string | null
+  media_urls?: string[]
+  media_derivatives?: Record<string, any> | null
+  thumbnail_url?: string | null
+  user_id?: string
+  artifact_type?: {
+    id: string
+    name: string
+    icon_name: string
+  } | null
+}
+
 interface LoggedOutHomepageProps {
   backgroundImages: string[]
+  heroArtifacts: HeroArtifact[]
   showcaseArtifacts: ShowcaseArtifact[]
   showcaseCollections: ShowcaseCollection[]
 }
 
+const howItWorksSteps = [
+  {
+    icon: Upload,
+    step: 1,
+    title: "Create an Artifact",
+    description: "Add photos, videos, or audio recordings of the things you treasure. Capture every detail.",
+  },
+  {
+    icon: BookOpen,
+    step: 2,
+    title: "Add Story & Details",
+    description: "Document the history, origin, and memories associated with each piece. Let AI help with descriptions.",
+  },
+  {
+    icon: FolderOpen,
+    step: 3,
+    title: "Organize & Share",
+    description: "Group artifacts into collections. Keep them private or share with family and friends.",
+  },
+]
+
+function HowItWorksCarousel() {
+  const [activeIndex, setActiveIndex] = useState(0)
+  const totalSteps = howItWorksSteps.length
+
+  const handlePrev = () => {
+    if (activeIndex > 0) {
+      setActiveIndex(activeIndex - 1)
+    }
+  }
+
+  const handleNext = () => {
+    if (activeIndex < totalSteps - 1) {
+      setActiveIndex(activeIndex + 1)
+    }
+  }
+
+  return (
+    <section id="how-it-works" className="py-16 md:py-24 bg-muted/30">
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">How It Works</h2>
+          <p className="text-muted-foreground text-lg">Three simple steps to preserve what matters</p>
+        </div>
+      </div>
+
+      {/* Carousel container */}
+      <div className="max-w-5xl mx-auto px-4">
+        {/* Cards area with navigation buttons - relative wrapper for button positioning */}
+        <div className="relative">
+          {/* Left arrow - overlaid on card */}
+          <button
+            onClick={handlePrev}
+            disabled={activeIndex === 0}
+            className={cn(
+              "absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-10",
+              "flex h-10 w-10 items-center justify-center rounded-full",
+              "bg-background/90 backdrop-blur-sm border shadow-md",
+              "transition-all hover:bg-background hover:scale-105",
+              activeIndex === 0 ? "opacity-0 pointer-events-none" : "opacity-100"
+            )}
+            aria-label="Previous step"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+
+          {/* Right arrow - overlaid on card */}
+          <button
+            onClick={handleNext}
+            disabled={activeIndex === totalSteps - 1}
+            className={cn(
+              "absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-10",
+              "flex h-10 w-10 items-center justify-center rounded-full",
+              "bg-background/90 backdrop-blur-sm border shadow-md",
+              "transition-all hover:bg-background hover:scale-105",
+              activeIndex === totalSteps - 1 ? "opacity-0 pointer-events-none" : "opacity-100"
+            )}
+            aria-label="Next step"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          {/* Sliding cards */}
+          <div className="overflow-hidden">
+            <div
+              className="flex transition-transform duration-300 ease-out"
+              style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+            >
+              {howItWorksSteps.map((step) => (
+                <div key={step.step} className="flex-shrink-0 w-full px-2 md:px-8">
+                  <Card className="mx-auto max-w-[400px]">
+                    <CardContent className="p-6 text-center space-y-4">
+                      <div className="flex justify-center">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <step.icon className="h-7 w-7" />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
+                          {step.step}
+                        </span>
+                        <h3 className="text-xl font-semibold">{step.title}</h3>
+                      </div>
+                      <p className="text-muted-foreground text-sm">{step.description}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Dot indicators - outside relative wrapper */}
+        <div className="flex justify-center gap-2 mt-6">
+          {howItWorksSteps.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setActiveIndex(index)}
+              className={cn(
+                "h-2 rounded-full transition-all",
+                activeIndex === index
+                  ? "w-6 bg-primary"
+                  : "w-2 bg-primary/30 hover:bg-primary/50"
+              )}
+              aria-label={`Go to step ${index + 1}`}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export function LoggedOutHomepage({
   backgroundImages,
+  heroArtifacts,
   showcaseArtifacts,
   showcaseCollections,
 }: LoggedOutHomepageProps) {
@@ -52,14 +207,14 @@ export function LoggedOutHomepage({
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background">
+    <div className="min-h-[100dvh] bg-background pb-20 lg:pb-0">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
 
         {/* Floating background images */}
-        <div className="absolute inset-0 overflow-hidden opacity-10">
+        <div className="absolute inset-0 overflow-hidden opacity-20">
           {backgroundImages[0] && (
             <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full overflow-hidden blur-sm">
               <MediaImage src={backgroundImages[0]} alt="" className="w-full h-full" objectFit="cover" />
@@ -74,8 +229,8 @@ export function LoggedOutHomepage({
 
         <div className="relative px-4 py-16 md:py-24 lg:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-6">
-            {/* Logo */}
-            <div className="flex justify-center mb-8">
+            {/* Logo with Brand Name */}
+            <div className="flex justify-center items-center gap-3 mb-8">
               <div className="flex h-16 w-16 items-center justify-center bg-gradient-to-br from-primary to-chart-2 text-primary-foreground shadow-lg rounded-lg">
                 <svg
                   width="36"
@@ -102,29 +257,58 @@ export function LoggedOutHomepage({
                   <path d="M66.6001 43.3L66.6001 28.9L54.1001 21.6L54.1001 36.1L66.6001 43.3Z" fill="currentColor" />
                 </svg>
               </div>
+              <span className="text-3xl md:text-4xl font-bold tracking-tight">Heirlooms</span>
+              <span className="text-sm font-normal text-muted-foreground">(Beta)</span>
             </div>
 
             {/* Headline */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-foreground">
               Capture, organize, and share the things you love and the stories behind them.
             </h1>
+          </div>
 
+          {/* Hero Carousel - Full width, compact cards, infinite loop */}
+          {heroArtifacts.length > 0 && (
+            <div className="py-8">
+              <ArtifactsCarousel artifacts={heroArtifacts} hideEmptyState compact infinite />
+            </div>
+          )}
+
+          <div className="max-w-4xl mx-auto text-center space-y-6">
             {/* Subheading */}
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               Create beautiful digital collections of your artifacts, preserve their stories, and share them with the people who matter most.
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" asChild className="gap-2">
-                <Link href="/login">
-                  Start Your First Collection
-                  <ArrowRight className="h-4 w-4" />
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+              <Button size="lg" asChild className="gap-2 w-full sm:w-64">
+                <Link href="/login?returnTo=/artifacts">
+                  <Package className="h-4 w-4" />
+                  Create Your First Artifact
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" onClick={scrollToHowItWorks} className="gap-2">
+              <Button size="lg" asChild className="gap-2 bg-purple-600 hover:bg-purple-700 w-full sm:w-64">
+                <Link href="/login?returnTo=/collections">
+                  <LayoutGrid className="h-4 w-4" />
+                  Start Your First Collection
+                </Link>
+              </Button>
+            </div>
+            <div className="flex flex-col items-center gap-3 pt-2">
+              <Button size="lg" variant="ghost" onClick={scrollToHowItWorks} className="gap-2 text-muted-foreground">
                 See How It Works
                 <ChevronDown className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="rounded-full text-xs text-muted-foreground/60 border-muted-foreground/30 hover:text-muted-foreground hover:border-muted-foreground/50 hover:bg-transparent"
+              >
+                <Link href="/login?returnTo=/">
+                  Login to continue
+                </Link>
               </Button>
             </div>
           </div>
@@ -132,88 +316,48 @@ export function LoggedOutHomepage({
       </section>
 
       {/* How It Works Section */}
-      <section id="how-it-works" className="px-4 py-16 md:py-24 bg-muted/30">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">How It Works</h2>
-            <p className="text-muted-foreground text-lg">Three simple steps to preserve what matters</p>
-          </div>
+      <HowItWorksCarousel />
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Step 1 */}
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Upload className="h-7 w-7" />
-                </div>
-              </div>
-              <h3 className="text-xl font-semibold">Upload an Artifact</h3>
-              <p className="text-muted-foreground">
-                Add photos, videos, or audio recordings of the things you treasure. Capture every detail.
-              </p>
-            </div>
+      {/* Community Showcase: Artifacts */}
+      {showcaseArtifacts.length > 0 && (
+        <CommunityShowcase
+          artifacts={showcaseArtifacts}
+          title="Community Showcase"
+          subtitle="Artifacts"
+          showViewAll
+          viewAllHref="/artifacts"
+          maxItems={9}
+          className="bg-muted/30"
+        />
+      )}
 
-            {/* Step 2 */}
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <BookOpen className="h-7 w-7" />
-                </div>
-              </div>
-              <h3 className="text-xl font-semibold">Add Story & Details</h3>
-              <p className="text-muted-foreground">
-                Document the history, origin, and memories associated with each piece. Let AI help with descriptions.
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <FolderOpen className="h-7 w-7" />
-                </div>
-              </div>
-              <h3 className="text-xl font-semibold">Organize & Share</h3>
-              <p className="text-muted-foreground">
-                Group artifacts into collections. Keep them private or share with family and friends.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Inside the App Preview Section */}
-      {(showcaseArtifacts.length > 0 || showcaseCollections.length > 0) && (
-        <section className="px-4 py-16 md:py-24">
+      {/* Collections Preview */}
+      {showcaseCollections.length > 0 && (
+        <section className="px-4 py-12 md:py-16">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Inside the App</h2>
-              <p className="text-muted-foreground text-lg">Your private, organized home for artifacts and stories</p>
+            <div className="flex items-end justify-between mb-6">
+              <div className="flex items-end gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-0.5">
+                  <LayoutGrid className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Community Showcase</p>
+                  <h2 className="text-xl md:text-2xl font-bold tracking-tight leading-tight">Collections</h2>
+                </div>
+              </div>
+              <Link
+                href="/collections"
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors self-end mb-0.5"
+              >
+                View All
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
-
-            {/* Artifacts Preview */}
-            {showcaseArtifacts.length > 0 && (
-              <div className="mb-12">
-                <h3 className="text-xl font-semibold mb-6 text-center">Sample Artifacts</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  {showcaseArtifacts.slice(0, 6).map((artifact) => (
-                    <ArtifactCard key={artifact.id} artifact={artifact} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Collections Preview */}
-            {showcaseCollections.length > 0 && (
-              <div>
-                <h3 className="text-xl font-semibold mb-6 text-center">Sample Collections</h3>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {showcaseCollections.slice(0, 4).map((collection) => (
-                    <CollectionCard key={collection.id} collection={collection} mode="all" />
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {showcaseCollections.slice(0, 4).map((collection) => (
+                <CollectionCard key={collection.id} collection={collection} mode="all" />
+              ))}
+            </div>
           </div>
         </section>
       )}
@@ -309,7 +453,7 @@ export function LoggedOutHomepage({
             Start your collection today. It only takes a minute.
           </p>
           <Button size="lg" asChild className="gap-2">
-            <Link href="/login">
+            <Link href="/login?returnTo=/">
               Get Started Free
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -353,6 +497,8 @@ export function LoggedOutHomepage({
           </p>
         </div>
       </footer>
+      {/* Bottom Navigation for Mobile */}
+      <BottomNav />
     </div>
   )
 }
