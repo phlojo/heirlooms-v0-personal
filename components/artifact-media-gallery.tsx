@@ -5,7 +5,7 @@ import "flickity/css/flickity.css"
 import { type ArtifactMediaWithDerivatives } from "@/lib/types/media"
 import { isImageMedia, isVideoMedia } from "@/lib/types/media"
 import { cn } from "@/lib/utils"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FullscreenImageViewer } from "@/components/fullscreen-image-viewer"
 
@@ -276,7 +276,12 @@ export function ArtifactMediaGallery({
         )}
 
         {/* Flickity Gallery Container - Filmstrip layout */}
-        <div ref={galleryRef} className="artifact-media-gallery aspect-[4/3] mb-10 bg-purple-500/5">
+        <div ref={galleryRef} className="artifact-media-gallery aspect-[4/3] mb-10 bg-purple-500/5 relative">
+          {/* Decorative background icon - visible in empty space before first media */}
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-0 flex items-center">
+            <ImageIcon className="h-8 w-8 text-purple-400/15" />
+            <ChevronRight className="h-5 w-5 text-purple-400/15 -ml-1" />
+          </div>
           {media.map((item) => {
             const mediaData = item.media
             const imageSrc = mediaData.largeUrl || mediaData.mediumUrl || mediaData.public_url
@@ -323,6 +328,8 @@ export function ArtifactMediaGallery({
               height: 100% !important;
               border-radius: 4px;
               overflow: hidden;
+              position: relative;
+              z-index: 1;
             }
             .artifact-media-gallery .flickity-slider {
               height: 100% !important;
