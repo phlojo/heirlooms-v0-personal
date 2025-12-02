@@ -33,7 +33,7 @@ export function GenerateVideoSummaryButton({
       while (attempt < maxAttempts) {
         attempt++
         try {
-          const data = await fetchJson("/api/analyze/video-single", {
+          const data = await fetchJson<{ summary?: string }>("/api/analyze/video-single", {
             body: {
               artifactId: artifactId || "temp",
               videoUrl,

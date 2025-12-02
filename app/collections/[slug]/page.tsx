@@ -56,7 +56,7 @@ export default async function CollectionDetailPage({
     notFound()
   }
 
-  let artifacts = []
+  let artifacts: any[] = []
   try {
     if (isUncategorized && user) {
       const { data, error } = await supabase

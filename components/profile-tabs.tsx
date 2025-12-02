@@ -76,7 +76,7 @@ export function ProfileTabs({ user, profile, stats, showPasswordUI, passwordMode
                 <User className="mt-0.5 h-5 w-5 text-muted-foreground" />
                 <div className="flex-1">
                   <p className="text-sm font-medium">Display Name</p>
-                  <DisplayNameForm currentDisplayName={profile?.display_name} userId={user.id} />
+                  <DisplayNameForm currentDisplayName={profile?.display_name ?? null} userId={user.id} />
                 </div>
               </div>
 
