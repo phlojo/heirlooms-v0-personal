@@ -16,12 +16,17 @@ import { updateViewPreference } from "@/lib/actions/profile"
 
 interface Collection {
   id: string
-  name: string
-  description: string | null
-  slug: string
-  thumbnailImages: string[]
+  title: string
+  name?: string
+  description?: string | null
+  slug?: string
+  cover_image?: string | null
+  thumbnailImages?: string[]
   itemCount: number
+  user_id: string
+  authorName?: string | null
   isUnsorted?: boolean
+  is_public?: boolean | null
   created_at: string
 }
 
@@ -201,9 +206,9 @@ export function CollectionsTabs({
                 Array.isArray(allCollectionsList) &&
                 allCollectionsList.map((collection) =>
                   viewType === "gallery" ? (
-                    <CollectionCard key={collection.id} collection={collection} mode="all" />
+                    <CollectionCard key={collection.id} collection={collection as any} mode="all" />
                   ) : (
-                    <CollectionCardHorizontal key={collection.id} collection={collection} mode="all" />
+                    <CollectionCardHorizontal key={collection.id} collection={collection as any} mode="all" />
                   ),
                 )}
             </div>
@@ -252,12 +257,12 @@ export function CollectionsTabs({
                 myCollectionsList.map((collection) =>
                   viewType === "gallery" ? (
                     collection.isUnsorted ? (
-                      <UncategorizedCollectionCard key={collection.id} collection={collection} mode="mine" />
+                      <UncategorizedCollectionCard key={collection.id} collection={collection as any} mode="mine" />
                     ) : (
-                      <CollectionCard key={collection.id} collection={collection} mode="mine" />
+                      <CollectionCard key={collection.id} collection={collection as any} mode="mine" />
                     )
                   ) : (
-                    <CollectionCardHorizontal key={collection.id} collection={collection} mode="mine" />
+                    <CollectionCardHorizontal key={collection.id} collection={collection as any} mode="mine" />
                   ),
                 )}
             </div>

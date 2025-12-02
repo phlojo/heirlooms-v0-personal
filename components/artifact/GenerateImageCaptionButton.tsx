@@ -27,7 +27,7 @@ export function GenerateImageCaptionButton({
   async function handleGenerate() {
     setIsGenerating(true)
     try {
-      const data = await fetchJson("/api/analyze/image-single", {
+      const data = await fetchJson<{ caption?: string }>("/api/analyze/image-single", {
         body: {
           artifactId: artifactId || "temp",
           imageUrl,

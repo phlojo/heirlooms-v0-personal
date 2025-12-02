@@ -10,8 +10,8 @@ export type CreateCollectionInput = z.infer<typeof createCollectionSchema>
 export const collectionSchema = z.object({
   title: z.string().min(1, "Title is required").max(100, "Title must be less than 100 characters"),
   description: z.string().max(500, "Description must be less than 500 characters").optional(),
-  is_public: z.boolean().default(false),
-  primary_type_id: z.string().uuid("Invalid type ID").optional().nullable(),
+  is_public: z.boolean().optional(),
+  primary_type_id: z.string().uuid("Invalid type ID").nullable().optional(),
 })
 
 export type CollectionInput = z.infer<typeof collectionSchema>
@@ -108,11 +108,11 @@ export type UpdateUserMediaInput = z.infer<typeof updateUserMediaSchema>
 export const createArtifactMediaSchema = z.object({
   artifact_id: z.string().uuid("Invalid artifact ID"),
   media_id: z.string().uuid("Invalid media ID"),
-  role: z.enum(["gallery", "inline_block", "cover"]).default("gallery"),
-  sort_order: z.number().int().min(0).default(0),
+  role: z.enum(["gallery", "inline_block", "cover"]).optional(),
+  sort_order: z.number().int().min(0).optional(),
   block_id: z.string().nullable().optional(),
   caption_override: z.string().max(500).nullable().optional(),
-  is_primary: z.boolean().default(false),
+  is_primary: z.boolean().optional(),
 })
 
 export type CreateArtifactMediaInput = z.infer<typeof createArtifactMediaSchema>

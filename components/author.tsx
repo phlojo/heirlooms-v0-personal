@@ -7,7 +7,7 @@ import { useSupabase } from "@/lib/supabase/browser-context"
 
 interface AuthorProps {
   userId: string
-  authorName?: string
+  authorName?: string | null
   size?: "sm" | "md" | "lg"
   showAvatar?: boolean
   className?: string

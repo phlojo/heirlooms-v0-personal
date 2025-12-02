@@ -33,6 +33,13 @@ function getCloudinaryFetchUrl(remoteUrl: string, transformations: string): stri
     return remoteUrl
   }
 
+  // Cloudinary fetch mode can handle URLs up to ~400 chars
+  // Only return original if truly exceeding the limit
+  if (remoteUrl.length > 400) {
+    console.warn('[cloudinary] URL too long for fetch (>400 chars), returning original:', remoteUrl.length, 'chars')
+    return remoteUrl
+  }
+
   // Determine resource type based on URL
   const resourceType = isVideoUrl(remoteUrl) ? 'video' : 'image'
 

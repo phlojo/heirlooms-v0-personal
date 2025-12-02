@@ -102,7 +102,7 @@ Generate a JSON object with these fields:
 - tags (optional): Array of relevant tags
 
 Focus on creating a meaningful, warm description that captures the essence of this heirloom.`,
-        maxTokens: 2000,
+        maxOutputTokens: 2000,
       })
 
       const finalObject = result.object

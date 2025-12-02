@@ -15,7 +15,7 @@ export default function LoginPage() {
         <LoginModule returnTo={returnTo} />
       </div>
 
-      {isMobile && <BottomNav user={null} />}
+      {isMobile && <BottomNav />}
     </div>
   )
 }

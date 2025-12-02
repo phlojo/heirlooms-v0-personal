@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     // Validate URLs in parallel
     const validationResults = await Promise.all(
-      potentialImageUrls.map(async (url) => ({
+      potentialImageUrls.map(async (url: string) => ({
         url,
         isValid: await isValidImageUrl(url),
       })),
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
               ],
             },
           ],
-          maxTokens: 100,
+          maxOutputTokens: 100,
         })
 
         captions[imageUrl] = result.text.trim()
