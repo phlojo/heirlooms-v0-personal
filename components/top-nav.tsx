@@ -114,7 +114,7 @@ export function TopNav({ onMenuClick, user }: TopNavProps) {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2">
+                <Button variant="ghost" className="gap-2" suppressHydrationWarning>
                   <Avatar className="h-7 w-7">
                     <AvatarFallback className="text-xs">
                       {(displayName || user.email)?.charAt(0).toUpperCase()}
